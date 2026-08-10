@@ -210,17 +210,17 @@ export const bookingSteps: BookingStep[] = [
 
 export const gallery: GalleryItem[] = [
   { image: 'https://images.unsplash.com/photo-1520340356584-f9917d1eea6f?w=600&h=400&fit=crop', label: 'Rửa xe chuyên nghiệp' },
-  { image: 'https://images.unsplash.com/photo-1689182358896-2514cd65dfff?w=600&h=400&fit=crop', label: 'Detailing — Ưu đãi thành viên' },
+  { image: 'https://images.unsplash.com/photo-1694678505383-676d78ea3b96?w=600&h=400&fit=crop', label: 'Detailing — Ưu đãi thành viên' },
   { image: 'https://images.unsplash.com/photo-1732357624591-f2137085659b?w=600&h=400&fit=crop', label: 'Vệ sinh nội thất' },
-  { image: 'https://images.unsplash.com/photo-1760827797819-4361cd5cd353?w=600&h=400&fit=crop', label: 'Không gian AutoWash' },
-  { image: 'https://images.unsplash.com/photo-1620584899131-a5ff5f8fbb03?w=600&h=400&fit=crop', label: 'Đổi điểm lấy detailing' },
-  { image: 'https://images.unsplash.com/photo-1632823471808-08b572e7381c?w=600&h=400&fit=crop', label: 'Tư vấn dịch vụ' },
+  { image: 'https://images.unsplash.com/photo-1607860108855-64acf2078ed9?w=600&h=400&fit=crop', label: 'Không gian AutoWash' },
+  { image: 'https://images.unsplash.com/photo-1704796141009-5ed5cc8ca5f3?w=600&h=400&fit=crop', label: 'Đổi điểm lấy detailing' },
+  { image: 'https://images.unsplash.com/photo-1605164599901-f8a1464a2c87?w=600&h=400&fit=crop', label: 'Tư vấn dịch vụ' },
   { image: 'https://images.unsplash.com/photo-1611239179213-d972da54091a?w=600&h=400&fit=crop', label: 'Phủ ceramic' },
   { image: 'https://images.unsplash.com/photo-1565689876697-e467b6c54da2?w=600&h=400&fit=crop', label: 'Rửa gầm xe' },
-  { image: 'https://images.unsplash.com/photo-1520340356584-f9917d1eea6f?w=600&h=400&fit=crop', label: 'Rửa xe định kỳ' },
-  { image: 'https://images.unsplash.com/photo-1760015417725-f78ad49294ef?w=600&h=400&fit=crop', label: 'Khu vực tiếp nhận' },
-  { image: 'https://images.unsplash.com/photo-1620584898989-d39f7f9ed1b7?w=600&h=400&fit=crop', label: 'Vệ sinh khoang máy' },
-  { image: 'https://images.unsplash.com/photo-1527581849771-416a9d62308e?w=600&h=400&fit=crop', label: 'Giao xe hoàn tất' },
+  { image: 'https://images.unsplash.com/photo-1605164598708-25701594473e?w=600&h=400&fit=crop', label: 'Rửa xe định kỳ' },
+  { image: 'https://images.unsplash.com/photo-1608506375591-b90e1f955e4b?w=600&h=400&fit=crop', label: 'Khu vực tiếp nhận' },
+  { image: 'https://images.unsplash.com/photo-1518306727298-4c17e1bf6942?w=600&h=400&fit=crop', label: 'Vệ sinh khoang máy' },
+  { image: 'https://images.unsplash.com/photo-1633014041037-f5446fb4ce99?w=600&h=400&fit=crop', label: 'Giao xe hoàn tất' },
 ];
 
 export const testimonials: CustomerTestimonial[] = [
