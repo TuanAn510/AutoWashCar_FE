@@ -1,0 +1,17 @@
+node_modules
+dist
+build
+coverage
+.next
+.vite
+.vercel
+
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+
+*.log
+.env
+.env.*
+
+public

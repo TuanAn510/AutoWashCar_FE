@@ -1,0 +1,26 @@
+import type {
+  AppointmentItem,
+  AppointmentServiceSnapshot,
+  AppointmentStatus,
+} from '@/types/appointment';
+
+export const canCustomerCancelAppointment = (status: AppointmentStatus | string) =>
+  status === 'pending';
+
+export const getAppointmentNote = (note?: string | null) =>
+  note?.trim() ? note.trim() : 'Không có ghi chú';
+
+export const formatAppointmentServicesTitle = (services: AppointmentServiceSnapshot[]) => {
+  if (!services?.length) return 'Dịch vụ chưa xác định';
+
+  const visible = services
+    .slice(0, 2)
+    .map((service) => service.nameSnapshot)
+    .join(', ');
+  const remaining = services.length - 2;
+
+  return remaining > 0 ? `${visible} +${remaining} dịch vụ` : visible;
+};
+
+export const formatAppointmentVehicleLine = (appointment: AppointmentItem) =>
+  `${appointment.vehicleId.brand} ${appointment.vehicleId.model} · ${appointment.vehicleId.licensePlate}`;

@@ -1,0 +1,287 @@
+import { CheckCircle2, Loader2, RotateCcw, Search } from 'lucide-react';
+import { useMemo, useState } from 'react';
+
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import {
+  useCustomerLoyaltyAccount,
+  useCustomerLoyaltyTransactions,
+  useMarkRedemptionUsed,
+} from '@/features/shared/loyalty/hooks/use-loyalty';
+import type {
+  LoyaltyAccount,
+  LoyaltyTransaction,
+} from '@/features/shared/loyalty/types/loyalty.types';
+import {
+  formatPoints,
+  transactionTypeLabels,
+} from '@/features/shared/loyalty/utils/loyalty-formatters';
+import { getAccountTier } from '@/features/shared/loyalty/utils/tier-progress';
+import { formatDate, formatDateTime } from '@/lib/utils';
+
+function CustomerSummary({ account }: { account: LoyaltyAccount }) {
+  const tier = getAccountTier(account);
+
+  return (
+    <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-7">
+      <SummaryTile label="Điểm khả dụng" value={formatPoints(account.currentPoints)} highlight />
+      <SummaryTile
+        label="Điểm xét hạng quý này"
+        value={formatPoints(account.currentQuarterEarnedPoints)}
+      />
+      <SummaryTile
+        label="Reset điểm và hạng"
+        value={
+          account.nextQuarterResetAt ? formatDate(account.nextQuarterResetAt) : 'Chưa xác định'
+        }
+      />
+      <SummaryTile label="Tổng điểm tích lũy" value={formatPoints(account.totalEarnedPoints)} />
+      <SummaryTile label="Đã đổi" value={formatPoints(account.totalRedeemedPoints)} />
+      <SummaryTile label="Đã hết hạn" value={formatPoints(account.totalExpiredPoints)} />
+      <SummaryTile
+        label="Hạng"
+        value={`${tier?.name ?? 'Chưa có hạng'} (${tier?.discountPercent ?? 0}%)`}
+      />
+    </section>
+  );
+}
+
+function SummaryTile({
+  label,
+  value,
+  highlight,
+}: {
+  label: string;
+  value: string;
+  highlight?: boolean;
+}) {
+  return (
+    <div className="rounded-lg border border-border/80 bg-white p-5">
+      <p className="text-sm font-medium text-slate-500">{label}</p>
+      <p className={`mt-3 text-xl font-bold ${highlight ? 'text-emerald-600' : 'text-slate-950'}`}>
+        {value}
+      </p>
+    </div>
+  );
+}
+
+function TransactionTable({ transactions }: { transactions: LoyaltyTransaction[] }) {
+  if (transactions.length === 0) {
+    return (
+      <section className="rounded-lg border border-dashed border-slate-300 bg-white px-4 py-12 text-center text-sm text-slate-500">
+        Khách hàng này chưa có giao dịch tích điểm.
+      </section>
+    );
+  }
+
+  return (
+    <section className="rounded-lg border border-border/80 bg-white p-6">
+      <h2 className="text-xl font-semibold text-slate-950">Lịch sử điểm</h2>
+      <div className="mt-5 overflow-x-auto">
+        <table className="w-full min-w-[840px] text-left text-sm">
+          <thead>
+            <tr className="border-b text-slate-900">
+              <th className="px-2 py-3 font-semibold">Loại</th>
+              <th className="px-2 py-3 font-semibold">Điểm</th>
+              <th className="px-2 py-3 font-semibold">Còn lại</th>
+              <th className="px-2 py-3 font-semibold">Ghi chú</th>
+              <th className="px-2 py-3 font-semibold">Ngày tạo</th>
+              <th className="px-2 py-3 font-semibold">Hết hạn</th>
+            </tr>
+          </thead>
+          <tbody>
+            {transactions.map((transaction) => (
+              <tr key={transaction._id} className="border-b last:border-0">
+                <td className="px-2 py-4">
+                  <Badge className="border-slate-200 bg-slate-50 text-slate-700">
+                    {transactionTypeLabels[transaction.type] ?? transaction.type}
+                  </Badge>
+                </td>
+                <td className="px-2 py-4 font-semibold text-slate-950">
+                  {formatPoints(transaction.points)}
+                </td>
+                <td className="px-2 py-4">{formatPoints(transaction.remainingPoints)}</td>
+                <td className="px-2 py-4 text-slate-600">
+                  {transaction.description || 'Không có'}
+                </td>
+                <td className="px-2 py-4">
+                  {transaction.createdAt ? formatDateTime(transaction.createdAt) : 'Chưa có'}
+                </td>
+                <td className="px-2 py-4">
+                  {transaction.expiresAt ? formatDate(transaction.expiresAt) : 'Không có'}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
+export default function StaffLoyaltyLookupPage() {
+  const [inputCustomerId, setInputCustomerId] = useState('');
+  const [customerId, setCustomerId] = useState('');
+  const [redemptionId, setRedemptionId] = useState('');
+  const [confirmRedemptionId, setConfirmRedemptionId] = useState('');
+
+  const accountQuery = useCustomerLoyaltyAccount(customerId);
+  const transactionsQuery = useCustomerLoyaltyTransactions(customerId);
+  const markUsedMutation = useMarkRedemptionUsed(customerId);
+
+  const transactions = useMemo(
+    () =>
+      [...(transactionsQuery.data ?? [])].sort((a, b) =>
+        (b.createdAt ?? '').localeCompare(a.createdAt ?? '')
+      ),
+    [transactionsQuery.data]
+  );
+
+  const handleLookup = () => {
+    const trimmed = inputCustomerId.trim();
+    if (trimmed) setCustomerId(trimmed);
+  };
+
+  return (
+    <main className="min-h-screen min-w-0 overflow-x-hidden bg-[#f8fafc] px-4 py-8 sm:px-6 lg:px-8">
+      <div className="mx-auto flex w-full max-w-[1440px] min-w-0 flex-col gap-6">
+        <section>
+          <h1 className="text-3xl font-bold tracking-normal text-slate-950 sm:text-4xl">
+            Tra cứu khách hàng thân thiết
+          </h1>
+          <p className="mt-2 max-w-2xl text-base text-slate-500">
+            Kiểm tra điểm thưởng và đánh dấu phần thưởng đã sử dụng khi khách hàng dùng ưu đãi tại
+            gara.
+          </p>
+        </section>
+
+        <section className="rounded-lg border border-border/80 bg-white p-5">
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <Input
+              value={inputCustomerId}
+              onChange={(event) => setInputCustomerId(event.target.value)}
+              placeholder="Nhập ID khách hàng"
+              className="h-10"
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') handleLookup();
+              }}
+            />
+            <Button className="h-10 rounded-md" onClick={handleLookup}>
+              <Search className="size-4" />
+              Tra cứu
+            </Button>
+          </div>
+        </section>
+
+        {customerId ? (
+          accountQuery.isLoading || transactionsQuery.isLoading ? (
+            <section className="rounded-lg border border-border/80 bg-white px-6 py-16 text-center">
+              <Loader2 className="mx-auto size-8 animate-spin text-slate-400" />
+              <p className="mt-4 text-sm text-slate-500">
+                Đang tải thông tin tích điểm của khách hàng...
+              </p>
+            </section>
+          ) : accountQuery.isError || transactionsQuery.isError ? (
+            <section className="rounded-lg border border-rose-200 bg-rose-50 px-6 py-16 text-center">
+              <h2 className="text-xl font-semibold text-rose-700">
+                Không thể tải thông tin tích điểm của khách hàng
+              </h2>
+              <Button
+                className="mt-5 rounded-md"
+                onClick={() => {
+                  accountQuery.refetch();
+                  transactionsQuery.refetch();
+                }}
+              >
+                <RotateCcw className="size-4" />
+                Thử lại
+              </Button>
+            </section>
+          ) : accountQuery.data ? (
+            <>
+              <CustomerSummary account={accountQuery.data} />
+
+              <section className="rounded-lg border border-border/80 bg-white p-6">
+                <h2 className="text-xl font-semibold text-slate-950">
+                  Đánh dấu phần thưởng đã dùng
+                </h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  Nhập mã lượt đổi thưởng của khách hàng để đánh dấu phần thưởng đã sử dụng.
+                </p>
+                <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+                  <Input
+                    value={redemptionId}
+                    onChange={(event) => setRedemptionId(event.target.value)}
+                    placeholder="Nhập mã lượt đổi thưởng"
+                    className="h-10"
+                  />
+                  <Button
+                    className="h-10 rounded-md"
+                    disabled={markUsedMutation.isPending || !redemptionId.trim()}
+                    onClick={() => setConfirmRedemptionId(redemptionId.trim())}
+                  >
+                    <CheckCircle2 className="size-4" />
+                    Đã dùng
+                  </Button>
+                </div>
+              </section>
+
+              <TransactionTable transactions={transactions} />
+            </>
+          ) : null
+        ) : (
+          <section className="rounded-lg border border-dashed border-slate-300 bg-white px-4 py-12 text-center text-sm text-slate-500">
+            Nhập ID khách hàng để bắt đầu tra cứu.
+          </section>
+        )}
+      </div>
+
+      <Dialog
+        open={!!confirmRedemptionId}
+        onOpenChange={(open) => !open && setConfirmRedemptionId('')}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Xác nhận sử dụng phần thưởng</DialogTitle>
+            <DialogDescription>
+              Thao tác này xác nhận phần thưởng đã được sử dụng. Khách hàng không thể tự thực hiện
+              thao tác này.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="rounded-lg bg-slate-50 p-4 text-sm text-slate-700">
+            {confirmRedemptionId}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmRedemptionId('')}>
+              Hủy
+            </Button>
+            <Button
+              disabled={markUsedMutation.isPending}
+              onClick={async () => {
+                await markUsedMutation.mutateAsync(confirmRedemptionId);
+                setRedemptionId('');
+                setConfirmRedemptionId('');
+              }}
+            >
+              {markUsedMutation.isPending ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <CheckCircle2 className="size-4" />
+              )}
+              Xác nhận
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </main>
+  );
+}

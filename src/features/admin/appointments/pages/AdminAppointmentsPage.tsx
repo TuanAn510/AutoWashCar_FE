@@ -1,0 +1,564 @@
+import { Loader2 } from 'lucide-react';
+import { useMemo, useState } from 'react';
+
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { PaginationControls } from '@/components/shared/PaginationControls';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import type {
+  AdminAppointmentFilters as AdminAppointmentFilterParams,
+  AppointmentAssignedStaff,
+  AppointmentItem,
+  AppointmentStatus,
+} from '@/types/appointment';
+import { AdminAppointmentSummaryCards } from '@/features/admin/appointments/components/AdminAppointmentSummaryCards';
+import { AdminAppointmentFilters } from '@/features/admin/appointments/components/AdminAppointmentFilters';
+import { AdminAppointmentsTable } from '@/features/admin/appointments/components/AdminAppointmentsTable';
+import { AdminAppointmentDetailDialog } from '@/features/admin/appointments/components/AppointmentDetailDialog';
+import { AssignStaffDialog } from '@/features/admin/appointments/components/AssignStaffDialog';
+import { CancelAppointmentDialog } from '@/features/admin/appointments/components/CancelAppointmentDialog';
+import {
+  appointmentTimelineStatusLabels,
+  getAllowedAdminAppointmentStatuses,
+} from '@/features/admin/appointments/constants/appointmentStatus';
+import { EmptyAdminAppointmentsState } from '@/features/admin/appointments/components/EmptyAdminAppointmentsState';
+import { RescheduleAppointmentDialog } from '@/features/admin/appointments/components/RescheduleAppointmentDialog';
+import { UpdateAppointmentStatusDialog } from '@/features/admin/appointments/components/UpdateAppointmentStatusDialog';
+import { useAppointmentDetail } from '@/features/admin/appointments/hooks/useAppointmentDetail';
+import {
+  useAssignStaffToAppointment,
+  useCancelAppointmentByAdmin,
+  useRescheduleAppointment,
+  useUpdateAppointmentStatus,
+} from '@/features/admin/appointments/hooks/useAdminAppointmentMutations';
+import { useAppointments } from '@/features/admin/appointments/hooks/useAppointments';
+import { useStaffWorkload } from '@/features/admin/customers/hooks/useAdminCustomers';
+import type { StaffWorkload } from '@/services/userService';
+
+const getLocalDateRange = (date: string) => {
+  const [year, month, day] = date.split('-').map(Number);
+  if (!year || !month || !day) {
+    return {};
+  }
+
+  return {
+    dateFrom: new Date(year, month - 1, day, 0, 0, 0, 0).toISOString(),
+    dateTo: new Date(year, month - 1, day, 23, 59, 59, 999).toISOString(),
+  };
+};
+
+const APPOINTMENTS_PER_PAGE = 10;
+type TimelineStatus = Exclude<AppointmentStatus, 'cancelled'>;
+type AppointmentTab = 'today' | 'all' | 'priority';
+
+const TIER_PRIORITY: Record<string, number> = {
+  Platinum: 4,
+  Gold: 3,
+  Silver: 2,
+  Member: 1,
+};
+
+const getTierPriority = (appointment: AppointmentItem): number => {
+  const tier = appointment.membershipTierId;
+  if (tier && typeof tier === 'object' && 'name' in tier) {
+    return TIER_PRIORITY[tier.name] ?? 0;
+  }
+  return 0;
+};
+
+export default function AdminAppointmentsPage() {
+  const [appointmentTab, setAppointmentTab] = useState<AppointmentTab>(() =>
+    window.location.pathname.includes('service-histories') ? 'all' : 'today'
+  );
+  const [keyword, setKeyword] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | AppointmentStatus>(() =>
+    window.location.pathname.includes('service-histories') ? 'completed' : 'all'
+  );
+  const [staffFilter, setStaffFilter] = useState<'all' | string>('all');
+  const [dateFilter, setDateFilter] = useState('');
+  const [page, setPage] = useState(1);
+
+  const [detailAppointment, setDetailAppointment] = useState<AppointmentItem | null>(null);
+  const [assignAppointment, setAssignAppointment] = useState<AppointmentItem | null>(null);
+  const [selectedStaffId, setSelectedStaffId] = useState('');
+  const [statusAppointment, setStatusAppointment] = useState<AppointmentItem | null>(null);
+  const [confirmAppointment, setConfirmAppointment] = useState<AppointmentItem | null>(null);
+  const [nextStatus, setNextStatus] = useState<AppointmentStatus | ''>('');
+  const [rescheduleAppointment, setRescheduleAppointment] = useState<AppointmentItem | null>(null);
+  const [cancelAppointment, setCancelAppointment] = useState<AppointmentItem | null>(null);
+  const [, setPaymentAppointment] = useState<AppointmentItem | null>(null);
+  const [timelineStatusChange, setTimelineStatusChange] = useState<{
+    appointment: AppointmentItem;
+    status: TimelineStatus;
+  } | null>(null);
+
+  const appointmentFilters = useMemo<AdminAppointmentFilterParams>(() => {
+    const trimmedKeyword = keyword.trim();
+    const selectedDateRange =
+      appointmentTab === 'today' || appointmentTab === 'priority'
+        ? {
+            dateFrom: new Date(new Date().setHours(0, 0, 0, 0)).toISOString(),
+            dateTo: new Date(new Date().setHours(23, 59, 59, 999)).toISOString(),
+          }
+        : dateFilter
+          ? getLocalDateRange(dateFilter)
+          : {};
+
+    return {
+      ...(trimmedKeyword ? { search: trimmedKeyword } : {}),
+      ...(statusFilter !== 'all' ? { status: statusFilter } : {}),
+      ...(staffFilter !== 'all' ? { staffId: staffFilter } : {}),
+      ...selectedDateRange,
+      page,
+      limit: APPOINTMENTS_PER_PAGE,
+      sortBy: 'scheduledAt',
+      sortOrder: 'desc',
+    };
+  }, [appointmentTab, dateFilter, keyword, page, staffFilter, statusFilter]);
+
+  const appointmentsQuery = useAppointments(appointmentFilters);
+  const staffsQuery = useStaffWorkload();
+  const detailQuery = useAppointmentDetail(detailAppointment?._id);
+  const updateStatusMutation = useUpdateAppointmentStatus();
+  const assignStaffMutation = useAssignStaffToAppointment();
+  const rescheduleMutation = useRescheduleAppointment();
+  const cancelMutation = useCancelAppointmentByAdmin();
+
+  const appointments = useMemo(() => {
+    const raw = appointmentsQuery.data?.appointments ?? [];
+    if (appointmentTab === 'priority') {
+      return [...raw].sort((a, b) => getTierPriority(b) - getTierPriority(a));
+    }
+    return raw;
+  }, [appointmentsQuery.data?.appointments, appointmentTab]);
+  const detailData = detailQuery.data ?? detailAppointment;
+  const staffOptions = useMemo<Array<AppointmentAssignedStaff & StaffWorkload>>(() => {
+    return (staffsQuery.data ?? [])
+      .filter((staff) => staff.isActive !== false)
+      .map((staff) => ({
+        _id: staff._id,
+        displayName: staff.displayName,
+        phone: staff.phone,
+        avatarUrl: staff.avatarUrl,
+        todayCount: staff.todayCount,
+        weekCount: staff.weekCount,
+        activeCount: staff.activeCount,
+        completedCount: staff.completedCount,
+      }));
+  }, [staffsQuery.data]);
+
+  const summary = appointmentsQuery.data?.summary ?? {
+    total: 0,
+    pending: 0,
+    confirmed: 0,
+    inProgress: 0,
+    completed: 0,
+    cancelled: 0,
+  };
+
+  const handleConfirmAssignStaff = async () => {
+    if (!assignAppointment || !selectedStaffId) {
+      return;
+    }
+
+    await assignStaffMutation.mutateAsync({
+      appointmentId: assignAppointment._id,
+      payload: { staffId: selectedStaffId },
+    });
+    setAssignAppointment(null);
+  };
+
+  const handleConfirmUpdateStatus = async () => {
+    if (!statusAppointment || !nextStatus) {
+      return;
+    }
+
+    const appointmentBeingUpdated = statusAppointment;
+    const statusBeingApplied = nextStatus;
+
+    await updateStatusMutation.mutateAsync({
+      appointmentId: appointmentBeingUpdated._id,
+      payload: { status: statusBeingApplied },
+    });
+    setStatusAppointment(null);
+
+    if (statusBeingApplied === 'completed') {
+      setPaymentAppointment({
+        ...appointmentBeingUpdated,
+        status: 'completed',
+      });
+    }
+  };
+
+  const handleConfirmPendingAppointment = async () => {
+    if (!confirmAppointment) {
+      return;
+    }
+
+    await updateStatusMutation.mutateAsync({
+      appointmentId: confirmAppointment._id,
+      payload: { status: 'confirmed' },
+    });
+    setConfirmAppointment(null);
+  };
+
+  const handleConfirmTimelineStatus = async () => {
+    if (!timelineStatusChange) return;
+
+    const { appointment, status } = timelineStatusChange;
+    await updateStatusMutation.mutateAsync({
+      appointmentId: appointment._id,
+      payload: { status },
+    });
+    setTimelineStatusChange(null);
+
+    if (status === 'completed') {
+      setPaymentAppointment({ ...appointment, status });
+    }
+  };
+
+  const handleConfirmReschedule = async (scheduledAt: string) => {
+    if (!rescheduleAppointment) {
+      return;
+    }
+
+    await rescheduleMutation.mutateAsync({
+      appointmentId: rescheduleAppointment._id,
+      payload: { scheduledAt },
+    });
+    setRescheduleAppointment(null);
+  };
+
+  const handleConfirmCancel = async (cancelReason?: string) => {
+    if (!cancelAppointment) {
+      return;
+    }
+
+    await cancelMutation.mutateAsync({
+      appointmentId: cancelAppointment._id,
+      payload: { cancelReason },
+    });
+    setCancelAppointment(null);
+  };
+
+  const openAssignStaffDialog = (appointment: AppointmentItem) => {
+    setSelectedStaffId(appointment.assignedStaffId?._id ?? '');
+    setAssignAppointment(appointment);
+  };
+
+  const openStatusDialog = (appointment: AppointmentItem) => {
+    if (appointment.status === 'pending') {
+      setConfirmAppointment(appointment);
+      return;
+    }
+
+    setNextStatus(getAllowedAdminAppointmentStatuses(appointment.status)[0] ?? '');
+    setStatusAppointment(appointment);
+  };
+
+  return (
+    <main className="min-h-screen min-w-0 overflow-x-hidden bg-[#f8fafc] px-4 py-8 sm:px-6 lg:px-8">
+      <div className="mx-auto flex w-full max-w-[1540px] min-w-0 flex-col gap-7">
+        <section className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="contents">
+            <div className="min-w-0">
+              <h1 className="text-3xl font-bold tracking-normal text-slate-950 sm:text-4xl">
+                Quản lý lịch hẹn
+              </h1>
+              <p className="mt-2 max-w-2xl text-base text-slate-500">
+                Theo dõi, phân công nhân viên và cập nhật tiến độ lịch hẹn.
+              </p>
+            </div>
+          </div>
+          <Tabs
+            value={appointmentTab}
+            onValueChange={(value) => {
+              setAppointmentTab(value as AppointmentTab);
+              setPage(1);
+              if (value === 'today' || value === 'priority') setDateFilter('');
+            }}
+          >
+            <TabsList className="grid w-full grid-cols-3 sm:w-auto">
+              <TabsTrigger value="today">Hôm nay</TabsTrigger>
+              <TabsTrigger value="priority">Hàng đợi ưu tiên</TabsTrigger>
+              <TabsTrigger value="all">Tất cả lịch hẹn</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </section>
+
+        <AdminAppointmentSummaryCards
+          total={summary.total}
+          pending={summary.pending}
+          confirmed={summary.confirmed}
+          inProgress={summary.inProgress}
+          completed={summary.completed}
+          cancelled={summary.cancelled}
+        />
+
+        <AdminAppointmentFilters
+          keyword={keyword}
+          status={statusFilter}
+          staffId={staffFilter}
+          date={dateFilter}
+          staffOptions={staffOptions.map((staff) => ({
+            _id: staff._id,
+            displayName: staff.displayName,
+          }))}
+          onKeywordChange={(value) => {
+            setKeyword(value);
+            setPage(1);
+          }}
+          onStatusChange={(value) => {
+            setStatusFilter(value);
+            setPage(1);
+          }}
+          onStaffChange={(value) => {
+            setStaffFilter(value);
+            setPage(1);
+          }}
+          onDateChange={(date) => {
+            setDateFilter(date);
+            setPage(1);
+            if (date) setAppointmentTab('all');
+          }}
+        />
+        {appointmentsQuery.isLoading ? (
+          <section className="rounded-lg border border-border/80 bg-white px-6 py-16 text-center">
+            <Loader2 className="mx-auto size-8 animate-spin text-slate-400" />
+            <p className="mt-4 text-sm text-slate-500">Đang tải danh sách lịch hẹn...</p>
+          </section>
+        ) : appointmentsQuery.isError ? (
+          <section className="rounded-lg border border-rose-200 bg-rose-50 px-6 py-16 text-center">
+            <h2 className="text-xl font-semibold text-rose-700">
+              Không thể tải danh sách lịch hẹn
+            </h2>
+            <p className="mt-2 text-sm text-rose-600">Vui lòng thử lại.</p>
+            <Button className="mt-5 rounded-md" onClick={() => appointmentsQuery.refetch()}>
+              Thử lại
+            </Button>
+          </section>
+        ) : appointments.length === 0 ? (
+          <EmptyAdminAppointmentsState
+            title={
+              appointmentTab === 'today'
+                ? 'Hôm nay chưa có lịch hẹn nào'
+                : appointmentTab === 'priority'
+                  ? 'Hàng đợi ưu tiên trống'
+                  : dateFilter
+                    ? 'Không có lịch hẹn nào trong ngày đã chọn'
+                    : undefined
+            }
+            description={
+              appointmentTab === 'today'
+                ? 'Chuyển sang tab Hàng đợi ưu tiên để xem lịch sắp xếp theo hạng thành viên.'
+                : appointmentTab === 'priority'
+                  ? 'Hôm nay chưa có lịch hẹn nào. Hàng đợi ưu tiên sẽ sắp xếp theo hạng Platinum → Gold → Silver → Member.'
+                  : dateFilter
+                    ? 'Hãy chọn ngày khác hoặc xóa bộ lọc ngày hẹn để xem toàn bộ lịch.'
+                    : undefined
+            }
+          />
+        ) : (
+          <div className="space-y-4">
+            <AdminAppointmentsTable
+              appointments={appointments}
+              onViewDetail={setDetailAppointment}
+              onAssignStaff={openAssignStaffDialog}
+              onUpdateStatus={openStatusDialog}
+              onConfirmPayment={setPaymentAppointment}
+              onReschedule={setRescheduleAppointment}
+              onCancel={setCancelAppointment}
+            />
+            <PaginationControls
+              pagination={appointmentsQuery.data?.pagination}
+              itemCount={appointments.length}
+              onPageChange={setPage}
+            />
+          </div>
+        )}
+      </div>
+
+      <AdminAppointmentDetailDialog
+        appointment={detailData ?? null}
+        open={!!detailAppointment}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDetailAppointment(null);
+          }
+        }}
+      />
+
+      <AssignStaffDialog
+        appointment={assignAppointment}
+        open={!!assignAppointment}
+        selectedStaffId={selectedStaffId}
+        staffOptions={staffOptions}
+        isLoadingStaffs={staffsQuery.isLoading}
+        isSubmitting={assignStaffMutation.isPending}
+        onOpenChange={(open) => {
+          if (!open) {
+            setSelectedStaffId('');
+            setAssignAppointment(null);
+          }
+        }}
+        onSelectedStaffIdChange={setSelectedStaffId}
+        onConfirm={handleConfirmAssignStaff}
+      />
+
+      <UpdateAppointmentStatusDialog
+        appointment={statusAppointment}
+        open={!!statusAppointment}
+        nextStatus={nextStatus}
+        isSubmitting={updateStatusMutation.isPending}
+        onOpenChange={(open) => {
+          if (!open) {
+            setNextStatus('');
+            setStatusAppointment(null);
+          }
+        }}
+        onNextStatusChange={setNextStatus}
+        onConfirm={handleConfirmUpdateStatus}
+      />
+
+      <Dialog
+        open={!!timelineStatusChange}
+        onOpenChange={(open) => {
+          if (!open && !updateStatusMutation.isPending) setTimelineStatusChange(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-[28rem]">
+          <DialogHeader>
+            <DialogTitle>Xác nhận chuyển trạng thái</DialogTitle>
+            <DialogDescription>
+              Chuyển trạng thái sang{' '}
+              <span className="font-semibold text-slate-900">
+                “
+                {timelineStatusChange
+                  ? appointmentTimelineStatusLabels[timelineStatusChange.status]
+                  : ''}
+                ”
+              </span>
+              ?
+            </DialogDescription>
+          </DialogHeader>
+          {timelineStatusChange ? (
+            <div className="rounded-lg border border-slate-100 bg-slate-50 p-4 text-sm">
+              <p className="font-semibold text-slate-950">
+                {timelineStatusChange.appointment.customerId.displayName}
+              </p>
+              <p className="mt-1 text-slate-500">
+                {timelineStatusChange.appointment.vehicleId.brand}{' '}
+                {timelineStatusChange.appointment.vehicleId.model} ·{' '}
+                {timelineStatusChange.appointment.vehicleId.licensePlate}
+              </p>
+            </div>
+          ) : null}
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setTimelineStatusChange(null)}
+              disabled={updateStatusMutation.isPending}
+            >
+              Hủy
+            </Button>
+            <Button
+              type="button"
+              onClick={handleConfirmTimelineStatus}
+              disabled={updateStatusMutation.isPending}
+            >
+              {updateStatusMutation.isPending ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                'Xác nhận'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={!!confirmAppointment}
+        onOpenChange={(open) => {
+          if (!open) {
+            setConfirmAppointment(null);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-[28rem]">
+          <DialogHeader>
+            <DialogTitle>Xác nhận lịch hẹn</DialogTitle>
+            <DialogDescription>
+              Bạn có muốn xác nhận lịch hẹn của{' '}
+              {confirmAppointment?.customerId.displayName ?? 'khách hàng'} này hay không?
+            </DialogDescription>
+          </DialogHeader>
+          {confirmAppointment ? (
+            <div className="rounded-lg bg-slate-50 p-4 text-sm text-slate-600">
+              <p className="font-semibold text-slate-950">
+                {confirmAppointment.customerId.displayName}
+              </p>
+              <p className="mt-1">
+                {confirmAppointment.vehicleId.brand} {confirmAppointment.vehicleId.model} -{' '}
+                {confirmAppointment.vehicleId.licensePlate}
+              </p>
+            </div>
+          ) : null}
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setConfirmAppointment(null)}
+              disabled={updateStatusMutation.isPending}
+            >
+              Đóng
+            </Button>
+            <Button
+              type="button"
+              onClick={handleConfirmPendingAppointment}
+              disabled={updateStatusMutation.isPending}
+            >
+              {updateStatusMutation.isPending ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                'Xác nhận'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <RescheduleAppointmentDialog
+        appointment={rescheduleAppointment}
+        open={!!rescheduleAppointment}
+        isSubmitting={rescheduleMutation.isPending}
+        onOpenChange={(open) => {
+          if (!open) {
+            setRescheduleAppointment(null);
+          }
+        }}
+        onConfirm={handleConfirmReschedule}
+      />
+
+      <CancelAppointmentDialog
+        key={cancelAppointment?._id ?? 'closed'}
+        appointment={cancelAppointment}
+        open={!!cancelAppointment}
+        isSubmitting={cancelMutation.isPending}
+        onOpenChange={(open) => {
+          if (!open) {
+            setCancelAppointment(null);
+          }
+        }}
+        onConfirm={handleConfirmCancel}
+      />
+    </main>
+  );
+}
