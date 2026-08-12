@@ -587,9 +587,7 @@ export default function AdminAppointmentsPage() {
         <DialogContent className="sm:max-w-[28rem]">
           <DialogHeader>
             <DialogTitle>Xác nhận thanh toán</DialogTitle>
-            <DialogDescription>
-              Xác nhận khách hàng đã thanh toán thành công?
-            </DialogDescription>
+            <DialogDescription>Xác nhận khách hàng đã thanh toán thành công?</DialogDescription>
           </DialogHeader>
           {paymentAppointment ? (
             <div className="rounded-lg bg-slate-50 p-4 text-sm text-slate-600">

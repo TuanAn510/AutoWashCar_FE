@@ -107,7 +107,15 @@ export function StaffAppointmentDetailDialog({
           icon={CreditCard}
           label="Thanh toán"
           value={appointment.paymentStatus === 'paid' ? 'Đã thanh toán' : 'Chưa thanh toán'}
-          subValue={appointment.paymentMethod === 'cash' ? 'Tiền mặt' : appointment.paymentMethod === 'vnpay' ? 'VNPay' : appointment.paymentMethod === 'momo' ? 'Momo' : undefined}
+          subValue={
+            appointment.paymentMethod === 'cash'
+              ? 'Tiền mặt'
+              : appointment.paymentMethod === 'vnpay'
+                ? 'VNPay'
+                : appointment.paymentMethod === 'momo'
+                  ? 'Momo'
+                  : undefined
+          }
         />
       </section>
 

@@ -88,7 +88,9 @@ export function AppointmentCard({
 
       <CardFooter className="flex flex-col gap-3 border-t border-slate-100 bg-slate-50/70 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
-          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#64748b]">Tổng thanh toán</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#64748b]">
+            Tổng thanh toán
+          </p>
           <div className="mt-1 flex flex-wrap items-baseline gap-x-2 gap-y-1">
             {hasDiscount ? (
               <span className="text-sm font-semibold text-red-500 line-through decoration-red-400 decoration-2">

@@ -1,6 +1,8 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
+import { getApiErrorMessage } from '@/api/errors';
+import { queryKeys } from '@/constants/queryKeys';
 import { staffAppointmentsApi } from '@/services/appointmentService';
 import type {
   UpdateAppointmentPaymentStatusPayload,
@@ -9,6 +11,13 @@ import type {
 import { staffAppointmentsQueryKey } from '@/features/staff/appointments/hooks/useMyStaffAppointments';
 
 const getErrorMessage = getApiErrorMessage;
+
+const invalidateStaffOperations = async (queryClient: ReturnType<typeof useQueryClient>) => {
+  await Promise.all([
+    queryClient.invalidateQueries({ queryKey: staffAppointmentsQueryKey }),
+    queryClient.invalidateQueries({ queryKey: queryKeys.serviceHistories.staff() }),
+  ]);
+};
 
 export function useUpdateAppointmentStatus() {
   const queryClient = useQueryClient();
@@ -21,14 +30,12 @@ export function useUpdateAppointmentStatus() {
       appointmentId: string;
       payload: UpdateAppointmentStatusPayload;
     }) => staffAppointmentsApi.updateAppointmentStatus(appointmentId, payload),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: staffAppointmentsQueryKey });
-      toast.success('Cập nhật trạng thái lịch hẹn thành công.');
+    onSuccess: async () => {
+      await invalidateStaffOperations(queryClient);
+      toast.success('Cap nhat trang thai lich hen thanh cong.');
     },
     onError: (error) => {
-      toast.error(
-        getErrorMessage(error, 'Không thể cập nhật trạng thái lịch hẹn. Vui lòng thử lại.')
-      );
+      toast.error(getErrorMessage(error, 'Khong the cap nhat trang thai lich hen. Vui long thu lai.'));
     },
   });
 }
@@ -43,12 +50,10 @@ export function useConfirmStaffAppointmentPayment() {
       appointmentId: string;
       payload: UpdateAppointmentPaymentStatusPayload;
     }) => staffAppointmentsApi.confirmPayment(appointmentId, payload),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: staffAppointmentsQueryKey });
-      toast.success('Đã xác nhận thanh toán thành công.');
+    onSuccess: async () => {
+      await invalidateStaffOperations(queryClient);
+      toast.success('Da xac nhan thanh toan thanh cong.');
     },
-    onError: (error) => toast.error(getErrorMessage(error, 'Không thể xác nhận thanh toán.')),
+    onError: (error) => toast.error(getErrorMessage(error, 'Khong the xac nhan thanh toan.')),
   });
 }
-
-import { getApiErrorMessage } from '@/api/errors';

@@ -9,5 +9,7 @@ export function useMyStaffServiceHistories() {
   return useQuery({
     queryKey: staffServiceHistoriesQueryKey,
     queryFn: ({ signal }) => staffServiceHistoryApi.getMyServiceHistories(undefined, signal),
+    refetchInterval: 15_000,
+    refetchIntervalInBackground: true,
   });
 }

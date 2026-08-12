@@ -21,7 +21,8 @@ export function Footer({ links }: FooterProps) {
             <span className="text-base">AutoWash Pro</span>
           </Link>
           <p className="mt-4 max-w-sm text-sm leading-7 text-white/68">
-            Nền tảng đặt lịch rửa xe và chăm sóc khách hàng thân thiết, giúp quy trình tiếp nhận và tích điểm thành viên rõ ràng hơn.
+            Nền tảng đặt lịch rửa xe và chăm sóc khách hàng thân thiết, giúp quy trình tiếp nhận và
+            tích điểm thành viên rõ ràng hơn.
           </p>
         </div>
 

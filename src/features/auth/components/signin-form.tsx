@@ -136,7 +136,8 @@ export function SigninForm() {
       </div>
 
       <p className="mt-6 text-center text-xs leading-5 text-slate-400">
-        Bằng việc đăng nhập, bạn đồng ý với điều khoản sử dụng và chính sách bảo mật của AutoWash Pro.
+        Bằng việc đăng nhập, bạn đồng ý với điều khoản sử dụng và chính sách bảo mật của AutoWash
+        Pro.
       </p>
     </div>
   );

@@ -28,7 +28,7 @@ export function StaffServiceHistoryCard({
             {serviceHistory.customerId.displayName}
           </h3>
           <p className="mt-2 text-sm text-slate-500">
-            {serviceHistory.vehicleId.licensePlate} • {getServiceHistoryTitle(serviceNames)}
+            {serviceHistory.vehicleId.licensePlate} · {getServiceHistoryTitle(serviceNames)}
           </p>
         </div>
 

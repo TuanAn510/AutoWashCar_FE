@@ -6,7 +6,31 @@ import {
   formatServiceHistoryPrice,
   getServiceHistoryTitle,
 } from '@/lib/utils';
+import type { AppointmentStatus } from '@/types/appointment';
 import type { ServiceHistoryItem } from '@/types/serviceHistory';
+
+const statusMeta: Record<AppointmentStatus, { label: string; className: string }> = {
+  pending: {
+    label: 'Chờ xác nhận',
+    className: 'bg-amber-50 text-amber-700 ring-amber-200',
+  },
+  confirmed: {
+    label: 'Đã xác nhận',
+    className: 'bg-sky-50 text-sky-700 ring-sky-200',
+  },
+  in_progress: {
+    label: 'Đang thực hiện',
+    className: 'bg-blue-50 text-blue-700 ring-blue-200',
+  },
+  completed: {
+    label: 'Hoàn thành',
+    className: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
+  },
+  cancelled: {
+    label: 'Đã hủy',
+    className: 'bg-rose-50 text-rose-700 ring-rose-200',
+  },
+};
 
 export function StaffServiceHistoryList({
   serviceHistories,
@@ -24,9 +48,9 @@ export function StaffServiceHistoryList({
               <th className="w-[190px] px-3 py-4 font-semibold">Khách hàng</th>
               <th className="w-[180px] px-3 py-4 font-semibold">Xe</th>
               <th className="w-[240px] px-3 py-4 font-semibold">Dịch vụ</th>
-              <th className="w-[140px] px-3 py-4 font-semibold">Hoàn thành</th>
+              <th className="w-[140px] px-3 py-4 font-semibold">Thời gian</th>
               <th className="w-[130px] px-3 py-4 font-semibold">Tổng tiền</th>
-              <th className="w-[120px] px-3 py-4 font-semibold">Trạng thái</th>
+              <th className="w-[140px] px-3 py-4 font-semibold">Trạng thái</th>
               <th className="w-[110px] px-3 py-4 font-semibold text-right">Thao tác</th>
             </tr>
           </thead>
@@ -36,6 +60,10 @@ export function StaffServiceHistoryList({
               const serviceTitle = getServiceHistoryTitle(
                 serviceHistory.services.map((service) => service.nameSnapshot)
               );
+              const status = serviceHistory.appointmentId.status;
+              const meta = statusMeta[status];
+              const serviceDate =
+                serviceHistory.appointmentId.completedAt ?? serviceHistory.servicedAt;
 
               return (
                 <tr
@@ -50,7 +78,7 @@ export function StaffServiceHistoryList({
                       {serviceHistory.customerId.displayName}
                     </p>
                     <p className="mt-1 truncate text-slate-500">
-                      {serviceHistory.customerId.phone || '—'}
+                      {serviceHistory.customerId.phone || '-'}
                     </p>
                   </td>
                   <td className="px-3 py-4">
@@ -67,14 +95,16 @@ export function StaffServiceHistoryList({
                     </p>
                   </td>
                   <td className="px-3 py-4 text-slate-700">
-                    {formatServiceHistoryDateOnly(serviceHistory.servicedAt)}
+                    {formatServiceHistoryDateOnly(serviceDate)}
                   </td>
                   <td className="px-3 py-4 font-semibold text-slate-950">
                     {formatServiceHistoryPrice(serviceHistory.totalPrice)}
                   </td>
                   <td className="px-3 py-4">
-                    <span className="inline-flex rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200">
-                      Hoàn thành
+                    <span
+                      className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ring-1 ${meta.className}`}
+                    >
+                      {meta.label}
                     </span>
                   </td>
                   <td className="px-3 py-4 text-right">

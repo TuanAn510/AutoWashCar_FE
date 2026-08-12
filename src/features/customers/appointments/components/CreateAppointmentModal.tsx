@@ -407,7 +407,8 @@ export function CreateAppointmentModal({
                       type="button"
                       className={cn(
                         'flex min-h-10 w-full min-w-0 items-center justify-center gap-2 rounded-md px-2.5 py-2 text-xs font-black transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 sm:justify-start sm:px-3',
-                        isCurrent && 'bg-[#0b67c2] text-white shadow-[0_12px_26px_rgba(11,103,194,0.24)]',
+                        isCurrent &&
+                          'bg-[#0b67c2] text-white shadow-[0_12px_26px_rgba(11,103,194,0.24)]',
                         isVisited && 'bg-emerald-50 text-emerald-700',
                         !isCurrent && !isVisited && 'bg-slate-100 text-[#64748b]',
                         index > currentStep && 'cursor-not-allowed opacity-80'
@@ -575,9 +576,7 @@ export function CreateAppointmentModal({
                           }`}
                         >
                           <span>{formatTime(service.estimatedDuration)}</span>
-                          <span className="font-bold">
-                            {formatCurrency(service.price)}
-                          </span>
+                          <span className="font-bold">{formatCurrency(service.price)}</span>
                         </div>
                       </label>
                     );

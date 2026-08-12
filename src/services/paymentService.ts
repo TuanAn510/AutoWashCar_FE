@@ -1,9 +1,6 @@
 import api from '@/api/client';
 import type { ApiEnvelope } from '@/types/api';
-import type {
-  CreatePaymentPayload,
-  PaymentResult,
-} from '@/types/appointment';
+import type { CreatePaymentPayload, PaymentResult } from '@/types/appointment';
 
 export const paymentService = {
   async createPayment(payload: CreatePaymentPayload) {

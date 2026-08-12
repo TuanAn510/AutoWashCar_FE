@@ -43,9 +43,7 @@ const MyVehiclesPage = lazy(() => import('./features/customers/vehicles/pages/My
 const CustomerLoyaltyPage = lazy(
   () => import('./features/customers/loyalty/pages/CustomerLoyaltyPage')
 );
-const PaymentPage = lazy(
-  () => import('./features/customers/payments/pages/PaymentPage')
-);
+const PaymentPage = lazy(() => import('./features/customers/payments/pages/PaymentPage'));
 const ServicesManagementPage = lazy(
   () => import('./features/admin/services/pages/ServicesManagementPage')
 );

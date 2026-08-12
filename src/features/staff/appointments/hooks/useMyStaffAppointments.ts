@@ -10,5 +10,7 @@ export function useMyStaffAppointments(params?: AdminAppointmentFilters) {
   return useQuery({
     queryKey: queryKeys.appointments.staff.mine(params),
     queryFn: ({ signal }) => staffAppointmentsApi.getMyStaffAppointments(params, signal),
+    refetchInterval: 15_000,
+    refetchIntervalInBackground: true,
   });
 }

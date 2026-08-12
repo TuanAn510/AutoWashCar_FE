@@ -1,4 +1,4 @@
-import type { AppointmentStatus } from '@/types/appointment';
+import type { AppointmentPaymentStatus, AppointmentStatus } from '@/types/appointment';
 import type { PaginatedResult } from '@/types/api';
 
 export type { PaginatedResult, PaginationMeta } from '@/types/api';
@@ -23,7 +23,7 @@ export interface ServiceHistoryAppointmentSummary {
   status: AppointmentStatus;
   scheduledAt?: string | null;
   completedAt?: string | null;
-  paymentStatus?: 'unpaid' | 'paid';
+  paymentStatus?: AppointmentPaymentStatus;
 }
 
 export interface ServiceHistoryServiceSnapshot {

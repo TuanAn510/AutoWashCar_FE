@@ -17,13 +17,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router';
 
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAppointmentDetail } from '@/features/customers/appointments/hooks/useAppointmentDetail';
 import { paymentService } from '@/services/paymentService';
@@ -132,10 +126,13 @@ function PaymentQrPopup({
 
   useEffect(() => {
     if (open) {
-      startCountdown();
-    } else {
-      if (intervalRef.current) clearInterval(intervalRef.current);
+      const timeoutId = setTimeout(startCountdown, 0);
+      return () => {
+        clearTimeout(timeoutId);
+        if (intervalRef.current) clearInterval(intervalRef.current);
+      };
     }
+    if (intervalRef.current) clearInterval(intervalRef.current);
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
@@ -144,7 +141,6 @@ function PaymentQrPopup({
   if (!method) return null;
 
   const isVnPay = method === 'vnpay';
-  const brandColor = isVnPay ? '#ED1C24' : '#D5007A';
   const brandLabel = isVnPay ? 'VNPay' : 'Momo';
   const Logo = isVnPay ? VnPayLogo : MomoLogo;
 
@@ -254,9 +250,7 @@ function PaymentQrPopup({
 
         <div className="flex items-center justify-center gap-2 border-t border-[#e5edf6] px-6 py-3">
           <ShieldCheck className="size-4 text-emerald-600" />
-          <span className="text-xs text-[#64748b]">
-            Thanh toán được bảo mật bởi {brandLabel}
-          </span>
+          <span className="text-xs text-[#64748b]">Thanh toán được bảo mật bởi {brandLabel}</span>
         </div>
       </DialogContent>
     </Dialog>
@@ -299,8 +293,8 @@ function CashConfirmPopup({
             </div>
           </div>
           <p className="mt-4 text-sm leading-relaxed text-[#64748b]">
-            Bạn chọn thanh toán bằng tiền mặt tại gara. Admin sẽ xác nhận thanh toán sau khi bạn hoàn
-            tất dịch vụ.
+            Bạn chọn thanh toán bằng tiền mặt tại gara. Admin sẽ xác nhận thanh toán sau khi bạn
+            hoàn tất dịch vụ.
           </p>
         </div>
 
@@ -456,8 +450,7 @@ export default function PaymentPage() {
   const serviceNames = appointment.services.map((s) => s.nameSnapshot).join(', ');
   const discountedPrice = appointment.finalAmount ?? appointment.totalPrice;
   const originalPrice =
-    appointment.subtotalPrice ??
-    appointment.services.reduce((sum, s) => sum + s.priceSnapshot, 0);
+    appointment.subtotalPrice ?? appointment.services.reduce((sum, s) => sum + s.priceSnapshot, 0);
   const hasDiscount = originalPrice > discountedPrice;
 
   return (

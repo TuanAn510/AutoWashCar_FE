@@ -271,9 +271,7 @@ export default function CustomerAppointmentsPage() {
             <section className="space-y-4">
               <div className="flex items-center justify-between gap-4">
                 <div>
-                  <h2 className="text-lg font-black text-[#15243a]">
-                    Danh sách lịch hẹn của bạn
-                  </h2>
+                  <h2 className="text-lg font-black text-[#15243a]">Danh sách lịch hẹn của bạn</h2>
                   <p className="mt-1 text-sm text-[#64748b]">
                     {filteredAppointments.length} lịch hẹn đang hiển thị
                   </p>

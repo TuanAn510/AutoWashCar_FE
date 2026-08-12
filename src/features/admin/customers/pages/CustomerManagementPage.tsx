@@ -546,7 +546,13 @@ function PaymentHistoryTab({
               </p>
               <div className="text-sm text-slate-600">
                 <p>
-                  {appointment.paymentMethod === 'cash' ? 'Thanh toán tại gara' : appointment.paymentMethod === 'vnpay' ? 'VNPay' : appointment.paymentMethod === 'momo' ? 'Momo' : 'Chưa thanh toán'}
+                  {appointment.paymentMethod === 'cash'
+                    ? 'Thanh toán tại gara'
+                    : appointment.paymentMethod === 'vnpay'
+                      ? 'VNPay'
+                      : appointment.paymentMethod === 'momo'
+                        ? 'Momo'
+                        : 'Chưa thanh toán'}
                 </p>
                 <p className="mt-1 text-xs">
                   {appointment.paidAt
