@@ -67,8 +67,8 @@ export function AuthPageShell({ children, eyebrow, title, description }: AuthPag
         </section>
 
         <section className="order-1 flex min-w-0 flex-col bg-white">
-          <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4 lg:hidden">
-            <Link to="/" className="inline-flex items-center gap-2.5 font-black text-slate-950">
+          <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+            <Link to="/" className="inline-flex items-center gap-2.5 font-black text-slate-950 lg:hidden">
               <span className="grid size-9 place-items-center rounded-lg bg-[#0b67c2] text-white">
                 <CarFront className="size-5" />
               </span>

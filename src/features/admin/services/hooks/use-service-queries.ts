@@ -6,4 +6,4 @@ export {
 export {
   serviceCategoryQueryKeys,
   useActiveServiceCategories as useActiveServiceCategoriesQuery,
-} from '@/features/admin/service-categories/hooks/useActiveServiceCategories';
+} from '@/features/shared/service-categories/hooks/useActiveServiceCategories';

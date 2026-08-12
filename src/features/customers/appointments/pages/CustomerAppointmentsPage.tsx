@@ -117,23 +117,23 @@ export default function CustomerAppointmentsPage() {
   return (
     <main className="min-h-[calc(100vh-73px)] overflow-x-hidden bg-[#f8fafc] px-4 py-6 sm:px-6 lg:px-8">
       <div className="mx-auto min-w-0 max-w-[1240px] space-y-5">
-        <section className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200 sm:p-6">
+        <section className="rounded-xl border border-[#e5edf6] bg-white p-5 shadow-[0_18px_44px_rgba(15,23,42,0.08)] sm:p-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="min-w-0">
-              <div className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
-                <CalendarClock className="size-4" />
-                Customer Appointments
+              <div className="inline-flex items-center border-l-[4px] border-[#ff7a1a] pl-3 text-xs font-black uppercase tracking-[0.2em] text-[#0b67c2]">
+                <CalendarClock className="mr-2 size-4" />
+                Đặt lịch
               </div>
-              <h1 className="mt-3 text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">
+              <h1 className="mt-3 text-4xl font-black leading-[1.15] tracking-tight text-[#15243a] sm:text-5xl">
                 Lịch hẹn của tôi
               </h1>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500 sm:text-base">
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-[#64748b] sm:text-base">
                 Theo dõi lịch hẹn dịch vụ, xem chi tiết và đặt lịch mới nhanh chóng.
               </p>
             </div>
 
             <Button
-              className="h-10 w-full rounded-md px-5 sm:w-auto"
+              className="h-[42px] w-full rounded-md px-5 shadow-[0_12px_26px_rgba(11,103,194,0.24)] sm:w-auto"
               disabled={vehiclesQuery.isLoading}
               onClick={handleOpenCreateModal}
             >
@@ -143,12 +143,12 @@ export default function CustomerAppointmentsPage() {
           </div>
         </section>
 
-        <section className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
+        <section className="rounded-xl border border-[#e5edf6] bg-white p-4 shadow-[0_18px_44px_rgba(15,23,42,0.08)]">
           <div className="flex flex-col gap-3 md:flex-row md:items-center">
             <div className="relative min-w-0 flex-1">
               <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
               <Input
-                className="h-10 rounded-md border-0 bg-slate-100 pl-10 text-sm shadow-none focus-visible:ring-1"
+                className="h-[46px] rounded-md border-[#d8e2ef] bg-white pl-10 text-sm shadow-none focus-visible:border-[#0b67c2] focus-visible:ring-0"
                 placeholder="Tìm theo dịch vụ, biển số xe hoặc ghi chú..."
                 value={keyword}
                 onChange={(event) => setKeyword(event.target.value)}
@@ -157,7 +157,7 @@ export default function CustomerAppointmentsPage() {
 
             <div className="flex gap-2">
               <select
-                className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm"
+                className="h-[42px] rounded-md border border-[#d8e2ef] bg-white px-3 text-sm font-semibold text-[#64748b] outline-none focus:border-[#0b67c2]"
                 value={sortOrder}
                 onChange={(event) => setSortOrder(event.target.value as 'asc' | 'desc')}
               >
@@ -167,7 +167,7 @@ export default function CustomerAppointmentsPage() {
               <Button
                 type="button"
                 variant="outline"
-                className="h-10 rounded-md"
+                className="h-[42px] rounded-md border-[#d8e2ef] font-semibold"
                 onClick={() => setFilterOpen((value) => !value)}
               >
                 <Filter className="size-4" />
@@ -177,7 +177,7 @@ export default function CustomerAppointmentsPage() {
                 <Button
                   type="button"
                   variant="outline"
-                  className="h-10 rounded-md"
+                  className="h-[42px] rounded-md border-[#d8e2ef] font-semibold"
                   onClick={clearFilters}
                 >
                   <X className="size-4" />
@@ -194,10 +194,10 @@ export default function CustomerAppointmentsPage() {
                   key={filter.value}
                   type="button"
                   className={cn(
-                    'h-9 shrink-0 rounded-full px-3 text-sm font-semibold transition',
+                    'h-9 shrink-0 rounded-md px-3 text-sm font-black transition',
                     activeFilter === filter.value
-                      ? 'bg-slate-950 text-white'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      ? 'bg-[#0b67c2] text-white shadow-[0_12px_26px_rgba(11,103,194,0.24)]'
+                      : 'bg-slate-100 text-[#64748b] hover:bg-slate-200'
                   )}
                   onClick={() => setActiveFilter(filter.value)}
                 >
@@ -209,22 +209,22 @@ export default function CustomerAppointmentsPage() {
         </section>
 
         {appointmentsQuery.isLoading && (
-          <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
-            <p className="text-sm text-slate-500">Đang tải lịch hẹn của bạn...</p>
+          <section className="rounded-xl border border-[#e5edf6] bg-white p-6 shadow-[0_18px_44px_rgba(15,23,42,0.08)]">
+            <p className="text-sm text-[#64748b]">Đang tải lịch hẹn của bạn...</p>
             <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
               {Array.from({ length: 4 }).map((_, index) => (
-                <Skeleton key={index} className="h-48 rounded-2xl" />
+                <Skeleton key={index} className="h-48 rounded-xl" />
               ))}
             </div>
           </section>
         )}
 
         {appointmentsQuery.isError && (
-          <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
-            <p className="text-sm text-slate-600">Không thể tải lịch hẹn. Vui lòng thử lại.</p>
+          <section className="rounded-xl border border-[#e5edf6] bg-white p-6 shadow-[0_18px_44px_rgba(15,23,42,0.08)]">
+            <p className="text-sm text-[#64748b]">Không thể tải lịch hẹn. Vui lòng thử lại.</p>
             <Button
               variant="outline"
-              className="mt-4 h-10 rounded-md"
+              className="mt-4 h-[42px] rounded-md border-[#d8e2ef]"
               onClick={() => appointmentsQuery.refetch()}
             >
               <RefreshCw className="size-4" />
@@ -271,10 +271,10 @@ export default function CustomerAppointmentsPage() {
             <section className="space-y-4">
               <div className="flex items-center justify-between gap-4">
                 <div>
-                  <h2 className="text-lg font-semibold text-slate-950">
+                  <h2 className="text-lg font-black text-[#15243a]">
                     Danh sách lịch hẹn của bạn
                   </h2>
-                  <p className="mt-1 text-sm text-slate-500">
+                  <p className="mt-1 text-sm text-[#64748b]">
                     {filteredAppointments.length} lịch hẹn đang hiển thị
                   </p>
                 </div>

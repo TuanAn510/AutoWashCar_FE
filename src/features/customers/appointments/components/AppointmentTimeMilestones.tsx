@@ -27,20 +27,20 @@ export function AppointmentTimeMilestones({ appointment }: { appointment: Appoin
   ];
 
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-4">
-      <h3 className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-400">
+    <section className="rounded-xl border border-[#e5edf6] bg-white p-4">
+      <h3 className="text-sm font-black uppercase tracking-[0.12em] text-[#0b67c2]">
         Các mốc thời gian
       </h3>
       <div className="mt-3 grid gap-3 md:grid-cols-3">
         {milestones.map(({ icon: Icon, label, value }) => (
-          <div key={label} className="relative min-w-0 rounded-xl bg-slate-50 px-3 py-3">
-            <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-              <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-white text-slate-700 ring-1 ring-slate-200">
+          <div key={label} className="relative min-w-0 rounded-lg bg-slate-50 px-3 py-3">
+            <div className="flex items-center gap-2 text-sm font-black text-[#15243a]">
+              <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-white text-[#0b67c2] ring-1 ring-[#e5edf6]">
                 <Icon className="size-4" />
               </span>
               {label}
             </div>
-            <p className="mt-1 wrap-break-word text-sm leading-6 text-slate-600">{value}</p>
+            <p className="mt-1 wrap-break-word text-sm leading-6 text-[#64748b]">{value}</p>
           </div>
         ))}
       </div>

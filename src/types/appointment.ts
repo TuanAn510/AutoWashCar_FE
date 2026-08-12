@@ -1,6 +1,6 @@
 export type AppointmentStatus = 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled';
-export type AppointmentPaymentMethod = 'cash';
-export type AppointmentPaymentStatus = 'unpaid' | 'paid' | 'cancelled';
+export type AppointmentPaymentMethod = 'cash' | 'vnpay' | 'momo';
+export type AppointmentPaymentStatus = 'unpaid' | 'paid' | 'cancelled' | 'pending';
 
 export interface AppointmentCustomer {
   _id: string;
@@ -170,7 +170,7 @@ export interface UpdateAppointmentStatusPayload {
 
 export interface UpdateAppointmentPaymentStatusPayload {
   paymentStatus: 'paid';
-  paymentMethod: 'cash';
+  paymentMethod: AppointmentPaymentMethod;
 }
 
 export interface AssignStaffPayload {
@@ -194,4 +194,27 @@ export interface AppointmentListResult {
     totalPages?: number;
   };
   total?: number;
+}
+
+export interface CreatePaymentPayload {
+  appointmentId: string;
+  method: 'vnpay' | 'momo';
+}
+
+export interface PaymentResult {
+  paymentUrl: string;
+  paymentId: string;
+  method: 'vnpay' | 'momo';
+  amount: number;
+  expiresAt: string;
+}
+
+export interface PaymentCallbackParams {
+  appointmentId: string;
+  paymentId: string;
+  vnp_ResponseCode?: string;
+  vnp_TransactionStatus?: string;
+  resultCode?: string;
+  message?: string;
+  [key: string]: string | undefined;
 }

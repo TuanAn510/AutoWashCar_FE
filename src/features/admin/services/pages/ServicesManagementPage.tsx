@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { PaginationControls } from '@/components/shared/PaginationControls';
-import { useActiveServiceCategories } from '@/features/admin/service-categories/hooks/useActiveServiceCategories';
+import { useActiveServiceCategories } from '@/features/shared/service-categories/hooks/useActiveServiceCategories';
 import { CreateServiceDialog } from '@/features/admin/services/components/CreateServiceDialog';
 import { UpdateServiceDialog } from '@/features/admin/services/components/UpdateServiceDialog';
 import {

@@ -35,12 +35,14 @@ import { useAppointmentDetail } from '@/features/admin/appointments/hooks/useApp
 import {
   useAssignStaffToAppointment,
   useCancelAppointmentByAdmin,
+  useConfirmAppointmentPayment,
   useRescheduleAppointment,
   useUpdateAppointmentStatus,
 } from '@/features/admin/appointments/hooks/useAdminAppointmentMutations';
 import { useAppointments } from '@/features/admin/appointments/hooks/useAppointments';
 import { useStaffWorkload } from '@/features/admin/customers/hooks/useAdminCustomers';
 import type { StaffWorkload } from '@/services/userService';
+import { formatCurrencyVi } from '@/lib/utils';
 
 const getLocalDateRange = (date: string) => {
   const [year, month, day] = date.split('-').map(Number);
@@ -93,7 +95,7 @@ export default function AdminAppointmentsPage() {
   const [nextStatus, setNextStatus] = useState<AppointmentStatus | ''>('');
   const [rescheduleAppointment, setRescheduleAppointment] = useState<AppointmentItem | null>(null);
   const [cancelAppointment, setCancelAppointment] = useState<AppointmentItem | null>(null);
-  const [, setPaymentAppointment] = useState<AppointmentItem | null>(null);
+  const [paymentAppointment, setPaymentAppointment] = useState<AppointmentItem | null>(null);
   const [timelineStatusChange, setTimelineStatusChange] = useState<{
     appointment: AppointmentItem;
     status: TimelineStatus;
@@ -130,6 +132,7 @@ export default function AdminAppointmentsPage() {
   const assignStaffMutation = useAssignStaffToAppointment();
   const rescheduleMutation = useRescheduleAppointment();
   const cancelMutation = useCancelAppointmentByAdmin();
+  const confirmPaymentMutation = useConfirmAppointmentPayment();
 
   const appointments = useMemo(() => {
     const raw = appointmentsQuery.data?.appointments ?? [];
@@ -246,6 +249,21 @@ export default function AdminAppointmentsPage() {
       payload: { cancelReason },
     });
     setCancelAppointment(null);
+  };
+
+  const handleConfirmPayment = async () => {
+    if (!paymentAppointment) {
+      return;
+    }
+
+    await confirmPaymentMutation.mutateAsync({
+      appointmentId: paymentAppointment._id,
+      payload: {
+        paymentStatus: 'paid',
+        paymentMethod: paymentAppointment.paymentMethod || 'cash',
+      },
+    });
+    setPaymentAppointment(null);
   };
 
   const openAssignStaffDialog = (appointment: AppointmentItem) => {
@@ -559,6 +577,67 @@ export default function AdminAppointmentsPage() {
         }}
         onConfirm={handleConfirmCancel}
       />
+
+      <Dialog
+        open={!!paymentAppointment}
+        onOpenChange={(open) => {
+          if (!open && !confirmPaymentMutation.isPending) setPaymentAppointment(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-[28rem]">
+          <DialogHeader>
+            <DialogTitle>Xác nhận thanh toán</DialogTitle>
+            <DialogDescription>
+              Xác nhận khách hàng đã thanh toán thành công?
+            </DialogDescription>
+          </DialogHeader>
+          {paymentAppointment ? (
+            <div className="rounded-lg bg-slate-50 p-4 text-sm text-slate-600">
+              <p className="font-semibold text-slate-950">
+                {paymentAppointment.customerId.displayName}
+              </p>
+              <p className="mt-1">
+                {paymentAppointment.vehicleId.brand} {paymentAppointment.vehicleId.model} ·{' '}
+                {paymentAppointment.vehicleId.licensePlate}
+              </p>
+              <p className="mt-2 font-semibold text-slate-900">
+                {formatCurrencyVi(
+                  Number(paymentAppointment.finalAmount ?? paymentAppointment.totalPrice ?? 0)
+                )}
+              </p>
+              <p className="mt-1 text-xs text-slate-500">
+                Hình thức:{' '}
+                {paymentAppointment.paymentMethod === 'vnpay'
+                  ? 'VNPay'
+                  : paymentAppointment.paymentMethod === 'momo'
+                    ? 'Momo'
+                    : 'Tiền mặt'}
+              </p>
+            </div>
+          ) : null}
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setPaymentAppointment(null)}
+              disabled={confirmPaymentMutation.isPending}
+            >
+              Hủy
+            </Button>
+            <Button
+              type="button"
+              onClick={handleConfirmPayment}
+              disabled={confirmPaymentMutation.isPending}
+            >
+              {confirmPaymentMutation.isPending ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                'Xác nhận thanh toán'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </main>
   );
 }

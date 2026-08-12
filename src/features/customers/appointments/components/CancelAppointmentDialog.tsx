@@ -61,15 +61,15 @@ export function CancelAppointmentDialog({
         </>
       }
     >
-      <div className="rounded-2xl bg-slate-50 p-4">
-        <p className="font-semibold text-slate-950">{serviceNames}</p>
-        <p className="mt-1 text-sm text-slate-500">Xe {appointment.vehicleId.licensePlate}</p>
+      <div className="rounded-xl border border-[#e5edf6] bg-slate-50 p-4">
+        <p className="font-black text-[#15243a]">{serviceNames}</p>
+        <p className="mt-1 text-sm text-[#64748b]">Xe {appointment.vehicleId.licensePlate}</p>
       </div>
 
       <label className="grid gap-2">
-        <span className="text-sm font-medium text-slate-900">Lý do hủy lịch (không bắt buộc)</span>
+        <span className="text-sm font-black text-[#15243a]">Lý do hủy lịch (không bắt buộc)</span>
         <textarea
-          className="min-h-28 rounded-xl border border-input bg-white px-3 py-2 text-sm outline-none focus:border-primary/40"
+          className="min-h-28 rounded-md border border-[#d8e2ef] bg-white px-3 py-2 text-sm outline-none focus:border-[#0b67c2]"
           placeholder="Ví dụ: Tôi cần đổi sang khung giờ khác."
           value={cancelReason}
           onChange={(event) => setCancelReason(event.target.value)}

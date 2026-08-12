@@ -42,17 +42,22 @@ const paymentStatusLabels: Record<AppointmentPaymentStatus, string> = {
   unpaid: 'Chưa thanh toán',
   paid: 'Đã thanh toán',
   cancelled: 'Đã hủy',
+  pending: 'Đang xử lý',
 };
 
 const paymentMethodLabels: Record<AppointmentPaymentMethod, string> = {
   cash: 'Tiền mặt',
+  vnpay: 'VNPay',
+  momo: 'Momo',
 };
 
 const getPaymentMethodLabel = (paymentMethod: AppointmentItem['paymentMethod']) =>
-  paymentMethod === 'cash' ? paymentMethodLabels.cash : 'Chưa chọn';
+  paymentMethodLabels[paymentMethod] ?? 'Chưa chọn';
 
 const getPaymentMethodBadgeClassName = (paymentMethod: AppointmentItem['paymentMethod']) => {
   if (paymentMethod === 'cash') return 'border-slate-200 bg-slate-50 text-slate-800';
+  if (paymentMethod === 'vnpay') return 'border-blue-200 bg-blue-50 text-blue-700';
+  if (paymentMethod === 'momo') return 'border-pink-200 bg-pink-50 text-pink-700';
   return 'border-slate-200 bg-slate-100 text-slate-600';
 };
 
@@ -101,8 +106,16 @@ function PaymentStatusBadge({ status }: { status: AppointmentPaymentStatus }) {
     unpaid: 'bg-slate-100 text-slate-700',
     paid: 'bg-emerald-100 text-emerald-700',
     cancelled: 'bg-slate-200 text-slate-600',
+    pending: 'bg-amber-100 text-amber-700',
   };
-  const Icon = status === 'paid' ? CheckCircle2 : status === 'unpaid' ? Clock3 : XCircle;
+  const Icon =
+    status === 'paid'
+      ? CheckCircle2
+      : status === 'unpaid'
+        ? Clock3
+        : status === 'pending'
+          ? Clock3
+          : XCircle;
 
   return (
     <span
@@ -428,7 +441,10 @@ export default function PaymentsPage() {
                                   onConfirmPayment={(selectedAppointment) =>
                                     confirmPaymentMutation.mutate({
                                       appointmentId: selectedAppointment._id,
-                                      payload: { paymentStatus: 'paid', paymentMethod: 'cash' },
+                                      payload: {
+                                        paymentStatus: 'paid',
+                                        paymentMethod: selectedAppointment.paymentMethod || 'cash',
+                                      },
                                     })
                                   }
                                   onPrintInvoice={handlePrintInvoice}

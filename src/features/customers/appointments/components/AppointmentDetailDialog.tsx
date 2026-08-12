@@ -1,4 +1,5 @@
 import { CarFront, Clock3, CreditCard, NotebookPen, UserRound } from 'lucide-react';
+import { useNavigate } from 'react-router';
 
 import { Button } from '@/components/ui/button';
 import { AppointmentStatusBadge } from '@/features/customers/appointments/components/AppointmentStatusBadge';
@@ -7,6 +8,16 @@ import { PaymentStatusBadge } from '@/components/shared/PaymentStatusBadge';
 import type { AppointmentItem } from '@/types/appointment';
 import { CustomerModalShell } from '@/features/customers/components/CustomerModalShell';
 import { formatPrice, formatTime } from '@/lib/utils';
+
+const paymentMethodLabel: Record<string, string> = {
+  cash: 'Tiền mặt tại gara',
+  vnpay: 'VNPay',
+  momo: 'Momo',
+};
+
+function getPaymentMethodLabel(method: string) {
+  return paymentMethodLabel[method] || 'Chưa chọn phương thức';
+}
 
 const getAppointmentPriceDisplay = (appointment: AppointmentItem) => {
   const discountedPrice = appointment.finalAmount ?? appointment.totalPrice;
@@ -30,9 +41,13 @@ export function AppointmentDetailDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
+  const navigate = useNavigate();
+
   if (!appointment) {
     return null;
   }
+
+  const canPay = appointment.paymentStatus === 'unpaid' || appointment.paymentStatus === 'pending';
 
   return (
     <CustomerModalShell
@@ -44,28 +59,43 @@ export function AppointmentDetailDialog({
       contentClassName="max-w-[1120px] sm:max-w-[1120px]"
       bodyClassName="grid gap-6"
       footer={
-        <Button
-          type="button"
-          variant="outline"
-          className="w-full sm:w-36"
-          onClick={() => onOpenChange(false)}
-        >
-          Đóng
-        </Button>
+        <div className="flex w-full gap-2 sm:w-auto">
+          {canPay ? (
+            <Button
+              type="button"
+              className="w-full rounded-md shadow-[0_12px_26px_rgba(11,103,194,0.24)] sm:w-auto"
+              onClick={() => {
+                onOpenChange(false);
+                navigate(`/customer/payment/${appointment._id}`);
+              }}
+            >
+              <CreditCard className="size-4" />
+              Thanh toán
+            </Button>
+          ) : null}
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full rounded-md sm:w-auto"
+            onClick={() => onOpenChange(false)}
+          >
+            Đóng
+          </Button>
+        </div>
       }
     >
-      <section className="rounded-[24px] border border-slate-200 bg-slate-50 p-4 sm:p-5">
-        <h3 className="text-lg font-semibold text-slate-950">
+      <section className="rounded-xl border border-[#e5edf6] bg-slate-50 p-4 sm:p-5">
+        <h3 className="text-lg font-black text-[#15243a]">
           {appointment.services.map((service) => service.nameSnapshot).join(', ')}
         </h3>
-        <p className="mt-2 text-sm text-slate-500">
+        <p className="mt-2 text-sm text-[#64748b]">
           Lịch hẹn được tạo cho xe {appointment.vehicleId.licensePlate}.
         </p>
       </section>
 
       <AppointmentTimeMilestones appointment={appointment} />
 
-      <section className="rounded-[24px] border border-slate-200 bg-slate-50 p-4 sm:p-5">
+      <section className="rounded-xl border border-[#e5edf6] bg-slate-50 p-4 sm:p-5">
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           <DetailItem
             icon={Clock3}
@@ -83,14 +113,14 @@ export function AppointmentDetailDialog({
             label="Tổng thanh toán"
             value={<PriceDisplay appointment={appointment} />}
           />
-          <div className="min-w-0 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200/80">
-            <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.16em] text-slate-400">
+          <div className="min-w-0 rounded-lg bg-white p-4 shadow-[0_18px_44px_rgba(15,23,42,0.08)]">
+            <div className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.12em] text-[#64748b]">
               <CreditCard className="size-4" />
               Trạng thái thanh toán
             </div>
             <PaymentStatusBadge className="mt-2" status={appointment.paymentStatus} />
-            <p className="mt-2 text-xs text-slate-500">
-              {appointment.paymentMethod === 'cash' ? 'Tiền mặt tại gara' : 'Chưa chọn phương thức'}
+            <p className="mt-2 text-xs text-[#64748b]">
+              {getPaymentMethodLabel(appointment.paymentMethod)}
             </p>
           </div>
           {appointment.promotionDiscountSnapshot?.discountAmount ? (
@@ -115,25 +145,25 @@ export function AppointmentDetailDialog({
         </div>
       </section>
 
-      <section className="rounded-[24px] border border-slate-200 bg-white p-4 sm:p-5">
-        <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+      <section className="rounded-xl border border-[#e5edf6] bg-white p-4 sm:p-5">
+        <div className="flex items-center gap-2 text-sm font-black text-[#15243a]">
           <NotebookPen className="size-4" />
           Ghi chú của bạn
         </div>
-        <p className="mt-3 text-sm leading-6 text-slate-600">
+        <p className="mt-3 text-sm leading-6 text-[#64748b]">
           {appointment.note?.trim() || 'Bạn chưa để lại ghi chú cho lịch hẹn này.'}
         </p>
       </section>
 
-      <section className="rounded-[24px] border border-slate-200 bg-white p-4 sm:p-5">
-        <h3 className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-400">
+      <section className="rounded-xl border border-[#e5edf6] bg-white p-4 sm:p-5">
+        <h3 className="text-sm font-black uppercase tracking-[0.12em] text-[#0b67c2]">
           Dịch vụ đã chọn
         </h3>
         <div className="mt-4 space-y-3">
           {appointment.services.map((service) => (
             <div
               key={service.serviceId}
-              className="flex flex-col gap-2 rounded-2xl bg-slate-50 p-4 sm:flex-row sm:items-center sm:justify-between"
+              className="flex flex-col gap-2 rounded-lg bg-slate-50 p-4 sm:flex-row sm:items-center sm:justify-between"
             >
               <div>
                 <p className="font-semibold text-slate-900">{service.nameSnapshot}</p>
@@ -177,12 +207,12 @@ function DetailItem({
   value: React.ReactNode;
 }) {
   return (
-    <div className="min-w-0 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200/80">
-      <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.16em] text-slate-400">
+    <div className="min-w-0 rounded-lg bg-white p-4 shadow-[0_18px_44px_rgba(15,23,42,0.08)]">
+      <div className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.12em] text-[#64748b]">
         <Icon className="size-4" />
         {label}
       </div>
-      <div className="mt-2 break-words text-sm font-semibold text-slate-900">{value}</div>
+      <div className="mt-2 break-words text-sm font-black text-[#15243a]">{value}</div>
     </div>
   );
 }

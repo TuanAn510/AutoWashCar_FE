@@ -53,6 +53,14 @@ export const appointmentApi = {
 
     return response.data.data;
   },
+
+  async getBookingAvailability(date: string, signal?: AbortSignal) {
+    const response = await api.get<ApiEnvelope<Array<{ time: string; available: boolean }>>>(
+      '/bookings/availability',
+      { params: { date }, signal }
+    );
+    return response.data.data;
+  },
 };
 
 export const adminAppointmentsApi = {
@@ -119,6 +127,23 @@ export const adminAppointmentsApi = {
       `/appointments/${appointmentId}/cancel`,
       {
         cancelReason: payload?.cancelReason?.trim() || undefined,
+      }
+    );
+    return response.data.data;
+  },
+
+  async getTodayBookings(signal?: AbortSignal) {
+    const response = await api.get<ApiEnvelope<AppointmentItem[]>>('/admin/bookings/today', {
+      signal,
+    });
+    return response.data.data;
+  },
+
+  async getPriorityQueue(signal?: AbortSignal) {
+    const response = await api.get<ApiEnvelope<AppointmentItem[]>>(
+      '/admin/bookings/priority-queue',
+      {
+        signal,
       }
     );
     return response.data.data;

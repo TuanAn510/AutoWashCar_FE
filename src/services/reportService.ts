@@ -124,6 +124,15 @@ export interface VehicleReport {
   }>;
 }
 
+export interface ProjectReport {
+  architecture: string;
+  features: string[];
+  databaseConstraints: string[];
+  hostingInfo: string;
+  links: Record<string, string>;
+  [key: string]: unknown;
+}
+
 export interface ReportsStatistics {
   revenue: RevenueReport;
   appointments: AppointmentReport;
@@ -156,6 +165,18 @@ export const reportApi = {
     getData<PromotionReport>('/reports/promotions', params, signal),
   getVehicles: (params?: DateRangeParams, signal?: AbortSignal) =>
     getData<VehicleReport>('/reports/vehicles', params, signal),
+
+  exportBookingsCsv: async (params?: DateRangeParams, signal?: AbortSignal) => {
+    const response = await api.get<Blob>('/admin/reports/export/bookings.csv', {
+      params,
+      signal,
+      responseType: 'blob',
+    });
+    return response.data;
+  },
+
+  getProjectReport: (signal?: AbortSignal) =>
+    getData<ProjectReport>('/project-report', undefined, signal),
 
   async getStatistics(
     params?: RevenueReportParams & RankedReportParams,

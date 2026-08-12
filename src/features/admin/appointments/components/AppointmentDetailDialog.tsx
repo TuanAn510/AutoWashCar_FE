@@ -11,10 +11,13 @@ const paymentStatusLabels: Record<AppointmentItem['paymentStatus'], string> = {
   unpaid: 'Chưa thanh toán',
   paid: 'Đã thanh toán',
   cancelled: 'Đã hủy thanh toán',
+  pending: 'Đang xử lý',
 };
 
 const paymentMethodLabels: Record<NonNullable<AppointmentItem['paymentMethod']>, string> = {
   cash: 'Thanh toán tại gara',
+  vnpay: 'VNPay',
+  momo: 'Momo',
 };
 
 export function AdminAppointmentDetailDialog({

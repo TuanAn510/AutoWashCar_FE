@@ -55,7 +55,7 @@ export function AdminAppointmentActionsMenu({
         {appointment.status === 'completed' && appointment.paymentStatus !== 'paid' ? (
           <DropdownMenuItem onClick={() => onConfirmPayment(appointment)}>
             <CreditCard className="size-4" />
-            Thanh toán
+            {appointment.paymentStatus === 'pending' ? 'Xác nhận thanh toán online' : 'Thanh toán'}
           </DropdownMenuItem>
         ) : null}
 

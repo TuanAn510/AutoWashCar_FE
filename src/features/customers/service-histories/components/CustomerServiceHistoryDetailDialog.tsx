@@ -39,11 +39,11 @@ export function CustomerServiceHistoryDetailDialog({
       {detailQuery.isLoading ? (
         <p className="text-sm text-slate-500">Đang tải lịch sử dịch vụ...</p>
       ) : detailQuery.isError ? (
-        <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-5 text-sm text-rose-700">
+        <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-5 text-sm text-rose-700">
           Không thể tải chi tiết lịch sử dịch vụ. Vui lòng thử lại.
         </div>
       ) : !serviceHistory ? (
-        <div className="rounded-2xl border border-dashed border-slate-200 px-4 py-5 text-sm text-slate-500">
+        <div className="rounded-xl border border-dashed border-[#e5edf6] px-4 py-5 text-sm text-[#64748b]">
           Không có dữ liệu chi tiết để hiển thị.
         </div>
       ) : (
@@ -86,23 +86,23 @@ export function CustomerServiceHistoryDetailDialog({
             />
           </section>
 
-          <section className="rounded-2xl border border-slate-200 p-5">
-            <h3 className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-400">
+          <section className="rounded-xl border border-[#e5edf6] p-5">
+            <h3 className="text-sm font-black uppercase tracking-[0.12em] text-[#0b67c2]">
               Danh sách dịch vụ
             </h3>
             <div className="mt-4 space-y-3">
               {serviceHistory.services.map((service) => (
                 <div
                   key={service.serviceId}
-                  className="flex flex-col gap-2 rounded-2xl bg-slate-50 p-4 sm:flex-row sm:items-center sm:justify-between"
+                  className="flex flex-col gap-2 rounded-lg bg-slate-50 p-4 sm:flex-row sm:items-center sm:justify-between"
                 >
                   <div>
-                    <p className="font-semibold text-slate-900">{service.nameSnapshot}</p>
-                    <p className="mt-1 text-sm text-slate-500">
+                    <p className="font-black text-[#15243a]">{service.nameSnapshot}</p>
+                    <p className="mt-1 text-sm text-[#64748b]">
                       {formatTime(service.estimatedDurationSnapshot)}
                     </p>
                   </div>
-                  <p className="text-sm font-semibold text-slate-900">
+                  <p className="text-sm font-black text-[#15243a]">
                     {formatServiceHistoryPrice(service.priceSnapshot)}
                   </p>
                 </div>
@@ -110,16 +110,16 @@ export function CustomerServiceHistoryDetailDialog({
             </div>
           </section>
 
-          <section className="rounded-2xl bg-slate-50 p-5">
-            <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+          <section className="rounded-xl bg-slate-50 p-5">
+            <div className="flex items-center gap-2 text-sm font-black text-[#15243a]">
               <NotebookPen className="size-4" />
               Ghi chú
             </div>
-            <p className="mt-3 text-sm leading-6 text-slate-600">
+            <p className="mt-3 text-sm leading-6 text-[#64748b]">
               {serviceHistory.note?.trim() || 'Chưa có ghi chú cho lịch sử dịch vụ này.'}
             </p>
             {serviceHistory.nextMaintenanceDate ? (
-              <p className="mt-4 text-sm text-slate-500">
+              <p className="mt-4 text-sm text-[#64748b]">
                 Bảo dưỡng tiếp theo: {formatServiceHistoryDate(serviceHistory.nextMaintenanceDate)}
               </p>
             ) : null}
@@ -142,13 +142,13 @@ function DetailTile({
   subValue?: string;
 }) {
   return (
-    <div className="rounded-2xl bg-slate-50 p-4">
-      <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.16em] text-slate-400">
+    <div className="rounded-lg bg-slate-50 p-4">
+      <div className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.12em] text-[#64748b]">
         <Icon className="size-4" />
         {label}
       </div>
-      <p className="mt-2 break-words text-sm font-semibold text-slate-900">{value}</p>
-      {subValue ? <p className="mt-1 text-sm text-slate-500">{subValue}</p> : null}
+      <p className="mt-2 break-words text-sm font-black text-[#15243a]">{value}</p>
+      {subValue ? <p className="mt-1 text-sm text-[#64748b]">{subValue}</p> : null}
     </div>
   );
 }

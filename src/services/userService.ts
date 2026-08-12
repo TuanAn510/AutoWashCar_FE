@@ -81,12 +81,34 @@ export const userService = {
     const response = await api.patch<ApiEnvelope<User>>(`/users/${userId}`, payload);
     return response.data.data;
   },
+
+  toggleUserStatus: async (userId: string, isActive: boolean) => {
+    const response = await api.patch<ApiEnvelope<User>>(`/admin/users/${userId}/status`, {
+      isActive,
+    });
+    return response.data.data;
+  },
+
+  changeUserRole: async (userId: string, role: 'admin' | 'staff' | 'customer') => {
+    const response = await api.patch<ApiEnvelope<User>>(`/admin/users/${userId}/role`, { role });
+    return response.data.data;
+  },
+
+  resetUserPassword: async (userId: string) => {
+    const response = await api.post<ApiEnvelope<{ message: string }>>(
+      `/admin/users/${userId}/reset-password`
+    );
+    return response.data.data;
+  },
 };
 
 export const customersApi = {
   list: userService.listCustomers,
   getDetail: userService.getDetail,
   updateByAdmin: userService.updateByAdmin,
+  toggleStatus: userService.toggleUserStatus,
+  changeRole: userService.changeUserRole,
+  resetPassword: userService.resetUserPassword,
 };
 
 export const staffsApi = {

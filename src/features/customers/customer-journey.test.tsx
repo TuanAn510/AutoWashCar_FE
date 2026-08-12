@@ -46,7 +46,7 @@ vi.mock('@/features/customers/vehicles/hooks/useMyVehicles', () => ({
   }),
 }));
 
-vi.mock('@/features/admin/service-categories/hooks/useActiveServiceCategories', () => ({
+vi.mock('@/features/shared/service-categories/hooks/useActiveServiceCategories', () => ({
   useActiveServiceCategories: () => ({
     data: [{ _id: 'category-1', name: 'Chăm sóc xe' }],
     isLoading: false,

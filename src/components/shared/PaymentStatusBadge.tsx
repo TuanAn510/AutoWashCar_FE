@@ -1,4 +1,4 @@
-import { CheckCircle2, CircleDollarSign, XCircle } from 'lucide-react';
+import { CheckCircle2, CircleDollarSign, Clock3, XCircle } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -8,6 +8,7 @@ const paymentStatusLabels: Record<AppointmentPaymentStatus, string> = {
   unpaid: 'Chưa thanh toán',
   paid: 'Đã thanh toán',
   cancelled: 'Đã hủy thanh toán',
+  pending: 'Đang xử lý',
 };
 
 const statusVariant: Record<
@@ -17,12 +18,14 @@ const statusVariant: Record<
   unpaid: 'neutral',
   paid: 'success',
   cancelled: 'neutral',
+  pending: 'warning',
 };
 
 const statusIcons = {
   unpaid: CircleDollarSign,
   paid: CheckCircle2,
   cancelled: XCircle,
+  pending: Clock3,
 } satisfies Record<AppointmentPaymentStatus, React.ComponentType<{ className?: string }>>;
 
 export function PaymentStatusBadge({

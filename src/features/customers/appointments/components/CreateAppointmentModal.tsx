@@ -26,7 +26,7 @@ import {
 } from '@/features/shared/loyalty/hooks/use-loyalty';
 import type { Reward, RewardRedemption } from '@/features/shared/loyalty/types/loyalty.types';
 import { useActivePromotions } from '@/features/admin/promotions/hooks/usePromotions';
-import { useActiveServiceCategories } from '@/features/admin/service-categories/hooks/useActiveServiceCategories';
+import { useActiveServiceCategories } from '@/features/shared/service-categories/hooks/useActiveServiceCategories';
 import { useActiveServices } from '@/features/admin/services/hooks/useServices';
 import {
   calculatePromotionDiscount,
@@ -120,7 +120,7 @@ const createDefaultValues = (): CreateAppointmentFormValues => {
   };
 };
 
-const formatCurrency = (value: number) => `${new Intl.NumberFormat('vi-VN').format(value)} đ`;
+const formatCurrency = (value: number) => `${Math.round(value / 1000)}K`;
 
 const getRedemptionReward = (redemption: RewardRedemption) =>
   typeof redemption.rewardId === 'object' && redemption.rewardId ? redemption.rewardId : null;
@@ -312,9 +312,7 @@ export function CreateAppointmentModal({
     await onSubmit({
       vehicleId: formValues.vehicleId,
       services: formValues.serviceIds.map((serviceId) => ({ serviceId })),
-      scheduledAt: new Date(
-        `${formValues.scheduledDate}T${formValues.scheduledTime}`
-      ).toISOString(),
+      scheduledAt: `${formValues.scheduledDate}T${formValues.scheduledTime}:00`,
       note: formValues.note?.trim() || undefined,
       promotionId: formValues.promotionId || undefined,
       rewardRedemptionId: formValues.rewardRedemptionId || undefined,
@@ -390,8 +388,8 @@ export function CreateAppointmentModal({
           <div className="mx-auto flex size-16 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
             <CheckCircle2 className="size-8" />
           </div>
-          <h3 className="mt-5 text-2xl font-semibold text-slate-950">Lịch hẹn đã được tạo</h3>
-          <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">
+          <h3 className="mt-5 text-2xl font-black text-[#15243a]">Lịch hẹn đã được tạo</h3>
+          <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-[#64748b]">
             Bạn có thể theo dõi trạng thái và thanh toán ngay trong danh sách lịch hẹn.
           </p>
         </section>
@@ -408,10 +406,10 @@ export function CreateAppointmentModal({
                     <button
                       type="button"
                       className={cn(
-                        'flex min-h-10 w-full min-w-0 items-center justify-center gap-2 rounded-xl px-2.5 py-2 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 sm:justify-start sm:px-3',
-                        isCurrent && 'bg-slate-950 text-white shadow-sm',
+                        'flex min-h-10 w-full min-w-0 items-center justify-center gap-2 rounded-md px-2.5 py-2 text-xs font-black transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 sm:justify-start sm:px-3',
+                        isCurrent && 'bg-[#0b67c2] text-white shadow-[0_12px_26px_rgba(11,103,194,0.24)]',
                         isVisited && 'bg-emerald-50 text-emerald-700',
-                        !isCurrent && !isVisited && 'bg-slate-100 text-slate-500',
+                        !isCurrent && !isVisited && 'bg-slate-100 text-[#64748b]',
                         index > currentStep && 'cursor-not-allowed opacity-80'
                       )}
                       aria-current={isCurrent ? 'step' : undefined}
@@ -444,7 +442,7 @@ export function CreateAppointmentModal({
 
             <section
               className={cn(
-                'rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5',
+                'rounded-xl border border-[#e5edf6] bg-slate-50 p-4 sm:p-5',
                 currentStep !== 0 && currentStep !== 2 && 'hidden'
               )}
             >
@@ -452,7 +450,7 @@ export function CreateAppointmentModal({
                 <Field className={cn('min-w-0', currentStep !== 0 && 'hidden')}>
                   <FieldLabel>Chọn xe</FieldLabel>
                   <select
-                    className="h-11 rounded-xl border border-input bg-white px-3 text-sm outline-none focus:border-primary/40"
+                    className="h-[46px] rounded-md border border-[#d8e2ef] bg-white px-3 text-sm font-semibold text-[#64748b] outline-none focus:border-[#0b67c2]"
                     disabled={isSubmitting || vehiclesQuery.isLoading || !vehicles.length}
                     {...register('vehicleId')}
                   >
@@ -502,14 +500,14 @@ export function CreateAppointmentModal({
 
             <section
               className={cn(
-                'rounded-2xl border border-slate-200 bg-white p-4 sm:p-5',
+                'rounded-xl border border-[#e5edf6] bg-white p-4 sm:p-5',
                 currentStep !== 1 && 'hidden'
               )}
             >
               <Field>
                 <FieldLabel>Danh mục dịch vụ</FieldLabel>
                 <select
-                  className="h-11 rounded-xl border border-input bg-white px-3 text-sm outline-none focus:border-primary/40"
+                  className="h-[46px] rounded-md border border-[#d8e2ef] bg-white px-3 text-sm font-semibold text-[#64748b] outline-none focus:border-[#0b67c2]"
                   disabled={isSubmitting || categoriesQuery.isLoading || !categories.length}
                   {...register('categoryId')}
                 >
@@ -535,7 +533,7 @@ export function CreateAppointmentModal({
                     ))}
 
                   {!servicesQuery.isLoading && !services.length && (
-                    <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-sm text-slate-500 sm:col-span-2">
+                    <div className="rounded-xl border border-dashed border-[#e5edf6] bg-slate-50 px-4 py-6 text-sm text-[#64748b] sm:col-span-2">
                       Danh mục này hiện chưa có dịch vụ đang hoạt động.
                     </div>
                   )}
@@ -546,10 +544,10 @@ export function CreateAppointmentModal({
                     return (
                       <label
                         key={service._id}
-                        className={`flex min-w-0 cursor-pointer flex-col gap-2 rounded-2xl border p-3 transition ${
+                        className={`flex min-w-0 cursor-pointer flex-col gap-2 rounded-lg border p-3 transition ${
                           isSelected
-                            ? 'border-slate-950 bg-slate-950 text-white'
-                            : 'border-slate-200 bg-white hover:border-slate-300'
+                            ? 'border-[#0b67c2] bg-[#0b67c2] text-white'
+                            : 'border-[#e5edf6] bg-white hover:border-[#0b67c2]'
                         }`}
                       >
                         <div className="flex items-start justify-between gap-3">
@@ -557,7 +555,7 @@ export function CreateAppointmentModal({
                             <p className="font-semibold">{service.name}</p>
                             <p
                               className={`mt-1 line-clamp-2 text-sm ${
-                                isSelected ? 'text-slate-200' : 'text-slate-500'
+                                isSelected ? 'text-white/70' : 'text-[#64748b]'
                               }`}
                             >
                               {service.description?.trim() || 'Dịch vụ chăm sóc xe tiêu chuẩn'}
@@ -577,8 +575,8 @@ export function CreateAppointmentModal({
                           }`}
                         >
                           <span>{formatTime(service.estimatedDuration)}</span>
-                          <span className="font-semibold">
-                            {new Intl.NumberFormat('vi-VN').format(service.price)} đ
+                          <span className="font-bold">
+                            {formatCurrency(service.price)}
                           </span>
                         </div>
                       </label>
@@ -586,10 +584,10 @@ export function CreateAppointmentModal({
                   })}
                 </div>
                 {selectedServices.length ? (
-                  <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <div className="mt-4 rounded-xl border border-[#e5edf6] bg-slate-50 p-4">
                     <div className="flex items-center justify-between gap-3">
-                      <p className="font-semibold text-slate-950">Tất cả dịch vụ đã chọn</p>
-                      <span className="text-sm text-slate-500">
+                      <p className="font-black text-[#15243a]">Tất cả dịch vụ đã chọn</p>
+                      <span className="text-sm text-[#64748b]">
                         {selectedServices.length} dịch vụ
                       </span>
                     </div>
@@ -597,19 +595,19 @@ export function CreateAppointmentModal({
                       {selectedServices.map((service) => (
                         <div
                           key={service._id}
-                          className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2.5"
+                          className="flex items-center justify-between gap-3 rounded-lg border border-[#e5edf6] bg-white px-3 py-2.5"
                         >
                           <div className="min-w-0">
-                            <p className="truncate text-sm font-semibold text-slate-900">
+                            <p className="truncate text-sm font-black text-[#15243a]">
                               {service.name}
                             </p>
-                            <p className="mt-0.5 truncate text-xs text-slate-500">
+                            <p className="mt-0.5 truncate text-xs text-[#64748b]">
                               {service.categoryId?.name || 'Dịch vụ'} ·{' '}
                               {formatTime(service.estimatedDuration)}
                             </p>
                           </div>
                           <div className="flex shrink-0 items-center gap-3">
-                            <span className="text-sm font-semibold text-slate-700">
+                            <span className="text-sm font-black text-[#15243a]">
                               {formatCurrency(service.price)}
                             </span>
                             <button
@@ -632,14 +630,14 @@ export function CreateAppointmentModal({
 
             <section
               className={cn(
-                'rounded-2xl border border-slate-200 bg-white p-4 sm:p-5',
+                'rounded-xl border border-[#e5edf6] bg-white p-4 sm:p-5',
                 currentStep !== 3 && 'hidden'
               )}
             >
               <Field>
                 <FieldLabel>Chọn ưu đãi</FieldLabel>
                 <select
-                  className="h-11 w-full rounded-xl border border-input bg-white px-3 text-sm outline-none focus:border-primary/40"
+                  className="h-[46px] w-full rounded-md border border-[#d8e2ef] bg-white px-3 text-sm font-semibold text-[#64748b] outline-none focus:border-[#0b67c2]"
                   value={selectedBenefitValue}
                   disabled={
                     isSubmitting ||
@@ -740,34 +738,34 @@ export function CreateAppointmentModal({
             ) : null}
 
             {values.serviceIds.length && (currentStep === 3 || currentStep === 4) ? (
-              <section className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm sm:p-5">
-                <div className="flex justify-between gap-4 text-slate-600">
+              <section className="rounded-xl border border-[#e5edf6] bg-slate-50 p-4 text-sm sm:p-5">
+                <div className="flex justify-between gap-4 text-[#64748b]">
                   <span>Tạm tính</span>
                   <span>{formatCurrency(subtotalPrice)}</span>
                 </div>
                 {membershipDiscount > 0 ? (
-                  <div className="mt-2 flex justify-between gap-4 text-emerald-700">
+                  <div className="flex justify-between gap-4 text-emerald-700">
                     <span>Giảm giá thành viên ({membershipTier?.name})</span>
                     <span>-{formatCurrency(membershipDiscount)}</span>
                   </div>
                 ) : null}
                 {promotionDiscount > 0 ? (
-                  <div className="mt-2 flex justify-between gap-4 text-emerald-700">
+                  <div className="flex justify-between gap-4 text-emerald-700">
                     <span>Khuyến mãi ({selectedPromotion?.code})</span>
                     <span>-{formatCurrency(promotionDiscount)}</span>
                   </div>
                 ) : null}
                 {rewardDiscount > 0 ? (
-                  <div className="mt-2 flex justify-between gap-4 text-emerald-700">
+                  <div className="flex justify-between gap-4 text-emerald-700">
                     <span>Phần thưởng ({selectedReward?.name})</span>
                     <span>-{formatCurrency(rewardDiscount)}</span>
                   </div>
                 ) : null}
-                <div className="mt-3 flex justify-between gap-4 border-t border-slate-200 pt-3 font-semibold text-slate-950">
+                <div className="mt-3 flex justify-between gap-4 border-t border-[#e5edf6] pt-3 font-black text-[#15243a]">
                   <span>Tổng thanh toán dự kiến</span>
                   <span>{formatCurrency(estimatedTotal)}</span>
                 </div>
-                <p className="mt-2 text-xs text-slate-500">
+                <p className="mt-2 text-xs text-[#64748b]">
                   Hệ thống sẽ kiểm tra điều kiện và tính tổng tiền chính thức khi tạo lịch.
                 </p>
               </section>
@@ -775,14 +773,14 @@ export function CreateAppointmentModal({
 
             <section
               className={cn(
-                'rounded-2xl border border-slate-200 bg-white p-4 sm:p-5',
+                'rounded-xl border border-[#e5edf6] bg-white p-4 sm:p-5',
                 currentStep !== 2 && 'hidden'
               )}
             >
               <Field>
                 <FieldLabel>Ghi chú thêm</FieldLabel>
                 <textarea
-                  className="min-h-24 rounded-xl border border-input bg-white px-3 py-2 text-sm outline-none focus:border-primary/40"
+                  className="min-h-24 rounded-md border border-[#d8e2ef] bg-white px-3 py-2 text-sm outline-none focus:border-[#0b67c2]"
                   placeholder="Ví dụ: cần kiểm tra thêm nội thất, ưu tiên khung giờ sáng..."
                   disabled={isSubmitting}
                   {...register('note')}
@@ -799,9 +797,9 @@ export function CreateAppointmentModal({
 
 function ReviewItem({ label, value }: { label: string; value: string }) {
   return (
-    <div className="min-w-0 rounded-xl bg-slate-50 px-4 py-3">
-      <p className="text-xs font-medium text-slate-500">{label}</p>
-      <p className="mt-1 break-words text-sm font-semibold text-slate-900">{value}</p>
+    <div className="min-w-0 rounded-lg bg-slate-50 px-4 py-3">
+      <p className="text-xs font-black uppercase tracking-[0.12em] text-[#64748b]">{label}</p>
+      <p className="mt-1 break-words text-sm font-black text-[#15243a]">{value}</p>
     </div>
   );
 }

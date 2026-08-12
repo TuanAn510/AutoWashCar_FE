@@ -43,14 +43,20 @@ const MyVehiclesPage = lazy(() => import('./features/customers/vehicles/pages/My
 const CustomerLoyaltyPage = lazy(
   () => import('./features/customers/loyalty/pages/CustomerLoyaltyPage')
 );
+const PaymentPage = lazy(
+  () => import('./features/customers/payments/pages/PaymentPage')
+);
 const ServicesManagementPage = lazy(
   () => import('./features/admin/services/pages/ServicesManagementPage')
 );
-const ServiceCategoriesManagementPage = lazy(
-  () => import('./features/admin/service-categories/pages/ServiceCategoriesManagementPage')
-);
 const StaffAppointmentsPage = lazy(
   () => import('./features/staff/appointments/pages/StaffAppointmentsPage')
+);
+const StaffServiceHistoriesPage = lazy(
+  () => import('./features/staff/service-histories/pages/StaffServiceHistoriesPage')
+);
+const StaffLoyaltyLookupPage = lazy(
+  () => import('./features/staff/loyalty/pages/StaffLoyaltyLookupPage')
 );
 
 function App() {
@@ -79,6 +85,7 @@ function App() {
                 <Route path="/customer/vehicles" element={<MyVehiclesPage />} />
                 <Route path="/customer/loyalty" element={<CustomerLoyaltyPage />} />
                 <Route path="/customer/service-histories" element={<CustomerAppointmentsPage />} />
+                <Route path="/customer/payment/:appointmentId" element={<PaymentPage />} />
               </Route>
 
               <Route element={<RoleBasedRoute allowedRoles={['staff']} />}>
@@ -87,7 +94,8 @@ function App() {
                   path="/staff/appointments/:appointmentId"
                   element={<AppointmentDetailPage />}
                 />
-                <Route path="/staff/service-histories" element={<StaffAppointmentsPage />} />
+                <Route path="/staff/service-histories" element={<StaffServiceHistoriesPage />} />
+                <Route path="/staff/loyalty" element={<StaffLoyaltyLookupPage />} />
               </Route>
 
               <Route element={<RoleBasedRoute allowedRoles={['admin']} />}>
@@ -98,10 +106,6 @@ function App() {
                 />
                 <Route path="/admin/customers" element={<CustomerManagementPage />} />
                 <Route path="/admin/services" element={<ServicesManagementPage />} />
-                <Route
-                  path="/admin/service-categories"
-                  element={<ServiceCategoriesManagementPage />}
-                />
                 <Route path="/admin/payments" element={<PaymentsPage />} />
                 <Route path="/admin/service-histories" element={<AdminAppointmentsPage />} />
                 <Route path="/admin/loyalty" element={<AdminLoyaltyPage />} />
