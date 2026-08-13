@@ -25,15 +25,12 @@ export default function StaffServiceHistoriesPage() {
   const [detailServiceHistory, setDetailServiceHistory] = useState<ServiceHistoryItem | null>(null);
 
   const serviceHistoriesQuery = useMyStaffServiceHistories();
-  const serviceHistories = useMemo(
-    () => {
-      const items = serviceHistoriesQuery.data?.items ?? [];
-      return [...items].sort(
-        (a, b) => new Date(b.servicedAt).getTime() - new Date(a.servicedAt).getTime()
-      );
-    },
-    [serviceHistoriesQuery.data?.items]
-  );
+  const serviceHistories = useMemo(() => {
+    const items = serviceHistoriesQuery.data?.items ?? [];
+    return [...items].sort(
+      (a, b) => new Date(b.servicedAt).getTime() - new Date(a.servicedAt).getTime()
+    );
+  }, [serviceHistoriesQuery.data?.items]);
 
   const filteredServiceHistories = useMemo(() => {
     const normalizedKeyword = keyword.trim().toLowerCase();

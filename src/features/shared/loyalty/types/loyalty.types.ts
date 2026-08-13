@@ -78,6 +78,7 @@ export interface Reward {
 
 export interface RewardRedemption {
   _id: string;
+  code?: string;
   rewardId?: Reward | string | null;
   customerId?: string | LoyaltyCustomer;
   pointsUsed: number;

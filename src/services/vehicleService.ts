@@ -24,6 +24,9 @@ const buildVehicleFormData = (payload: CreateVehiclePayload | UpdateVehiclePaylo
   if (typeof payload.year !== 'undefined') {
     formData.append('year', String(payload.year));
   }
+  if (typeof payload.carType !== 'undefined') {
+    formData.append('carType', payload.carType);
+  }
   payload.files?.forEach((file) => {
     formData.append('files', file);
   });

@@ -33,9 +33,7 @@ const AdminRewardsPage = lazy(() => import('./features/admin/rewards/pages/Admin
 const VehicleAccessRequestsPage = lazy(
   () => import('./features/admin/vehicle-access/pages/VehicleAccessRequestsPage')
 );
-const AdminVehiclesPage = lazy(
-  () => import('./features/admin/vehicles/pages/AdminVehiclesPage')
-);
+const AdminVehiclesPage = lazy(() => import('./features/admin/vehicles/pages/AdminVehiclesPage'));
 const AppointmentDetailPage = lazy(
   () => import('./features/customers/appointments/pages/AppointmentDetailPage')
 );

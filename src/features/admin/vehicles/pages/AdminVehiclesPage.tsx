@@ -1,14 +1,4 @@
-import {
-  Car,
-  CarFront,
-  Eye,
-  Loader2,
-  Pencil,
-  Search,
-  Trash2,
-  User,
-  X,
-} from 'lucide-react';
+import { Car, CarFront, Eye, Loader2, Pencil, Search, Trash2, User, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -32,7 +22,7 @@ import { PaginationControls } from '@/components/shared/PaginationControls';
 import { useAdminVehicles } from '@/features/admin/vehicles/hooks/useAdminVehicles';
 import { vehiclesApi } from '@/services/vehicleService';
 import { queryKeys } from '@/constants/queryKeys';
-import { cn, formatDate } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import type { ApiVehicle, CarType } from '@/types/vehicle';
 
 const CAR_TYPE_LABELS: Record<CarType, string> = {
@@ -61,6 +51,12 @@ function ownerPhone(vehicle: ApiVehicle): string {
   return '—';
 }
 
+function vehicleCreatedAt(vehicle: ApiVehicle, options?: Intl.DateTimeFormatOptions) {
+  if (!vehicle.createdAt) return 'Chua co';
+
+  return new Intl.DateTimeFormat('vi-VN', options).format(new Date(vehicle.createdAt));
+}
+
 export default function AdminVehiclesPage() {
   const [keyword, setKeyword] = useState('');
   const [carTypeFilter, setCarTypeFilter] = useState<CarType | 'all'>('all');
@@ -68,43 +64,46 @@ export default function AdminVehiclesPage() {
   const [viewVehicle, setViewVehicle] = useState<ApiVehicle | null>(null);
   const [editVehicle, setEditVehicle] = useState<ApiVehicle | null>(null);
   const [deleteVehicle, setDeleteVehicle] = useState<ApiVehicle | null>(null);
+  const [loadingDetailId, setLoadingDetailId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
 
   const queryClient = useQueryClient();
-  const vehiclesQuery = useAdminVehicles({ page, limit: 20 });
+  const vehiclesQuery = useAdminVehicles({
+    page,
+    limit: 20,
+    keyword: keyword.trim() || undefined,
+    carType: carTypeFilter === 'all' ? undefined : carTypeFilter,
+    sortBy: 'createdAt',
+    sortOrder: 'desc',
+  });
 
-  const vehicles = vehiclesQuery.data?.vehicles ?? [];
+  const vehicles = useMemo(
+    () => vehiclesQuery.data?.vehicles ?? [],
+    [vehiclesQuery.data?.vehicles]
+  );
   const pagination = vehiclesQuery.data?.pagination;
   const total = vehiclesQuery.data?.total ?? 0;
 
-  const filtered = useMemo(() => {
-    const word = keyword.trim().toLocaleLowerCase('vi');
-    return vehicles.filter((vehicle) => {
-      const text = [
-        vehicle.brand,
-        vehicle.model,
-        vehicle.licensePlate,
-        ownerName(vehicle),
-        ownerPhone(vehicle),
-      ]
-        .join(' ')
-        .toLocaleLowerCase('vi');
-      const matchesKeyword = !word || text.includes(word);
-      const matchesType = carTypeFilter === 'all' || vehicle.carType === carTypeFilter;
-      return matchesKeyword && matchesType;
-    });
-  }, [vehicles, keyword, carTypeFilter]);
-
   const stats = useMemo(() => {
-    const all = vehiclesQuery.data?.vehicles ?? [];
     return {
       total,
-      sedan: all.filter((v) => v.carType === 'sedan').length,
-      suv: all.filter((v) => v.carType === 'suv').length,
-      pickup: all.filter((v) => v.carType === 'pickup').length,
+      sedan: vehicles.filter((v) => v.carType === 'sedan').length,
+      suv: vehicles.filter((v) => v.carType === 'suv').length,
+      pickup: vehicles.filter((v) => v.carType === 'pickup').length,
     };
-  }, [vehiclesQuery.data, total]);
+  }, [vehicles, total]);
+
+  const handleViewDetail = async (vehicle: ApiVehicle) => {
+    setLoadingDetailId(vehicle._id);
+    try {
+      setViewVehicle(await vehiclesApi.getById(vehicle._id));
+    } catch {
+      toast.error('Không thể tải chi tiết xe. Vui lòng thử lại.');
+    } finally {
+      setLoadingDetailId(null);
+    }
+  };
 
   const handleDelete = async () => {
     if (!deleteVehicle) return;
@@ -121,7 +120,13 @@ export default function AdminVehiclesPage() {
     }
   };
 
-  const handleUpdate = async (payload: { brand: string; model: string; licensePlate: string; year: number; carType: CarType }) => {
+  const handleUpdate = async (payload: {
+    brand: string;
+    model: string;
+    licensePlate: string;
+    year: number;
+    carType: CarType;
+  }) => {
     if (!editVehicle) return;
     setIsUpdating(true);
     try {
@@ -207,9 +212,7 @@ export default function AdminVehiclesPage() {
           <h2 className="text-xl font-semibold text-slate-950">
             Danh sách xe
             {!vehiclesQuery.isLoading && (
-              <span className="ml-2 text-sm font-normal text-slate-500">
-                ({filtered.length} xe)
-              </span>
+              <span className="ml-2 text-sm font-normal text-slate-500">({total} xe)</span>
             )}
           </h2>
           {vehiclesQuery.isError && (
@@ -231,17 +234,16 @@ export default function AdminVehiclesPage() {
               </tr>
             </thead>
             <tbody>
-              {vehiclesQuery.isLoading && (
-                <LoadingRow />
-              )}
-              {!vehiclesQuery.isLoading && !vehiclesQuery.isError && !filtered.length && (
+              {vehiclesQuery.isLoading && <LoadingRow />}
+              {!vehiclesQuery.isLoading && !vehiclesQuery.isError && !vehicles.length && (
                 <EmptyRow text="Không có xe nào phù hợp." />
               )}
-              {vehiclesQuery.isError && (
-                <EmptyRow text="Đã có lỗi xảy ra khi tải dữ liệu." />
-              )}
-              {filtered.map((vehicle) => (
-                <tr key={vehicle._id} className="border-b border-border/70 align-middle last:border-0">
+              {vehiclesQuery.isError && <EmptyRow text="Đã có lỗi xảy ra khi tải dữ liệu." />}
+              {vehicles.map((vehicle) => (
+                <tr
+                  key={vehicle._id}
+                  className="border-b border-border/70 align-middle last:border-0"
+                >
                   <td className="px-2 py-3.5">
                     <span className="font-bold text-slate-950">{vehicle.licensePlate}</span>
                   </td>
@@ -265,7 +267,7 @@ export default function AdminVehiclesPage() {
                     <p className="text-xs text-slate-500">{ownerPhone(vehicle)}</p>
                   </td>
                   <td className="whitespace-nowrap px-2 py-3.5 text-slate-600">
-                    {formatDate(vehicle.createdAt, { dateStyle: 'short' })}
+                    {vehicleCreatedAt(vehicle, { dateStyle: 'short' })}
                   </td>
                   <td className="px-2 py-3.5 text-right">
                     <div className="flex items-center justify-end gap-1.5">
@@ -275,9 +277,14 @@ export default function AdminVehiclesPage() {
                         size="icon"
                         className="size-8"
                         title="Xem chi tiết"
-                        onClick={() => setViewVehicle(vehicle)}
+                        disabled={loadingDetailId === vehicle._id}
+                        onClick={() => void handleViewDetail(vehicle)}
                       >
-                        <Eye className="size-4" />
+                        {loadingDetailId === vehicle._id ? (
+                          <Loader2 className="size-4 animate-spin" />
+                        ) : (
+                          <Eye className="size-4" />
+                        )}
                       </Button>
                       <Button
                         type="button"
@@ -309,7 +316,7 @@ export default function AdminVehiclesPage() {
 
         <PaginationControls
           pagination={pagination}
-          itemCount={filtered.length}
+          itemCount={vehicles.length}
           onPageChange={setPage}
         />
       </PageSection>
@@ -335,7 +342,12 @@ export default function AdminVehiclesPage() {
       />
 
       {/* Delete Vehicle Dialog */}
-      <Dialog open={!!deleteVehicle} onOpenChange={(open) => { if (!open) setDeleteVehicle(null); }}>
+      <Dialog
+        open={!!deleteVehicle}
+        onOpenChange={(open) => {
+          if (!open) setDeleteVehicle(null);
+        }}
+      >
         <DialogContent className="max-w-[420px] gap-0 rounded-xl border border-[#e5edf6] p-0 shadow-[0_18px_44px_rgba(15,23,42,0.12)]">
           <DialogHeader className="border-b border-[#e5edf6] px-6 py-4">
             <DialogTitle className="text-lg font-black text-[#15243a]">Xóa xe</DialogTitle>
@@ -353,9 +365,7 @@ export default function AdminVehiclesPage() {
                 <p className="mt-1 text-sm text-slate-500">
                   Biển số: {deleteVehicle.licensePlate} · Đời {deleteVehicle.year}
                 </p>
-                <p className="mt-1 text-sm text-slate-500">
-                  Chủ xe: {ownerName(deleteVehicle)}
-                </p>
+                <p className="mt-1 text-sm text-slate-500">Chủ xe: {ownerName(deleteVehicle)}</p>
               </div>
             </div>
           )}
@@ -413,9 +423,7 @@ function VehicleDetailDialog({
       <DialogContent className="max-w-[560px] gap-0 rounded-xl border border-[#e5edf6] p-0 shadow-[0_18px_44px_rgba(15,23,42,0.12)]">
         <DialogHeader className="flex flex-row items-start justify-between border-b border-[#e5edf6] px-6 py-4">
           <div>
-            <DialogTitle className="text-lg font-black text-[#15243a]">
-              Chi tiết xe
-            </DialogTitle>
+            <DialogTitle className="text-lg font-black text-[#15243a]">Chi tiết xe</DialogTitle>
             <DialogDescription className="mt-0.5 text-sm text-[#64748b]">
               Thông tin chi tiết của xe {vehicle.licensePlate}
             </DialogDescription>
@@ -473,7 +481,10 @@ function VehicleDetailDialog({
                 </span>
               }
             />
-            <InfoBlock label="Ngày tạo" value={formatDate(vehicle.createdAt, { dateStyle: 'medium' })} />
+            <InfoBlock
+              label="Ngày tạo"
+              value={vehicleCreatedAt(vehicle, { dateStyle: 'medium' })}
+            />
           </div>
 
           {/* Owner info */}
@@ -534,7 +545,13 @@ function EditVehicleDialog({
   vehicle: ApiVehicle | null;
   isSubmitting: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (payload: { brand: string; model: string; licensePlate: string; year: number; carType: CarType }) => Promise<void>;
+  onSubmit: (payload: {
+    brand: string;
+    model: string;
+    licensePlate: string;
+    year: number;
+    carType: CarType;
+  }) => Promise<void>;
 }) {
   const [brand, setBrand] = useState('');
   const [model, setModel] = useState('');
@@ -557,7 +574,8 @@ function EditVehicleDialog({
 
   if (!vehicle) return null;
 
-  const canSubmit = brand.trim() && model.trim() && licensePlate.trim() && year > 1900 && !isSubmitting;
+  const canSubmit =
+    brand.trim() && model.trim() && licensePlate.trim() && year > 1900 && !isSubmitting;
 
   const handleSubmit = async () => {
     if (!canSubmit) return;
@@ -596,7 +614,9 @@ function EditVehicleDialog({
         <div className="px-6 py-5 space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="flex flex-col gap-1.5">
-              <span className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Hãng xe</span>
+              <span className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
+                Hãng xe
+              </span>
               <Input
                 className="h-10 rounded-md"
                 value={brand}
@@ -605,7 +625,9 @@ function EditVehicleDialog({
               />
             </label>
             <label className="flex flex-col gap-1.5">
-              <span className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Dòng xe</span>
+              <span className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
+                Dòng xe
+              </span>
               <Input
                 className="h-10 rounded-md"
                 value={model}
@@ -614,7 +636,9 @@ function EditVehicleDialog({
               />
             </label>
             <label className="flex flex-col gap-1.5">
-              <span className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Biển số</span>
+              <span className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
+                Biển số
+              </span>
               <Input
                 className="h-10 rounded-md"
                 value={licensePlate}
@@ -623,7 +647,9 @@ function EditVehicleDialog({
               />
             </label>
             <label className="flex flex-col gap-1.5">
-              <span className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Năm sản xuất</span>
+              <span className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
+                Năm sản xuất
+              </span>
               <Input
                 type="number"
                 className="h-10 rounded-md"
@@ -635,7 +661,9 @@ function EditVehicleDialog({
             </label>
           </div>
           <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">Loại xe</span>
+            <span className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
+              Loại xe
+            </span>
             <select
               className="h-10 rounded-md border border-input bg-white px-3 text-sm"
               value={carType}
