@@ -61,6 +61,14 @@ export function useCustomerLoyaltyTransactions(customerId: string) {
   });
 }
 
+export function useCustomerRedemptions(customerId: string) {
+  return useQuery({
+    queryKey: loyaltyKeys.customerRedemptions(customerId),
+    queryFn: ({ signal }) => loyaltyApi.getCustomerRedemptions(customerId, signal),
+    enabled: !!customerId,
+  });
+}
+
 export function useMembershipTiers() {
   return useQuery({
     queryKey: membershipTierKeys.all,
