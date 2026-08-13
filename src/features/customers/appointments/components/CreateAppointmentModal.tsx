@@ -27,7 +27,6 @@ import {
 } from '@/features/shared/loyalty/hooks/use-loyalty';
 import type { Reward, RewardRedemption } from '@/features/shared/loyalty/types/loyalty.types';
 import { useActivePromotions } from '@/features/admin/promotions/hooks/usePromotions';
-import { useActiveServiceCategories } from '@/features/shared/service-categories/hooks/useActiveServiceCategories';
 import { useActiveServices } from '@/features/admin/services/hooks/useServices';
 import {
   calculatePromotionDiscount,
@@ -51,7 +50,6 @@ const DEFAULT_BOOKING_WINDOW = 7;
 const createAppointmentSchema = z
   .object({
     vehicleId: z.string().min(1, 'Vui lòng chọn xe của bạn.'),
-    categoryId: z.string().min(1, 'Vui lòng chọn danh mục dịch vụ.'),
     serviceIds: z.array(z.string()).min(1, 'Vui lòng chọn ít nhất một dịch vụ.'),
     scheduledDate: z.string().min(1, 'Vui lòng chọn ngày hẹn.'),
     scheduledTime: z.string().min(1, 'Vui lòng chọn giờ hẹn.'),
@@ -93,7 +91,7 @@ type StepField = keyof CreateAppointmentFormValues;
 const formId = 'customer-create-appointment-form';
 const steps = [
   { label: 'Xe', icon: CarFront, fields: ['vehicleId'] },
-  { label: 'Dịch vụ', icon: Wrench, fields: ['categoryId', 'serviceIds'] },
+  { label: 'Dịch vụ', icon: Wrench, fields: ['serviceIds'] },
   { label: 'Lịch hẹn', icon: CalendarDays, fields: ['scheduledDate', 'scheduledTime', 'note'] },
   { label: 'Ưu đãi', icon: Gift, fields: [] },
   { label: 'Xem lại', icon: ClipboardCheck, fields: [] },
@@ -111,7 +109,6 @@ const createDefaultValues = (): CreateAppointmentFormValues => {
 
   return {
     vehicleId: '',
-    categoryId: 'all',
     serviceIds: [],
     scheduledDate: `${yyyy}-${mm}-${dd}`,
     scheduledTime: '09:00',
@@ -182,22 +179,14 @@ export function CreateAppointmentModal({
   });
 
   const values = useWatch({ control }) as CreateAppointmentFormValues;
-  const categoriesQuery = useActiveServiceCategories({ enabled: isOpen });
   const servicesQuery = useActiveServices({ limit: 100 }, { enabled: isOpen });
   const promotionsQuery = useActivePromotions({ enabled: isOpen });
   const redemptionsQuery = useMyRewardRedemptions();
   const loyaltyQuery = useMyLoyaltyAccount();
 
   const vehicles = vehiclesQuery.data?.vehicles ?? [];
-  const categories = categoriesQuery.data ?? [];
   const allServices = useMemo(() => servicesQuery.data ?? [], [servicesQuery.data]);
-  const services = useMemo(
-    () =>
-      values.categoryId === 'all'
-        ? allServices
-        : allServices.filter((service) => service.categoryId?._id === values.categoryId),
-    [allServices, values.categoryId]
-  );
+  const services = allServices;
   const selectedVehicle = vehicles.find((vehicle) => vehicle._id === values.vehicleId);
   const selectedServices = useMemo(
     () => allServices.filter((service) => values.serviceIds.includes(service._id)),
@@ -329,9 +318,9 @@ export function CreateAppointmentModal({
   };
 
   const hasFormOptionsError =
-    vehiclesQuery.isError || categoriesQuery.isError || servicesQuery.isError;
+    vehiclesQuery.isError || servicesQuery.isError;
   const isInitialOptionsLoading =
-    vehiclesQuery.isLoading || categoriesQuery.isLoading || servicesQuery.isLoading;
+    vehiclesQuery.isLoading || servicesQuery.isLoading;
 
   const submitAppointment = handleSubmit(async (formValues) => {
     await onSubmit({
@@ -530,24 +519,7 @@ export function CreateAppointmentModal({
                 currentStep !== 1 && 'hidden'
               )}
             >
-              <Field>
-                <FieldLabel>Danh mục dịch vụ</FieldLabel>
-                <select
-                  className="h-[46px] rounded-md border border-[#d8e2ef] bg-white px-3 text-sm font-semibold text-[#64748b] outline-none focus:border-[#0b67c2]"
-                  disabled={isSubmitting || categoriesQuery.isLoading || !categories.length}
-                  {...register('categoryId')}
-                >
-                  <option value="all">Tất cả danh mục</option>
-                  {categories.map((category) => (
-                    <option key={category._id} value={category._id}>
-                      {category.name}
-                    </option>
-                  ))}
-                </select>
-                <FieldError>{errors.categoryId?.message}</FieldError>
-              </Field>
-
-              <Field className="mt-4">
+              <Field className="mt-0">
                 <FieldLabel>
                   Chọn dịch vụ
                   {values.serviceIds.length ? ` (${values.serviceIds.length} dịch vụ đã chọn)` : ''}
@@ -560,7 +532,7 @@ export function CreateAppointmentModal({
 
                   {!servicesQuery.isLoading && !services.length && (
                     <div className="rounded-xl border border-dashed border-[#e5edf6] bg-slate-50 px-4 py-6 text-sm text-[#64748b] sm:col-span-2">
-                      Danh mục này hiện chưa có dịch vụ đang hoạt động.
+                      Hiện chưa có dịch vụ đang hoạt động.
                     </div>
                   )}
 
@@ -575,6 +547,7 @@ export function CreateAppointmentModal({
                             ? 'border-[#0b67c2] bg-[#0b67c2] text-white'
                             : 'border-[#e5edf6] bg-white hover:border-[#0b67c2]'
                         }`}
+                        onClick={() => handleToggleService(service._id)}
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
@@ -587,12 +560,6 @@ export function CreateAppointmentModal({
                               {service.description?.trim() || 'Dịch vụ chăm sóc xe tiêu chuẩn'}
                             </p>
                           </div>
-                          <input
-                            type="checkbox"
-                            className="mt-1 size-4 accent-slate-950"
-                            checked={isSelected}
-                            onChange={() => handleToggleService(service._id)}
-                          />
                         </div>
 
                         <div
@@ -765,29 +732,41 @@ export function CreateAppointmentModal({
               <section className="rounded-xl border border-[#e5edf6] bg-slate-50 p-4 text-sm sm:p-5">
                 <div className="flex justify-between gap-4 text-[#64748b]">
                   <span>Tạm tính</span>
-                  <span>{formatCurrency(subtotalPrice)}</span>
+                  <span className="font-semibold">{formatCurrency(subtotalPrice)}</span>
                 </div>
                 {membershipDiscount > 0 ? (
-                  <div className="flex justify-between gap-4 text-emerald-700">
-                    <span>Giảm giá thành viên ({membershipTier?.name})</span>
-                    <span>-{formatCurrency(membershipDiscount)}</span>
-                  </div>
+                  <>
+                    <div className="mt-2 flex justify-between gap-4 text-emerald-700">
+                      <span>Giảm giá thành viên ({membershipTier?.name})</span>
+                      <span>-{formatCurrency(membershipDiscount)}</span>
+                    </div>
+                    <div className="mt-1 flex justify-between gap-4 border-t border-dashed border-[#e5edf6] pt-1.5 text-[#15243a]">
+                      <span className="text-xs font-semibold">→ Thành tiền</span>
+                      <span className="font-bold">{formatCurrency(priceAfterMembership)}</span>
+                    </div>
+                  </>
                 ) : null}
                 {promotionDiscount > 0 ? (
-                  <div className="flex justify-between gap-4 text-emerald-700">
-                    <span>Khuyến mãi ({selectedPromotion?.code})</span>
-                    <span>-{formatCurrency(promotionDiscount)}</span>
-                  </div>
+                  <>
+                    <div className="mt-2 flex justify-between gap-4 text-emerald-700">
+                      <span>Khuyến mãi ({selectedPromotion?.code})</span>
+                      <span>-{formatCurrency(promotionDiscount)}</span>
+                    </div>
+                    <div className="mt-1 flex justify-between gap-4 border-t border-dashed border-[#e5edf6] pt-1.5 text-[#15243a]">
+                      <span className="text-xs font-semibold">→ Thành tiền</span>
+                      <span className="font-bold">{formatCurrency(priceAfterPromotion)}</span>
+                    </div>
+                  </>
                 ) : null}
                 {rewardDiscount > 0 ? (
-                  <div className="flex justify-between gap-4 text-emerald-700">
+                  <div className="mt-2 flex justify-between gap-4 text-emerald-700">
                     <span>Phần thưởng ({selectedReward?.name})</span>
                     <span>-{formatCurrency(rewardDiscount)}</span>
                   </div>
                 ) : null}
                 <div className="mt-3 flex justify-between gap-4 border-t border-[#e5edf6] pt-3 font-black text-[#15243a]">
                   <span>Tổng thanh toán dự kiến</span>
-                  <span>{formatCurrency(estimatedTotal)}</span>
+                  <span className="text-base">{formatCurrency(estimatedTotal)}</span>
                 </div>
                 <p className="mt-2 text-xs text-[#64748b]">
                   Hệ thống sẽ kiểm tra điều kiện và tính tổng tiền chính thức khi tạo lịch.

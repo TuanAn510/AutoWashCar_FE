@@ -32,7 +32,7 @@ export const sidebarNav: NavItem[] = [
     href: '/appointments',
     roles: ['admin', 'staff', 'customer'],
   },
-  { label: 'Xe', icon: Car, href: '/vehicles', roles: ['customer'] },
+  { label: 'Xe', icon: Car, href: '/vehicles', roles: ['customer', 'admin'] },
   { label: 'Lịch sử', icon: History, href: '/service-histories', roles: ['staff'] },
   { label: 'Tích điểm', icon: Coins, href: '/loyalty', roles: ['admin', 'staff', 'customer'] },
   { label: 'Khách hàng', icon: Users, href: '/customers', roles: ['admin'] },
