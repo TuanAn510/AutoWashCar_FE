@@ -222,6 +222,7 @@ export interface PaymentResult {
   method: 'vnpay' | 'momo';
   amount: number;
   expiresAt: string;
+  qrCodeUrl?: string;
 }
 
 export interface PaymentCallbackParams {
