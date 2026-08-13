@@ -33,6 +33,9 @@ const AdminRewardsPage = lazy(() => import('./features/admin/rewards/pages/Admin
 const VehicleAccessRequestsPage = lazy(
   () => import('./features/admin/vehicle-access/pages/VehicleAccessRequestsPage')
 );
+const AdminVehiclesPage = lazy(
+  () => import('./features/admin/vehicles/pages/AdminVehiclesPage')
+);
 const AppointmentDetailPage = lazy(
   () => import('./features/customers/appointments/pages/AppointmentDetailPage')
 );
@@ -117,6 +120,7 @@ function App() {
                   path="/admin/vehicle-access-requests"
                   element={<VehicleAccessRequestsPage />}
                 />
+                <Route path="/admin/vehicles" element={<AdminVehiclesPage />} />
                 <Route path="/admin/promotions" element={<PromotionsPage />} />
                 <Route path="/admin/reports" element={<ReportsAnalyticsPage />} />
               </Route>

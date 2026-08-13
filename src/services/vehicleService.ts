@@ -74,6 +74,26 @@ export const vehiclesApi = {
     const response = await api.delete<ApiEnvelope<ApiVehicle>>(`/vehicles/${vehicleId}`);
     return response.data.data;
   },
+
+  // Admin
+  listAll: async (params?: PaginationParams, signal?: AbortSignal) => {
+    const response = await api.get<VehicleListEnvelope>('/vehicles', {
+      params,
+      signal,
+    });
+
+    return {
+      vehicles: response.data.data,
+      pagination: response.data.pagination,
+      total: response.data.pagination?.total ?? response.data.data.length,
+      message: response.data.message,
+    };
+  },
+
+  getById: async (vehicleId: string, signal?: AbortSignal) => {
+    const response = await api.get<ApiEnvelope<ApiVehicle>>(`/vehicles/${vehicleId}`, { signal });
+    return response.data.data;
+  },
 };
 
 export const vehicleService = vehiclesApi;
