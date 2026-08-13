@@ -12,6 +12,12 @@ const carTypeLabels: Record<string, string> = {
   pickup: 'Bán tải',
 };
 
+const verificationMeta = {
+  approved: { label: 'Đã xác minh', className: 'border-emerald-200 bg-emerald-50 text-emerald-700' },
+  pending: { label: 'Chờ admin xác minh', className: 'border-amber-200 bg-amber-50 text-amber-700' },
+  rejected: { label: 'Bị từ chối', className: 'border-rose-200 bg-rose-50 text-rose-700' },
+} as const;
+
 interface VehicleCardProps {
   vehicle: ApiVehicle;
   onView: (vehicle: ApiVehicle) => void;
@@ -22,6 +28,9 @@ interface VehicleCardProps {
 export function VehicleCard({ vehicle, onView, onEdit, onDelete }: VehicleCardProps) {
   const coverImage = vehicle.images?.[0]?.url;
   const vehicleName = [vehicle.brand, vehicle.model, vehicle.year].filter(Boolean).join(' ');
+  const verification = vehicle.verificationStatus
+    ? verificationMeta[vehicle.verificationStatus]
+    : verificationMeta.approved;
 
   return (
     <Card
@@ -49,6 +58,9 @@ export function VehicleCard({ vehicle, onView, onEdit, onDelete }: VehicleCardPr
             </CardTitle>
             <Badge variant="outline" className="mt-1.5 rounded-full text-xs">
               {carTypeLabels[vehicle.carType] ?? vehicle.carType}
+            </Badge>
+            <Badge variant="outline" className={`mt-1.5 rounded-full text-xs ${verification.className}`}>
+              {verification.label}
             </Badge>
           </div>
           <Badge variant="neutral" className="rounded-full px-2.5 py-1 font-semibold">

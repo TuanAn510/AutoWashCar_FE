@@ -1,6 +1,12 @@
 import api from '@/api/client';
 import type { ApiEnvelope, PaginationMeta, PaginationParams } from '@/types/api';
-import type { ApiVehicle, CreateVehiclePayload, UpdateVehiclePayload } from '@/types/vehicle';
+import type {
+  ApiVehicle,
+  CreateVehiclePayload,
+  UpdateVehiclePayload,
+  VehicleBrand,
+  VehicleModel,
+} from '@/types/vehicle';
 
 interface VehicleListEnvelope {
   success: boolean;
@@ -8,6 +14,10 @@ interface VehicleListEnvelope {
   data: ApiVehicle[];
   pagination?: PaginationMeta;
 }
+
+/** Unwrap an envelope ({ data: T }) or a raw array, whichever the backend returns. */
+const unwrapList = <T>(envelope: ApiEnvelope<T[]> | T[]): T[] =>
+  Array.isArray(envelope) ? envelope : envelope.data;
 
 const buildVehicleFormData = (payload: CreateVehiclePayload | UpdateVehiclePayload) => {
   const formData = new FormData();
@@ -17,6 +27,18 @@ const buildVehicleFormData = (payload: CreateVehiclePayload | UpdateVehiclePaylo
   }
   if (typeof payload.model !== 'undefined') {
     formData.append('model', payload.model);
+  }
+  if (typeof payload.brandId !== 'undefined') {
+    formData.append('brandId', payload.brandId);
+  }
+  if (typeof payload.modelId !== 'undefined') {
+    formData.append('modelId', payload.modelId);
+  }
+  if (typeof payload.suggestedBrandName !== 'undefined') {
+    formData.append('suggestedBrandName', payload.suggestedBrandName);
+  }
+  if (typeof payload.suggestedModelName !== 'undefined') {
+    formData.append('suggestedModelName', payload.suggestedModelName);
   }
   if (typeof payload.licensePlate !== 'undefined') {
     formData.append('licensePlate', payload.licensePlate);
@@ -35,6 +57,22 @@ const buildVehicleFormData = (payload: CreateVehiclePayload | UpdateVehiclePaylo
 };
 
 export const vehiclesApi = {
+  getVehicleBrands: async (signal?: AbortSignal): Promise<VehicleBrand[]> => {
+    const response = await api.get<ApiEnvelope<VehicleBrand[]> | VehicleBrand[]>(
+      '/vehicle-brands',
+      { signal }
+    );
+    return unwrapList<VehicleBrand>(response.data);
+  },
+
+  getVehicleModels: async (brandId: string, signal?: AbortSignal): Promise<VehicleModel[]> => {
+    const response = await api.get<ApiEnvelope<VehicleModel[]> | VehicleModel[]>(
+      `/vehicle-brands/${brandId}/models`,
+      { signal }
+    );
+    return unwrapList<VehicleModel>(response.data);
+  },
+
   getMyVehicles: async (params?: PaginationParams, signal?: AbortSignal) => {
     const response = await api.get<VehicleListEnvelope>('/vehicles/me', {
       params,

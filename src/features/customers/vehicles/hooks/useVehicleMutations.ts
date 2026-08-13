@@ -13,8 +13,13 @@ export function useCreateVehicle() {
 
   return useMutation({
     mutationFn: (payload: CreateVehiclePayload) => vehiclesApi.createVehicle(payload),
-    onSuccess: () => {
+    onSuccess: (vehicle) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.vehicles.all });
+      queryClient.invalidateQueries({ queryKey: ['vehicle-access-requests'] });
+      if (vehicle.verificationStatus === 'pending') {
+        toast.success('Đã gửi yêu cầu xác minh xe cho admin.');
+        return;
+      }
       toast.success('Thêm xe thành công.');
     },
     onError: (error) => {
