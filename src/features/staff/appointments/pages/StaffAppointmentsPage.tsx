@@ -83,9 +83,7 @@ export default function StaffAppointmentsPage() {
   );
 
   const { activeAppointments, completedAppointments } = useMemo(() => {
-    const active = appointments.filter(
-      (a) => a.status !== 'completed' && a.status !== 'cancelled'
-    );
+    const active = appointments.filter((a) => a.status !== 'completed' && a.status !== 'cancelled');
     const completed = appointments.filter(
       (a) => a.status === 'completed' || a.status === 'cancelled'
     );
@@ -124,7 +122,12 @@ export default function StaffAppointmentsPage() {
       }
     }
 
-    return { unpaidCompleted: unpaid, todayCompleted: today, yesterdayCompleted: yesterday, olderCompleted: older };
+    return {
+      unpaidCompleted: unpaid,
+      todayCompleted: today,
+      yesterdayCompleted: yesterday,
+      olderCompleted: older,
+    };
   }, [completedAppointments]);
 
   const summary = staffAppointmentsQuery.data?.summary ?? {
@@ -150,8 +153,7 @@ export default function StaffAppointmentsPage() {
       appointmentId: appointment._id,
       payload: { status: targetStatus },
     });
-
-    };
+  };
 
   const handleConfirmStatusUpdate = async () => {
     if (!statusAppointment || !nextStatus) {
@@ -268,7 +270,10 @@ export default function StaffAppointmentsPage() {
               </div>
             ) : null}
 
-            {(unpaidCompleted.length > 0 || todayCompleted.length > 0 || yesterdayCompleted.length > 0 || olderCompleted.length > 0) ? (
+            {unpaidCompleted.length > 0 ||
+            todayCompleted.length > 0 ||
+            yesterdayCompleted.length > 0 ||
+            olderCompleted.length > 0 ? (
               <div className="space-y-6">
                 <div>
                   <h2 className="text-2xl font-semibold text-slate-500">Đã hoàn thành / Đã hủy</h2>
@@ -288,7 +293,7 @@ export default function StaffAppointmentsPage() {
                       onViewDetail={setDetailAppointment}
                       onOpenStatusDialog={handleOpenStatusDialog}
                       onQuickUpdate={handleQuickUpdate}
-                                          />
+                    />
                   </div>
                 ) : null}
 
@@ -300,7 +305,7 @@ export default function StaffAppointmentsPage() {
                       onViewDetail={setDetailAppointment}
                       onOpenStatusDialog={handleOpenStatusDialog}
                       onQuickUpdate={handleQuickUpdate}
-                                          />
+                    />
                   </div>
                 ) : null}
 
@@ -312,7 +317,7 @@ export default function StaffAppointmentsPage() {
                       onViewDetail={setDetailAppointment}
                       onOpenStatusDialog={handleOpenStatusDialog}
                       onQuickUpdate={handleQuickUpdate}
-                                          />
+                    />
                   </div>
                 ) : null}
 
@@ -324,7 +329,7 @@ export default function StaffAppointmentsPage() {
                       onViewDetail={setDetailAppointment}
                       onOpenStatusDialog={handleOpenStatusDialog}
                       onQuickUpdate={handleQuickUpdate}
-                                          />
+                    />
                   </div>
                 ) : null}
               </div>

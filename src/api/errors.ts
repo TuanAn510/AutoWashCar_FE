@@ -20,6 +20,9 @@ export interface ValidationIssue {
 interface ErrorPayload {
   message?: string;
   code?: string;
+  data?: {
+    code?: string;
+  };
   errors?: ValidationIssue[] | Record<string, string | string[]>;
 }
 

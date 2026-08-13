@@ -95,8 +95,8 @@ export default function StaffServiceHistoriesPage() {
               Lịch sử và tiến độ dịch vụ
             </h1>
             <p className="mt-3 max-w-2xl text-base leading-7 text-slate-500">
-              Theo dõi các đơn đã thực hiện, đơn đang thực hiện và tổng giá trị công việc
-              được phân công cho bạn.
+              Theo dõi các đơn đã thực hiện, đơn đang thực hiện và tổng giá trị công việc được phân
+              công cho bạn.
             </p>
           </div>
         </section>
@@ -135,9 +135,7 @@ export default function StaffServiceHistoriesPage() {
           </section>
         ) : serviceHistoriesQuery.isError ? (
           <section className="rounded-[28px] border border-rose-200 bg-rose-50 px-6 py-16 text-center shadow-sm">
-            <h2 className="text-xl font-semibold text-rose-700">
-              Không thể tải dữ liệu nhân viên
-            </h2>
+            <h2 className="text-xl font-semibold text-rose-700">Không thể tải dữ liệu nhân viên</h2>
             <p className="mt-2 text-sm text-rose-600">Vui lòng thử lại.</p>
             <Button
               className="mt-5 rounded-xl"
@@ -213,9 +211,7 @@ function SummaryCard({
         {label}
       </p>
       <p className="mt-3 break-words text-2xl font-bold text-slate-950">{value}</p>
-      <p className="mt-2 text-sm text-slate-500">
-        Tự động cập nhật từ lịch hẹn được phân công.
-      </p>
+      <p className="mt-2 text-sm text-slate-500">Tự động cập nhật từ lịch hẹn được phân công.</p>
     </article>
   );
 }

@@ -234,7 +234,8 @@ export default function StaffLoyaltyLookupPage() {
                             {item.customer.displayName || 'Khách hàng'}
                           </p>
                           <p className="truncate text-xs text-slate-500">
-                            {item.customer.phone || 'Chưa có số điện thoại'} · ID: {item.customer._id}
+                            {item.customer.phone || 'Chưa có số điện thoại'} · ID:{' '}
+                            {item.customer._id}
                           </p>
                         </div>
                       </button>
@@ -283,14 +284,21 @@ export default function StaffLoyaltyLookupPage() {
                   </div>
                   <div>
                     <p className="font-semibold text-slate-950">
-                      {accountQuery.data.customerId && typeof accountQuery.data.customerId === 'object'
-                        ? (accountQuery.data.customerId as LoyaltyCustomer).displayName || 'Khách hàng'
+                      {accountQuery.data.customerId &&
+                      typeof accountQuery.data.customerId === 'object'
+                        ? (accountQuery.data.customerId as LoyaltyCustomer).displayName ||
+                          'Khách hàng'
                         : 'Khách hàng'}
                     </p>
                     <p className="text-sm text-slate-500">ID: {customerId}</p>
                   </div>
                 </div>
-                <Button variant="outline" size="sm" className="rounded-md" onClick={handleClearCustomer}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="rounded-md"
+                  onClick={handleClearCustomer}
+                >
                   Đổi khách hàng
                 </Button>
               </section>

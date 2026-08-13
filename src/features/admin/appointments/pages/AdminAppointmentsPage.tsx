@@ -151,9 +151,7 @@ export default function AdminAppointmentsPage() {
   }, [appointmentsQuery.data?.appointments, appointmentTab]);
 
   const { activeAppointments, completedAppointments } = useMemo(() => {
-    const active = appointments.filter(
-      (a) => a.status !== 'completed' && a.status !== 'cancelled'
-    );
+    const active = appointments.filter((a) => a.status !== 'completed' && a.status !== 'cancelled');
     const completed = appointments.filter(
       (a) => a.status === 'completed' || a.status === 'cancelled'
     );
@@ -192,7 +190,12 @@ export default function AdminAppointmentsPage() {
       }
     }
 
-    return { unpaidCompleted: unpaid, todayCompleted: today, yesterdayCompleted: yesterday, olderCompleted: older };
+    return {
+      unpaidCompleted: unpaid,
+      todayCompleted: today,
+      yesterdayCompleted: yesterday,
+      olderCompleted: older,
+    };
   }, [completedAppointments]);
 
   const detailData = detailQuery.data ?? detailAppointment;
@@ -465,7 +468,11 @@ export default function AdminAppointmentsPage() {
               </div>
             ) : null}
 
-            {appointmentTab !== 'priority' && (unpaidCompleted.length > 0 || todayCompleted.length > 0 || yesterdayCompleted.length > 0 || olderCompleted.length > 0) ? (
+            {appointmentTab !== 'priority' &&
+            (unpaidCompleted.length > 0 ||
+              todayCompleted.length > 0 ||
+              yesterdayCompleted.length > 0 ||
+              olderCompleted.length > 0) ? (
               <div className="space-y-6">
                 <div>
                   <h2 className="text-2xl font-semibold text-slate-500">Đã hoàn thành / Đã hủy</h2>

@@ -11,7 +11,7 @@ declare module 'axios' {
   }
 }
 
-const AUTH_ENDPOINTS = ['/auth/signin', '/auth/signup', '/auth/refresh-token'];
+const AUTH_ENDPOINTS = ['/auth/signin', '/auth/signup', '/auth/register', '/auth/refresh-token'];
 
 export const apiClient = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
@@ -22,6 +22,19 @@ export const apiClient = axios.create({
 let refreshPromise: Promise<string> | null = null;
 
 const isAuthEndpoint = (url?: string) => AUTH_ENDPOINTS.some((path) => url?.includes(path));
+
+const shouldRefreshSession = (
+  status: number | undefined,
+  request: InternalAxiosRequestConfig | undefined
+) => {
+  if (!status || !request || request._retry || isAuthEndpoint(request.url)) return false;
+  if (status === 401) return true;
+  if (status !== 403) return false;
+
+  const currentAccessToken = useAuthStore.getState().accessToken;
+  const requestAccessToken = request.headers.get('Authorization');
+  return !currentAccessToken && !requestAccessToken;
+};
 
 const refreshAccessToken = () => {
   if (!refreshPromise) {
@@ -52,23 +65,22 @@ apiClient.interceptors.response.use(
     if (!axios.isAxiosError(error)) return Promise.reject(toApiError(error));
 
     const request = error.config as InternalAxiosRequestConfig | undefined;
-    const shouldRefresh =
-      error.response?.status === 401 && request && !request._retry && !isAuthEndpoint(request.url);
+    if (!shouldRefreshSession(error.response?.status, request)) {
+      return Promise.reject(toApiError(error));
+    }
 
-    if (!shouldRefresh) return Promise.reject(toApiError(error));
-
-    request._retry = true;
+    request!._retry = true;
     try {
       const currentAccessToken = useAuthStore.getState().accessToken;
-      const requestAccessToken = request.headers.get('Authorization');
+      const requestAccessToken = request!.headers.get('Authorization');
       if (currentAccessToken && requestAccessToken !== `Bearer ${currentAccessToken}`) {
-        request.headers.set('Authorization', `Bearer ${currentAccessToken}`);
-        return await apiClient(request);
+        request!.headers.set('Authorization', `Bearer ${currentAccessToken}`);
+        return await apiClient(request!);
       }
 
       const accessToken = await refreshAccessToken();
-      request.headers.set('Authorization', `Bearer ${accessToken}`);
-      return await apiClient(request);
+      request!.headers.set('Authorization', `Bearer ${accessToken}`);
+      return await apiClient(request!);
     } catch (refreshError) {
       useAuthStore.getState().clearState();
       queryClient.clear();

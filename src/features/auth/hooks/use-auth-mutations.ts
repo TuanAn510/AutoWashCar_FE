@@ -17,15 +17,18 @@ export function useSigninMutation() {
     onSuccess: ({ user, accessToken }) => {
       setAccessToken(accessToken);
       queryClient.setQueryData(queryKeys.auth.me(), user);
-      toast.success('Đăng nhập thành công!');
+      toast.success('Dang nhap thanh cong!');
     },
     onError: (error) => {
-      toast.error(getApiErrorMessage(error, 'Đăng nhập thất bại. Vui lòng thử lại.'));
+      toast.error(getApiErrorMessage(error, 'Dang nhap that bai. Vui long thu lai.'));
     },
   });
 }
 
 export function useSignupMutation() {
+  const queryClient = useQueryClient();
+  const setAccessToken = useAuthStore((state) => state.setAccessToken);
+
   return useMutation({
     mutationFn: ({
       phone,
@@ -38,11 +41,13 @@ export function useSignupMutation() {
       firstName: string;
       lastName: string;
     }) => authService.signup(phone, password, firstName, lastName),
-    onSuccess: () => {
-      toast.success('Đăng ký thành công! Vui lòng đăng nhập.');
+    onSuccess: ({ user, accessToken }) => {
+      setAccessToken(accessToken);
+      queryClient.setQueryData(queryKeys.auth.me(), user);
+      toast.success('Dang ky thanh cong!');
     },
     onError: (error) => {
-      toast.error(getApiErrorMessage(error, 'Đăng ký thất bại. Vui lòng thử lại.'));
+      toast.error(getApiErrorMessage(error, 'Dang ky that bai. Vui long thu lai.'));
     },
   });
 }
@@ -58,10 +63,10 @@ export function useSignoutMutation() {
       queryClient.clear();
     },
     onSuccess: () => {
-      toast.success('Đăng xuất thành công!');
+      toast.success('Dang xuat thanh cong!');
     },
     onError: (error) => {
-      toast.error(getApiErrorMessage(error, 'Đăng xuất thất bại. Vui lòng thử lại.'));
+      toast.error(getApiErrorMessage(error, 'Dang xuat that bai. Vui long thu lai.'));
     },
   });
 }
@@ -73,10 +78,10 @@ export function useUpdateProfileMutation() {
     mutationFn: userService.updateProfile,
     onSuccess: (updatedUser) => {
       queryClient.setQueryData(queryKeys.auth.me(), updatedUser);
-      toast.success('Cập nhật thông tin thành công!');
+      toast.success('Cap nhat thong tin thanh cong!');
     },
     onError: (error) => {
-      toast.error(getApiErrorMessage(error, 'Cập nhật thông tin thất bại. Vui lòng thử lại.'));
+      toast.error(getApiErrorMessage(error, 'Cap nhat thong tin that bai. Vui long thu lai.'));
     },
   });
 }

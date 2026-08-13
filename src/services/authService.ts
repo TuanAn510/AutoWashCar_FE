@@ -13,7 +13,7 @@ export const authService = {
   },
 
   signup: async (phone: string, password: string, firstName: string, lastName: string) => {
-    const response = await api.post<ApiEnvelope<User>>('/auth/signup', {
+    const response = await api.post<ApiEnvelope<AuthSession>>('/auth/signup', {
       phone: phone.trim(),
       password,
       firstName: firstName.trim(),

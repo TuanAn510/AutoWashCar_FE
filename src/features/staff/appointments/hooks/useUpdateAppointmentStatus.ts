@@ -35,7 +35,9 @@ export function useUpdateAppointmentStatus() {
       toast.success('Cap nhat trang thai lich hen thanh cong.');
     },
     onError: (error) => {
-      toast.error(getErrorMessage(error, 'Khong the cap nhat trang thai lich hen. Vui long thu lai.'));
+      toast.error(
+        getErrorMessage(error, 'Khong the cap nhat trang thai lich hen. Vui long thu lai.')
+      );
     },
   });
 }

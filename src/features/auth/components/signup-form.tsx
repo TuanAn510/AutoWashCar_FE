@@ -49,7 +49,7 @@ export function SignupForm() {
   const onSubmit = async ({ phone, password, firstName, lastName }: SignupFormValues) => {
     try {
       await signupMutation.mutateAsync({ phone, password, firstName, lastName });
-      navigate('/signin');
+      navigate('/dashboard');
     } catch {
       // Toast is handled in the mutation hook.
     }

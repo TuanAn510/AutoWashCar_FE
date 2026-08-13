@@ -44,6 +44,36 @@ describe('API authentication interceptors', () => {
     expect(useAuthStore.getState().accessToken).toBe('access-2');
   });
 
+  it('refreshes a 403 response when the app reloads without an in-memory token', async () => {
+    let refreshCount = 0;
+    mock
+      .onGet('/auth/me')
+      .reply((config) =>
+        config.headers?.Authorization === 'Bearer access-after-reload'
+          ? [200, { id: 1, role: 'customer' }]
+          : [403]
+      );
+    mock.onPost('/auth/refresh-token').reply(() => {
+      refreshCount += 1;
+      return [200, { success: true, message: 'ok', data: { accessToken: 'access-after-reload' } }];
+    });
+
+    const response = await apiClient.get('/auth/me');
+
+    expect(refreshCount).toBe(1);
+    expect(response.data.role).toBe('customer');
+    expect(useAuthStore.getState().accessToken).toBe('access-after-reload');
+  });
+
+  it('does not refresh a 403 response when a bearer token was already sent', async () => {
+    useAuthStore.getState().setAccessToken('customer-token');
+    mock.onGet('/api/admin/users').reply(403, { message: 'Forbidden' });
+    mock.onPost('/auth/refresh-token').reply(200);
+
+    await expect(apiClient.get('/api/admin/users')).rejects.toMatchObject({ kind: 'forbidden' });
+    expect(mock.history.post.filter(({ url }) => url === '/auth/refresh-token')).toHaveLength(0);
+  });
+
   it('never refreshes excluded authentication requests', async () => {
     mock.onPost('/auth/signin').reply(401, { message: 'Bad credentials' });
     mock.onPost('/auth/refresh-token').reply(200);
