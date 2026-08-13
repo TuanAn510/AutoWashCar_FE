@@ -139,16 +139,16 @@ describe('customer journey UI', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));
     await expectCurrentStep(2);
 
-    expect(screen.getByText('Chọn dịch vụ')).toBeTruthy();
-    const serviceCheckbox = container.querySelector('input[type="checkbox"]') as HTMLInputElement;
-    fireEvent.click(serviceCheckbox);
+    expect(screen.getByText('Chọn gói dịch vụ')).toBeTruthy();
+    const primaryServiceRadio = container.querySelector('input[type="radio"]') as HTMLInputElement;
+    fireEvent.click(primaryServiceRadio);
     fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));
     await expectCurrentStep(3);
 
     fireEvent.click(screen.getByRole('button', { name: 'Quay lại' }));
     await expectCurrentStep(2);
     expect(vehicleSelect.value).toBe('vehicle-1');
-    expect(serviceCheckbox.checked).toBe(true);
+    expect(primaryServiceRadio.checked).toBe(true);
 
     fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));
     await expectCurrentStep(3);

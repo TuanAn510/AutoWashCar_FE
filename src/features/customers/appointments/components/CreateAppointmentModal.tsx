@@ -12,7 +12,6 @@ import {
   Wrench,
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { toast } from 'sonner';
 import { useForm, useWatch } from 'react-hook-form';
 import { z } from 'zod';
 
@@ -27,6 +26,7 @@ import {
 } from '@/features/shared/loyalty/hooks/use-loyalty';
 import type { Reward, RewardRedemption } from '@/features/shared/loyalty/types/loyalty.types';
 import { useActivePromotions } from '@/features/admin/promotions/hooks/usePromotions';
+import { useActiveServiceCategories } from '@/features/shared/service-categories/hooks/useActiveServiceCategories';
 import { useActiveServices } from '@/features/admin/services/hooks/useServices';
 import {
   calculatePromotionDiscount,
@@ -50,7 +50,8 @@ const DEFAULT_BOOKING_WINDOW = 7;
 const createAppointmentSchema = z
   .object({
     vehicleId: z.string().min(1, 'Vui lòng chọn xe của bạn.'),
-    serviceIds: z.array(z.string()).min(1, 'Vui lòng chọn ít nhất một dịch vụ.'),
+    categoryId: z.string().min(1, 'Vui lòng chọn danh mục dịch vụ.'),
+    serviceIds: z.array(z.string()).length(1, 'Vui lòng chọn đúng một gói dịch vụ.'),
     scheduledDate: z.string().min(1, 'Vui lòng chọn ngày hẹn.'),
     scheduledTime: z.string().min(1, 'Vui lòng chọn giờ hẹn.'),
     note: z.string().trim().max(1000, 'Ghi chú tối đa 1000 ký tự.').optional(),
@@ -91,7 +92,7 @@ type StepField = keyof CreateAppointmentFormValues;
 const formId = 'customer-create-appointment-form';
 const steps = [
   { label: 'Xe', icon: CarFront, fields: ['vehicleId'] },
-  { label: 'Dịch vụ', icon: Wrench, fields: ['serviceIds'] },
+  { label: 'Dịch vụ', icon: Wrench, fields: ['categoryId', 'serviceIds'] },
   { label: 'Lịch hẹn', icon: CalendarDays, fields: ['scheduledDate', 'scheduledTime', 'note'] },
   { label: 'Ưu đãi', icon: Gift, fields: [] },
   { label: 'Xem lại', icon: ClipboardCheck, fields: [] },
@@ -109,6 +110,7 @@ const createDefaultValues = (): CreateAppointmentFormValues => {
 
   return {
     vehicleId: '',
+    categoryId: 'all',
     serviceIds: [],
     scheduledDate: `${yyyy}-${mm}-${dd}`,
     scheduledTime: '09:00',
@@ -179,14 +181,22 @@ export function CreateAppointmentModal({
   });
 
   const values = useWatch({ control }) as CreateAppointmentFormValues;
+  const categoriesQuery = useActiveServiceCategories({ enabled: isOpen });
   const servicesQuery = useActiveServices({ limit: 100 }, { enabled: isOpen });
   const promotionsQuery = useActivePromotions({ enabled: isOpen });
   const redemptionsQuery = useMyRewardRedemptions();
   const loyaltyQuery = useMyLoyaltyAccount();
 
   const vehicles = vehiclesQuery.data?.vehicles ?? [];
+  const categories = categoriesQuery.data ?? [];
   const allServices = useMemo(() => servicesQuery.data ?? [], [servicesQuery.data]);
-  const services = allServices;
+  const services = useMemo(
+    () =>
+      values.categoryId === 'all'
+        ? allServices
+        : allServices.filter((service) => service.categoryId?._id === values.categoryId),
+    [allServices, values.categoryId]
+  );
   const selectedVehicle = vehicles.find((vehicle) => vehicle._id === values.vehicleId);
   const selectedServices = useMemo(
     () => allServices.filter((service) => values.serviceIds.includes(service._id)),
@@ -276,36 +286,10 @@ export function CreateAppointmentModal({
     onOpenChange(nextOpen);
   };
 
-  const handleToggleService = (serviceId: string) => {
-    const isCurrentlySelected = values.serviceIds.includes(serviceId);
+  const handleSelectPrimaryService = (serviceId: string) => {
+    if (values.serviceIds[0] === serviceId) return;
 
-    if (isCurrentlySelected) {
-      // Deselect: always allow
-      const nextServiceIds = values.serviceIds.filter((item) => item !== serviceId);
-      setValue('serviceIds', nextServiceIds, { shouldDirty: true, shouldValidate: true });
-      setValue('promotionId', '', { shouldDirty: true });
-      setValue('rewardRedemptionId', '', { shouldDirty: true });
-      return;
-    }
-
-    // Select: prevent more than 1 service per category
-    const serviceToAdd = allServices.find((s) => s._id === serviceId);
-    if (serviceToAdd) {
-      const categoryId = serviceToAdd.categoryId?._id;
-      const alreadySelectedInSameCategory = values.serviceIds.some((id) => {
-        const selected = allServices.find((s) => s._id === id);
-        return selected?.categoryId?._id === categoryId;
-      });
-      if (alreadySelectedInSameCategory) {
-        toast.warning(
-          `Chỉ được chọn 1 dịch vụ trong danh mục "${serviceToAdd.categoryId?.name ?? 'này'}"`
-        );
-        return;
-      }
-    }
-
-    const nextServiceIds = [...values.serviceIds, serviceId];
-    setValue('serviceIds', nextServiceIds, { shouldDirty: true, shouldValidate: true });
+    setValue('serviceIds', [serviceId], { shouldDirty: true, shouldValidate: true });
     setValue('promotionId', '', { shouldDirty: true });
     setValue('rewardRedemptionId', '', { shouldDirty: true });
   };
@@ -318,9 +302,9 @@ export function CreateAppointmentModal({
   };
 
   const hasFormOptionsError =
-    vehiclesQuery.isError || servicesQuery.isError;
+    vehiclesQuery.isError || categoriesQuery.isError || servicesQuery.isError;
   const isInitialOptionsLoading =
-    vehiclesQuery.isLoading || servicesQuery.isLoading;
+    vehiclesQuery.isLoading || categoriesQuery.isLoading || servicesQuery.isLoading;
 
   const submitAppointment = handleSubmit(async (formValues) => {
     await onSubmit({
@@ -519,10 +503,26 @@ export function CreateAppointmentModal({
                 currentStep !== 1 && 'hidden'
               )}
             >
-              <Field className="mt-0">
+              <Field>
+                <FieldLabel>Danh mục dịch vụ</FieldLabel>
+                <select
+                  className="h-[46px] rounded-md border border-[#d8e2ef] bg-white px-3 text-sm font-semibold text-[#64748b] outline-none focus:border-[#0b67c2]"
+                  disabled={isSubmitting || categoriesQuery.isLoading || !categories.length}
+                  {...register('categoryId')}
+                >
+                  <option value="all">Tất cả danh mục</option>
+                  {categories.map((category) => (
+                    <option key={category._id} value={category._id}>
+                      {category.name}
+                    </option>
+                  ))}
+                </select>
+                <FieldError>{errors.categoryId?.message}</FieldError>
+              </Field>
+
+              <Field className="mt-4">
                 <FieldLabel>
-                  Chọn dịch vụ
-                  {values.serviceIds.length ? ` (${values.serviceIds.length} dịch vụ đã chọn)` : ''}
+                  Chọn gói dịch vụ
                 </FieldLabel>
                 <div className="grid gap-3 sm:grid-cols-2">
                   {servicesQuery.isLoading &&
@@ -547,7 +547,6 @@ export function CreateAppointmentModal({
                             ? 'border-[#0b67c2] bg-[#0b67c2] text-white'
                             : 'border-[#e5edf6] bg-white hover:border-[#0b67c2]'
                         }`}
-                        onClick={() => handleToggleService(service._id)}
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
@@ -560,6 +559,12 @@ export function CreateAppointmentModal({
                               {service.description?.trim() || 'Dịch vụ chăm sóc xe tiêu chuẩn'}
                             </p>
                           </div>
+                          <input
+                            type="radio"
+                            className="mt-1 size-4 accent-slate-950"
+                            checked={isSelected}
+                            onChange={() => handleSelectPrimaryService(service._id)}
+                          />
                         </div>
 
                         <div
@@ -577,10 +582,7 @@ export function CreateAppointmentModal({
                 {selectedServices.length ? (
                   <div className="mt-4 rounded-xl border border-[#e5edf6] bg-slate-50 p-4">
                     <div className="flex items-center justify-between gap-3">
-                      <p className="font-black text-[#15243a]">Tất cả dịch vụ đã chọn</p>
-                      <span className="text-sm text-[#64748b]">
-                        {selectedServices.length} dịch vụ
-                      </span>
+                      <p className="font-black text-[#15243a]">Gói dịch vụ đã chọn</p>
                     </div>
                     <div className="mt-3 grid gap-2">
                       {selectedServices.map((service) => (
@@ -601,14 +603,6 @@ export function CreateAppointmentModal({
                             <span className="text-sm font-black text-[#15243a]">
                               {formatCurrency(service.price)}
                             </span>
-                            <button
-                              type="button"
-                              className="rounded-lg px-2 py-1 text-xs font-semibold text-rose-600 hover:bg-rose-50"
-                              disabled={isSubmitting}
-                              onClick={() => handleToggleService(service._id)}
-                            >
-                              Bỏ
-                            </button>
                           </div>
                         </div>
                       ))}
