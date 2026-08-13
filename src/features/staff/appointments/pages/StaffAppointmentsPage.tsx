@@ -23,9 +23,19 @@ const getLocalDateRange = (date: string) => {
   const [year, month, day] = date.split('-').map(Number);
   if (!year || !month || !day) return {};
 
+  const d = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
   return {
-    dateFrom: new Date(year, month - 1, day, 0, 0, 0, 0).toISOString(),
-    dateTo: new Date(year, month - 1, day, 23, 59, 59, 999).toISOString(),
+    dateFrom: `${d}T00:00:00`,
+    dateTo: `${d}T23:59:59`,
+  };
+};
+
+const getTodayRange = () => {
+  const now = new Date();
+  const d = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  return {
+    dateFrom: `${d}T00:00:00`,
+    dateTo: `${d}T23:59:59`,
   };
 };
 
@@ -44,16 +54,12 @@ export default function StaffAppointmentsPage() {
   const [detailAppointment, setDetailAppointment] = useState<AppointmentItem | null>(null);
   const [statusAppointment, setStatusAppointment] = useState<AppointmentItem | null>(null);
   const [nextStatus, setNextStatus] = useState<AppointmentStatus | ''>('');
-  const [, setPaymentAppointment] = useState<AppointmentItem | null>(null);
 
   const appointmentFilters = useMemo<StaffAppointmentFilterParams>(() => {
     const trimmedKeyword = keyword.trim();
     const selectedDateRange =
       appointmentTab === 'today'
-        ? {
-            dateFrom: new Date(new Date().setHours(0, 0, 0, 0)).toISOString(),
-            dateTo: new Date(new Date().setHours(23, 59, 59, 999)).toISOString(),
-          }
+        ? getTodayRange()
         : dateFilter
           ? getLocalDateRange(dateFilter)
           : {};
@@ -64,7 +70,6 @@ export default function StaffAppointmentsPage() {
       ...selectedDateRange,
       page,
       limit: APPOINTMENTS_PER_PAGE,
-      sortBy: 'scheduledAt',
       sortOrder: 'desc',
     };
   }, [appointmentTab, dateFilter, keyword, page, statusFilter]);
@@ -76,6 +81,51 @@ export default function StaffAppointmentsPage() {
     () => staffAppointmentsQuery.data?.appointments ?? [],
     [staffAppointmentsQuery.data?.appointments]
   );
+
+  const { activeAppointments, completedAppointments } = useMemo(() => {
+    const active = appointments.filter(
+      (a) => a.status !== 'completed' && a.status !== 'cancelled'
+    );
+    const completed = appointments.filter(
+      (a) => a.status === 'completed' || a.status === 'cancelled'
+    );
+    return { activeAppointments: active, completedAppointments: completed };
+  }, [appointments]);
+
+  const { unpaidCompleted, todayCompleted, yesterdayCompleted, olderCompleted } = useMemo(() => {
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const yesterdayStart = new Date(todayStart);
+    yesterdayStart.setDate(yesterdayStart.getDate() - 1);
+
+    const unpaid: AppointmentItem[] = [];
+    const today: AppointmentItem[] = [];
+    const yesterday: AppointmentItem[] = [];
+    const older: AppointmentItem[] = [];
+
+    for (const a of completedAppointments) {
+      // Completed but unpaid → separate section for easy payment confirmation
+      if (a.status === 'completed' && a.paymentStatus !== 'paid') {
+        unpaid.push(a);
+        continue;
+      }
+      const date = a.completedAt ? new Date(a.completedAt) : null;
+      if (!date) {
+        older.push(a);
+        continue;
+      }
+      const dateStart = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+      if (dateStart.getTime() === todayStart.getTime()) {
+        today.push(a);
+      } else if (dateStart.getTime() === yesterdayStart.getTime()) {
+        yesterday.push(a);
+      } else {
+        older.push(a);
+      }
+    }
+
+    return { unpaidCompleted: unpaid, todayCompleted: today, yesterdayCompleted: yesterday, olderCompleted: older };
+  }, [completedAppointments]);
 
   const summary = staffAppointmentsQuery.data?.summary ?? {
     total: 0,
@@ -101,10 +151,7 @@ export default function StaffAppointmentsPage() {
       payload: { status: targetStatus },
     });
 
-    if (targetStatus === 'completed') {
-      setPaymentAppointment({ ...appointment, status: 'completed' });
-    }
-  };
+    };
 
   const handleConfirmStatusUpdate = async () => {
     if (!statusAppointment || !nextStatus) {
@@ -120,13 +167,6 @@ export default function StaffAppointmentsPage() {
     });
     setNextStatus('');
     setStatusAppointment(null);
-
-    if (statusBeingApplied === 'completed') {
-      setPaymentAppointment({
-        ...appointmentBeingUpdated,
-        status: 'completed',
-      });
-    }
   };
 
   return (
@@ -152,7 +192,7 @@ export default function StaffAppointmentsPage() {
               onValueChange={(value) => {
                 setAppointmentTab(value as 'today' | 'all');
                 setPage(1);
-                if (value === 'today') setDateFilter('');
+                setDateFilter('');
               }}
               className="max-w-full"
             >
@@ -173,6 +213,7 @@ export default function StaffAppointmentsPage() {
         />
 
         <StaffAppointmentFilters
+          key={appointmentTab}
           keyword={keyword}
           status={statusFilter}
           date={dateFilter}
@@ -205,25 +246,90 @@ export default function StaffAppointmentsPage() {
               Thử lại
             </Button>
           </section>
-        ) : appointments.length === 0 ? (
+        ) : activeAppointments.length === 0 && completedAppointments.length === 0 ? (
           <EmptyStaffAppointmentsState />
         ) : (
-          <section className="space-y-4">
-            <div>
-              <h2 className="text-2xl font-semibold text-slate-950">Bảng lịch hẹn được giao</h2>
-              <p className="mt-1 text-sm text-slate-500">
-                {staffAppointmentsQuery.data?.pagination?.total ?? appointments.length} lịch hẹn phù
-                hợp.
-              </p>
-            </div>
+          <section className="space-y-6">
+            {activeAppointments.length > 0 ? (
+              <div className="space-y-4">
+                <div>
+                  <h2 className="text-2xl font-semibold text-slate-950">Lịch hẹn đang xử lý</h2>
+                  <p className="mt-1 text-sm text-slate-500">
+                    {activeAppointments.length} lịch hẹn đang chờ xử lý.
+                  </p>
+                </div>
 
-            <StaffAppointmentList
-              appointments={appointments}
-              onViewDetail={setDetailAppointment}
-              onOpenStatusDialog={handleOpenStatusDialog}
-              onQuickUpdate={handleQuickUpdate}
-              onConfirmPayment={setPaymentAppointment}
-            />
+                <StaffAppointmentList
+                  appointments={activeAppointments}
+                  onViewDetail={setDetailAppointment}
+                  onOpenStatusDialog={handleOpenStatusDialog}
+                  onQuickUpdate={handleQuickUpdate}
+                />
+              </div>
+            ) : null}
+
+            {(unpaidCompleted.length > 0 || todayCompleted.length > 0 || yesterdayCompleted.length > 0 || olderCompleted.length > 0) ? (
+              <div className="space-y-6">
+                <div>
+                  <h2 className="text-2xl font-semibold text-slate-500">Đã hoàn thành / Đã hủy</h2>
+                  <p className="mt-1 text-sm text-slate-400">
+                    {completedAppointments.length} lịch hẹn đã kết thúc.
+                  </p>
+                </div>
+
+                {unpaidCompleted.length > 0 ? (
+                  <div className="space-y-3">
+                    <h3 className="text-lg font-semibold text-rose-600">Chưa thanh toán</h3>
+                    <p className="text-sm text-rose-500">
+                      {unpaidCompleted.length} lịch hẹn đã hoàn thành nhưng chưa thanh toán.
+                    </p>
+                    <StaffAppointmentList
+                      appointments={unpaidCompleted}
+                      onViewDetail={setDetailAppointment}
+                      onOpenStatusDialog={handleOpenStatusDialog}
+                      onQuickUpdate={handleQuickUpdate}
+                                          />
+                  </div>
+                ) : null}
+
+                {todayCompleted.length > 0 ? (
+                  <div className="space-y-3">
+                    <h3 className="text-lg font-semibold text-emerald-700">Hôm nay</h3>
+                    <StaffAppointmentList
+                      appointments={todayCompleted}
+                      onViewDetail={setDetailAppointment}
+                      onOpenStatusDialog={handleOpenStatusDialog}
+                      onQuickUpdate={handleQuickUpdate}
+                                          />
+                  </div>
+                ) : null}
+
+                {yesterdayCompleted.length > 0 ? (
+                  <div className="space-y-3">
+                    <h3 className="text-lg font-semibold text-amber-700">Hôm qua</h3>
+                    <StaffAppointmentList
+                      appointments={yesterdayCompleted}
+                      onViewDetail={setDetailAppointment}
+                      onOpenStatusDialog={handleOpenStatusDialog}
+                      onQuickUpdate={handleQuickUpdate}
+                                          />
+                  </div>
+                ) : null}
+
+                {olderCompleted.length > 0 ? (
+                  <div className="space-y-3">
+                    <h3 className="text-lg font-semibold text-slate-400">Cũ hơn</h3>
+                    <StaffAppointmentList
+                      appointments={olderCompleted}
+                      onViewDetail={setDetailAppointment}
+                      onOpenStatusDialog={handleOpenStatusDialog}
+                      onQuickUpdate={handleQuickUpdate}
+                                          />
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+
             <PaginationControls
               pagination={staffAppointmentsQuery.data?.pagination}
               itemCount={appointments.length}

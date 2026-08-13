@@ -12,6 +12,7 @@ import {
   Wrench,
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import { toast } from 'sonner';
 import { useForm, useWatch } from 'react-hook-form';
 import { z } from 'zod';
 
@@ -287,10 +288,34 @@ export function CreateAppointmentModal({
   };
 
   const handleToggleService = (serviceId: string) => {
-    const nextServiceIds = values.serviceIds.includes(serviceId)
-      ? values.serviceIds.filter((item) => item !== serviceId)
-      : [...values.serviceIds, serviceId];
+    const isCurrentlySelected = values.serviceIds.includes(serviceId);
 
+    if (isCurrentlySelected) {
+      // Deselect: always allow
+      const nextServiceIds = values.serviceIds.filter((item) => item !== serviceId);
+      setValue('serviceIds', nextServiceIds, { shouldDirty: true, shouldValidate: true });
+      setValue('promotionId', '', { shouldDirty: true });
+      setValue('rewardRedemptionId', '', { shouldDirty: true });
+      return;
+    }
+
+    // Select: prevent more than 1 service per category
+    const serviceToAdd = allServices.find((s) => s._id === serviceId);
+    if (serviceToAdd) {
+      const categoryId = serviceToAdd.categoryId?._id;
+      const alreadySelectedInSameCategory = values.serviceIds.some((id) => {
+        const selected = allServices.find((s) => s._id === id);
+        return selected?.categoryId?._id === categoryId;
+      });
+      if (alreadySelectedInSameCategory) {
+        toast.warning(
+          `Chỉ được chọn 1 dịch vụ trong danh mục "${serviceToAdd.categoryId?.name ?? 'này'}"`
+        );
+        return;
+      }
+    }
+
+    const nextServiceIds = [...values.serviceIds, serviceId];
     setValue('serviceIds', nextServiceIds, { shouldDirty: true, shouldValidate: true });
     setValue('promotionId', '', { shouldDirty: true });
     setValue('rewardRedemptionId', '', { shouldDirty: true });

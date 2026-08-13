@@ -111,7 +111,7 @@ export const toApiError = (error: unknown): ApiError => {
     message: payload?.message || error.message || 'Yêu cầu không thành công.',
     kind,
     status,
-    code: payload?.code || error.code,
+    code: payload?.code || payload?.data?.code || error.code,
     validationIssues,
     retryable: status === 408 || status === 429 || status >= 500,
   });
