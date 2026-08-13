@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { CustomerEmptyState } from '@/features/customers/components/CustomerEmptyState';
 import { CustomerModalShell } from '@/features/customers/components/CustomerModalShell';
+import { resolveImageUrl } from '@/lib/image-url';
 import { type ApiVehicle } from '@/types/vehicle';
 
 const carTypeLabels: Record<string, string> = {
@@ -73,7 +74,7 @@ export function VehicleDetailDialog({ open, vehicle, onOpenChange }: VehicleDeta
             {vehicle.images.map((image) => (
               <div key={image.id} className="overflow-hidden rounded-2xl border border-slate-200">
                 <img
-                  src={image.url}
+                  src={resolveImageUrl(image.url)}
                   alt={`${vehicle.brand} ${vehicle.model}`}
                   className="aspect-[4/3] w-full object-cover transition duration-300 hover:scale-[1.02]"
                 />

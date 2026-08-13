@@ -3,6 +3,7 @@ import { Calendar, CarFront, Eye, ImageIcon, Pencil, Trash2 } from 'lucide-react
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { resolveImageUrl } from '@/lib/image-url';
 import { type ApiVehicle } from '@/types/vehicle';
 
 const carTypeLabels: Record<string, string> = {
@@ -29,7 +30,7 @@ export function VehicleCard({ vehicle, onView, onEdit, onDelete }: VehicleCardPr
     >
       <div className="aspect-video overflow-hidden bg-gradient-to-br from-slate-100 via-white to-slate-200">
         {coverImage ? (
-          <img src={coverImage} alt={vehicleName} className="h-full w-full object-cover" />
+          <img src={resolveImageUrl(coverImage)} alt={vehicleName} className="h-full w-full object-cover" />
         ) : (
           <div className="flex h-full items-center justify-center text-slate-400">
             <CarFront className="size-12" />
