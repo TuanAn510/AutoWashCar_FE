@@ -1,5 +1,6 @@
 import { CirclePlay, CreditCard, Eye } from 'lucide-react';
 
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { AppointmentStatusBadge } from '@/features/customers/appointments/components/AppointmentStatusBadge';
 import { formatDateTime, formatTime } from '@/lib/utils';
@@ -22,27 +23,26 @@ export function StaffAppointmentList({
   onViewDetail,
   onOpenStatusDialog,
   onQuickUpdate,
-  onConfirmPayment,
 }: {
   appointments: AppointmentItem[];
   onViewDetail: (appointment: AppointmentItem) => void;
   onOpenStatusDialog: (appointment: AppointmentItem) => void;
   onQuickUpdate: (appointment: AppointmentItem, nextStatus: 'in_progress' | 'completed') => void;
-  onConfirmPayment: (appointment: AppointmentItem) => void;
 }) {
   return (
     <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
       <div className="w-full max-w-full overflow-x-auto">
-        <table className="w-full min-w-[1080px] table-fixed border-collapse text-left text-sm">
+        <table className="w-full min-w-[1200px] table-fixed border-collapse text-left text-sm">
           <thead>
             <tr className="border-b border-slate-200 text-slate-900">
+              <th className="w-[160px] px-3 py-4 font-semibold">Thao tác</th>
               <th className="w-[180px] px-3 py-4 font-semibold">Khách hàng</th>
               <th className="w-[170px] px-3 py-4 font-semibold">Xe</th>
               <th className="w-[220px] px-3 py-4 font-semibold">Dịch vụ</th>
               <th className="w-[150px] px-3 py-4 font-semibold">Thời gian hẹn</th>
-              <th className="w-[100px] px-3 py-4 font-semibold">Thời lượng</th>
-              <th className="w-[140px] px-3 py-4 font-semibold">Trạng thái</th>
-              <th className="w-[210px] px-3 py-4 font-semibold text-right">Thao tác</th>
+              <th className="w-[90px] px-3 py-4 font-semibold">Thời lượng</th>
+              <th className="w-[130px] px-3 py-4 font-semibold">Trạng thái</th>
+              <th className="w-[100px] px-3 py-4 font-semibold text-center">Chi tiết</th>
             </tr>
           </thead>
           <tbody>
@@ -60,6 +60,45 @@ export function StaffAppointmentList({
                   key={appointment._id}
                   className="border-b border-slate-100 align-top transition-colors hover:bg-slate-50/70 last:border-0"
                 >
+                  <td className="px-3 py-4">
+                    <div className="flex flex-nowrap items-center gap-2 whitespace-nowrap">
+                      {!isTerminal && !quickAction ? (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="rounded-lg"
+                          onClick={() => onOpenStatusDialog(appointment)}
+                        >
+                          <CirclePlay className="size-4" />
+                          Cập nhật
+                        </Button>
+                      ) : null}
+                      {quickAction ? (
+                        <Button
+                          type="button"
+                          size="sm"
+                          className="rounded-lg"
+                          onClick={() => onQuickUpdate(appointment, quickAction.nextStatus)}
+                        >
+                          {quickAction.label}
+                        </Button>
+                      ) : null}
+                      {appointment.status === 'completed' ? (
+                        appointment.paymentStatus === 'paid' ? (
+                          <Badge variant="success" className="rounded-full px-2.5 py-0.5 text-xs">
+                            <CreditCard className="mr-1 size-3" />
+                            Đã thanh toán
+                          </Badge>
+                        ) : (
+                          <Badge variant="neutral" className="rounded-full px-2.5 py-0.5 text-xs">
+                            <CreditCard className="mr-1 size-3" />
+                            Đợi thanh toán
+                          </Badge>
+                        )
+                      ) : null}
+                    </div>
+                  </td>
                   <td className="px-3 py-4">
                     <p
                       className="truncate font-semibold text-slate-950"
@@ -92,7 +131,7 @@ export function StaffAppointmentList({
                     <AppointmentStatusBadge status={appointment.status} />
                   </td>
                   <td className="px-3 py-4">
-                    <div className="flex flex-nowrap items-center justify-end gap-2 whitespace-nowrap">
+                    <div className="flex items-center justify-center">
                       <Button
                         type="button"
                         size="sm"
@@ -103,40 +142,6 @@ export function StaffAppointmentList({
                         <Eye className="size-4" />
                         Chi tiết
                       </Button>
-                      {!isTerminal && !quickAction ? (
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          className="rounded-lg"
-                          onClick={() => onOpenStatusDialog(appointment)}
-                        >
-                          <CirclePlay className="size-4" />
-                          Cập nhật
-                        </Button>
-                      ) : null}
-                      {quickAction ? (
-                        <Button
-                          type="button"
-                          size="sm"
-                          className="rounded-lg"
-                          onClick={() => onQuickUpdate(appointment, quickAction.nextStatus)}
-                        >
-                          {quickAction.label}
-                        </Button>
-                      ) : null}
-                      {appointment.status === 'completed' &&
-                      appointment.paymentStatus !== 'paid' ? (
-                        <Button
-                          type="button"
-                          size="sm"
-                          className="rounded-lg"
-                          onClick={() => onConfirmPayment(appointment)}
-                        >
-                          <CreditCard className="size-4" />
-                          Thanh toán
-                        </Button>
-                      ) : null}
                     </div>
                   </td>
                 </tr>

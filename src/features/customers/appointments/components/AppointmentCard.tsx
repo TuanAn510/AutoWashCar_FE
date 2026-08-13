@@ -9,7 +9,7 @@ import {
   formatAppointmentVehicleLine,
 } from '@/features/customers/appointments/utils/appointmentDisplay';
 import { PaymentStatusBadge } from '@/components/shared/PaymentStatusBadge';
-import { formatDateTime, formatPrice, formatTime } from '@/lib/utils';
+import { formatDateTime, formatPrice, formatRelativeCreatedTime, formatTime } from '@/lib/utils';
 import type { AppointmentItem } from '@/types/appointment';
 
 const getAppointmentPriceDisplay = (appointment: AppointmentItem) => {
@@ -37,6 +37,7 @@ export function AppointmentCard({
   const canCancel = canCustomerCancelAppointment(appointment.status);
   const note = appointment.note?.trim();
   const { discountedPrice, hasDiscount, originalPrice } = getAppointmentPriceDisplay(appointment);
+  const relativeTime = formatRelativeCreatedTime(appointment.createdAt);
 
   return (
     <Card
@@ -52,6 +53,11 @@ export function AppointmentCard({
             <p className="mt-1 truncate text-sm text-[#64748b]">
               {formatAppointmentVehicleLine(appointment)}
             </p>
+            {relativeTime ? (
+              <span className="mt-1 inline-block rounded-full bg-[#fff3e6] px-2 py-0.5 text-xs font-semibold text-[#ff7a1a]">
+                {relativeTime}
+              </span>
+            ) : null}
           </div>
           <AppointmentStatusBadge status={appointment.status} />
         </div>

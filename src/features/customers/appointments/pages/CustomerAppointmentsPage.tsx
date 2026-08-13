@@ -46,7 +46,7 @@ export default function CustomerAppointmentsPage() {
   const [isFilterOpen, setFilterOpen] = useState(false);
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
-  const appointmentsQuery = useMyAppointments({ sortBy: 'scheduledAt', sortOrder });
+  const appointmentsQuery = useMyAppointments({ sortBy: 'createdAt', sortOrder });
   const vehiclesQuery = useMyVehicles();
   const createAppointmentMutation = useCreateAppointment();
   const cancelAppointmentMutation = useCancelAppointment();
@@ -161,8 +161,8 @@ export default function CustomerAppointmentsPage() {
                 value={sortOrder}
                 onChange={(event) => setSortOrder(event.target.value as 'asc' | 'desc')}
               >
-                <option value="desc">Lịch mới nhất</option>
-                <option value="asc">Lịch cũ nhất</option>
+                <option value="desc">Mới nhất</option>
+                <option value="asc">Cũ nhất</option>
               </select>
               <Button
                 type="button"

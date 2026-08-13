@@ -115,3 +115,20 @@ export const getMonthStartISOString = () => {
   const start = new Date(now.getFullYear(), now.getMonth(), 1);
   return start.toISOString();
 };
+
+export const formatRelativeCreatedTime = (dateString?: string | null): string => {
+  if (!dateString) return '';
+
+  const now = new Date();
+  const created = new Date(dateString);
+  const diffMs = now.getTime() - created.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffDays < 0) return 'Vừa tạo';
+  if (diffDays === 0) return 'Hôm nay';
+  if (diffDays === 1) return 'Hôm qua';
+  if (diffDays < 7) return `${diffDays} ngày trước`;
+  if (diffDays < 30) return `${Math.floor(diffDays / 7)} tuần trước`;
+  if (diffDays < 365) return `${Math.floor(diffDays / 30)} tháng trước`;
+  return 'Cũ hơn';
+};

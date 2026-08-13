@@ -203,7 +203,14 @@ export default function PaymentsPage() {
   const averageTransaction = paidAppointments.length ? totalRevenue / paidAppointments.length : 0;
 
   const filteredAppointments = useMemo(
-    () => appointments.filter((appointment) => matchesPaymentFilter(appointment, activeFilter)),
+    () =>
+      appointments
+        .filter((appointment) => matchesPaymentFilter(appointment, activeFilter))
+        .sort((a, b) => {
+          const dateA = new Date(getDisplayDate(a)).getTime();
+          const dateB = new Date(getDisplayDate(b)).getTime();
+          return dateB - dateA;
+        }),
     [activeFilter, appointments]
   );
   const totalPages = Math.max(1, Math.ceil(filteredAppointments.length / PAYMENTS_PER_PAGE));
@@ -212,7 +219,17 @@ export default function PaymentsPage() {
     (safePage - 1) * PAYMENTS_PER_PAGE,
     safePage * PAYMENTS_PER_PAGE
   );
-  const recentAppointments = appointments.slice(0, 5);
+  const recentAppointments = useMemo(
+    () =>
+      [...appointments]
+        .sort((a, b) => {
+          const dateA = new Date(getDisplayDate(a)).getTime();
+          const dateB = new Date(getDisplayDate(b)).getTime();
+          return dateB - dateA;
+        })
+        .slice(0, 5),
+    [appointments]
+  );
 
   const handlePrintInvoice = (appointment: AppointmentItem) => {
     setDetailAppointment(appointment);
@@ -290,46 +307,44 @@ export default function PaymentsPage() {
                 ))}
               </section>
 
-              <section className="grid gap-6 xl:grid-cols-2">
-                <div className="rounded-lg border border-border/80 bg-white p-6">
-                  <p className="text-xl font-semibold text-slate-950">Giao dịch gần đây</p>
-                  <div className="mt-7 space-y-4">
-                    {recentAppointments.length ? (
-                      recentAppointments.map((appointment) => {
-                        const date = getDateParts(getDisplayDate(appointment));
-                        return (
-                          <button
-                            key={appointment._id}
-                            type="button"
-                            className="flex w-full items-center justify-between gap-4 rounded-lg bg-slate-50 p-4 text-left transition hover:bg-slate-100"
-                            onClick={() => setDetailAppointment(appointment)}
-                          >
-                            <div className="min-w-0">
-                              <p className="truncate font-semibold text-slate-900">
-                                {appointment.customerId.displayName}
-                              </p>
-                              <p className="mt-1 line-clamp-1 text-sm text-slate-500">
-                                {getServiceTitle(appointment)}
-                              </p>
-                              <p className="text-xs text-slate-500">{date.time}</p>
+              <section className="rounded-lg border border-border/80 bg-white p-6">
+                <p className="text-xl font-semibold text-slate-950">Giao dịch gần đây</p>
+                <div className="mt-7 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+                  {recentAppointments.length ? (
+                    recentAppointments.map((appointment) => {
+                      const date = getDateParts(getDisplayDate(appointment));
+                      return (
+                        <button
+                          key={appointment._id}
+                          type="button"
+                          className="flex w-full items-center justify-between gap-4 rounded-lg bg-slate-50 p-4 text-left transition hover:bg-slate-100"
+                          onClick={() => setDetailAppointment(appointment)}
+                        >
+                          <div className="min-w-0">
+                            <p className="truncate font-semibold text-slate-900">
+                              {appointment.customerId.displayName}
+                            </p>
+                            <p className="mt-1 line-clamp-1 text-sm text-slate-500">
+                              {getServiceTitle(appointment)}
+                            </p>
+                            <p className="text-xs text-slate-500">{date.time}</p>
+                          </div>
+                          <div className="shrink-0 text-right">
+                            <p className="font-bold text-slate-950">
+                              {formatCurrencyVi(getPaymentAmount(appointment))}
+                            </p>
+                            <div className="mt-2">
+                              <PaymentStatusBadge status={appointment.paymentStatus} />
                             </div>
-                            <div className="shrink-0 text-right">
-                              <p className="font-bold text-slate-950">
-                                {formatCurrencyVi(getPaymentAmount(appointment))}
-                              </p>
-                              <div className="mt-2">
-                                <PaymentStatusBadge status={appointment.paymentStatus} />
-                              </div>
-                            </div>
-                          </button>
-                        );
-                      })
-                    ) : (
-                      <p className="rounded-lg bg-slate-50 p-6 text-center text-sm text-slate-500">
-                        Chưa có dữ liệu thanh toán.
-                      </p>
-                    )}
-                  </div>
+                          </div>
+                        </button>
+                      );
+                    })
+                  ) : (
+                    <p className="col-span-full rounded-lg bg-slate-50 p-6 text-center text-sm text-slate-500">
+                      Chưa có dữ liệu thanh toán.
+                    </p>
+                  )}
                 </div>
               </section>
 
