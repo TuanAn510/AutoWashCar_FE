@@ -63,7 +63,9 @@ function RescheduleAppointmentDialogContent({
   const nextDateTime =
     scheduledDate && scheduledTime ? new Date(`${scheduledDate}T${scheduledTime}`) : null;
   const isInvalidDateTime =
-    !nextDateTime || Number.isNaN(nextDateTime.getTime()) || nextDateTime <= new Date();
+    !nextDateTime ||
+    Number.isNaN(nextDateTime.getTime()) ||
+    nextDateTime < new Date(Date.now() + 30 * 60 * 1000);
 
   return (
     <CustomerModalShell
@@ -80,7 +82,7 @@ function RescheduleAppointmentDialogContent({
           </Button>
           <Button
             type="button"
-            onClick={() => nextDateTime && onConfirm(nextDateTime.toISOString())}
+            onClick={() => onConfirm(`${scheduledDate}T${scheduledTime}:00`)}
             disabled={isSubmitting || isInvalidDateTime}
           >
             {isSubmitting ? 'Đang đổi lịch...' : 'Cập nhật lịch'}
@@ -122,7 +124,7 @@ function RescheduleAppointmentDialogContent({
       </div>
 
       {isInvalidDateTime ? (
-        <p className="text-sm text-rose-600">Thời gian hẹn mới phải nằm trong tương lai.</p>
+        <p className="text-sm text-rose-600">Thời gian hẹn mới phải cách hiện tại ít nhất 30 phút.</p>
       ) : null}
     </CustomerModalShell>
   );
