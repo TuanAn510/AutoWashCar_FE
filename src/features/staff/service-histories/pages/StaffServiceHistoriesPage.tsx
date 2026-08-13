@@ -26,7 +26,12 @@ export default function StaffServiceHistoriesPage() {
 
   const serviceHistoriesQuery = useMyStaffServiceHistories();
   const serviceHistories = useMemo(
-    () => serviceHistoriesQuery.data?.items ?? [],
+    () => {
+      const items = serviceHistoriesQuery.data?.items ?? [];
+      return [...items].sort(
+        (a, b) => new Date(b.servicedAt).getTime() - new Date(a.servicedAt).getTime()
+      );
+    },
     [serviceHistoriesQuery.data?.items]
   );
 

@@ -61,6 +61,14 @@ export const loyaltyApi = {
     >(`/loyalty/customers/${customerId}/transactions`, { params: { limit: 100 }, signal });
     return unwrapList<LoyaltyTransaction>(response);
   },
+
+  async getCustomerRedemptions(customerId: string, signal?: AbortSignal) {
+    const response = await api.get<ApiEnvelope<RewardRedemption[]>>(
+      `/loyalty/customers/${customerId}/redemptions`,
+      { signal }
+    );
+    return response.data.data ?? [];
+  },
 };
 
 export const membershipTierApi = {

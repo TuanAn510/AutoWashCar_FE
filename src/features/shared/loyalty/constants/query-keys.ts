@@ -11,6 +11,7 @@ export const loyaltyKeys = {
   }) => queryKeys.loyalty.customers(params),
   customer: queryKeys.loyalty.customer,
   customerTransactions: queryKeys.loyalty.customerTransactions,
+  customerRedemptions: queryKeys.loyalty.customerRedemptions,
 };
 
 export const membershipTierKeys = {

@@ -107,6 +107,7 @@ export const queryKeys = {
     customers: (params?: object) => keyed(['loyalty', 'customers', params ?? {}] as const),
     customer: (id: string) => ['loyalty', 'customers', id] as const,
     customerTransactions: (id: string) => ['loyalty', 'customers', id, 'transactions'] as const,
+    customerRedemptions: (id: string) => ['loyalty', 'customers', id, 'redemptions'] as const,
   },
   membershipTiers: {
     all: ['membership-tiers'] as const,

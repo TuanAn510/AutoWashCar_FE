@@ -15,6 +15,7 @@ import { Input } from '@/components/ui/input';
 import {
   useCustomerLoyaltyAccount,
   useCustomerLoyaltyTransactions,
+  useCustomerRedemptions,
   useCustomersWithLoyalty,
   useMarkRedemptionUsed,
 } from '@/features/shared/loyalty/hooks/use-loyalty';
@@ -23,9 +24,11 @@ import type {
   LoyaltyAccount,
   LoyaltyCustomer,
   LoyaltyTransaction,
+  RewardRedemption,
 } from '@/features/shared/loyalty/types/loyalty.types';
 import {
   formatPoints,
+  redemptionStatusLabels,
   transactionTypeLabels,
 } from '@/features/shared/loyalty/utils/loyalty-formatters';
 import { getAccountTier } from '@/features/shared/loyalty/utils/tier-progress';
@@ -135,7 +138,8 @@ export default function StaffLoyaltyLookupPage() {
   const [keyword, setKeyword] = useState('');
   const [submittedKeyword, setSubmittedKeyword] = useState('');
   const [customerId, setCustomerId] = useState('');
-  const [redemptionId, setRedemptionId] = useState('');
+  const [selectedCustomerName, setSelectedCustomerName] = useState('');
+  const [selectedCustomerPhone, setSelectedCustomerPhone] = useState('');
   const [confirmRedemptionId, setConfirmRedemptionId] = useState('');
   const [showResults, setShowResults] = useState(false);
 
@@ -145,6 +149,7 @@ export default function StaffLoyaltyLookupPage() {
   });
   const accountQuery = useCustomerLoyaltyAccount(customerId);
   const transactionsQuery = useCustomerLoyaltyTransactions(customerId);
+  const redemptionsQuery = useCustomerRedemptions(customerId);
   const markUsedMutation = useMarkRedemptionUsed(customerId);
 
   const searchResults = useMemo(
@@ -170,6 +175,8 @@ export default function StaffLoyaltyLookupPage() {
 
   const handleSelectCustomer = (customer: LoyaltyCustomer) => {
     setCustomerId(customer._id);
+    setSelectedCustomerName(customer.displayName || '');
+    setSelectedCustomerPhone(customer.phone || '');
     setShowResults(false);
     setKeyword('');
     setSubmittedKeyword('');
@@ -177,6 +184,8 @@ export default function StaffLoyaltyLookupPage() {
 
   const handleClearCustomer = () => {
     setCustomerId('');
+    setSelectedCustomerName('');
+    setSelectedCustomerPhone('');
     setKeyword('');
     setSubmittedKeyword('');
     setShowResults(false);
@@ -284,13 +293,11 @@ export default function StaffLoyaltyLookupPage() {
                   </div>
                   <div>
                     <p className="font-semibold text-slate-950">
-                      {accountQuery.data.customerId &&
-                      typeof accountQuery.data.customerId === 'object'
-                        ? (accountQuery.data.customerId as LoyaltyCustomer).displayName ||
-                          'Khách hàng'
-                        : 'Khách hàng'}
+{selectedCustomerName || 'Khách hàng'}
                     </p>
-                    <p className="text-sm text-slate-500">ID: {customerId}</p>
+                    <p className="text-sm text-slate-500">
+                      {selectedCustomerPhone ? `${selectedCustomerPhone} · ` : ''}ID: {customerId}
+                    </p>
                   </div>
                 </div>
                 <Button
@@ -310,24 +317,76 @@ export default function StaffLoyaltyLookupPage() {
                   Đánh dấu phần thưởng đã dùng
                 </h2>
                 <p className="mt-1 text-sm text-slate-500">
-                  Nhập mã lượt đổi thưởng của khách hàng để đánh dấu phần thưởng đã sử dụng.
+                  Chọn mã đổi thưởng của khách hàng để đánh dấu đã sử dụng.
                 </p>
-                <div className="mt-5 flex flex-col gap-3 sm:flex-row">
-                  <Input
-                    value={redemptionId}
-                    onChange={(event) => setRedemptionId(event.target.value)}
-                    placeholder="Nhập mã lượt đổi thưởng"
-                    className="h-10"
-                  />
-                  <Button
-                    className="h-10 rounded-md"
-                    disabled={markUsedMutation.isPending || !redemptionId.trim()}
-                    onClick={() => setConfirmRedemptionId(redemptionId.trim())}
-                  >
-                    <CheckCircle2 className="size-4" />
-                    Đã dùng
-                  </Button>
-                </div>
+                {redemptionsQuery.isLoading ? (
+                  <div className="mt-5 flex items-center justify-center py-6">
+                    <Loader2 className="size-5 animate-spin text-slate-400" />
+                  </div>
+                ) : (redemptionsQuery.data ?? []).length === 0 ? (
+                  <div className="mt-5 rounded-lg border border-dashed border-slate-300 px-4 py-8 text-center text-sm text-slate-500">
+                    Khách hàng này chưa có mã đổi thưởng nào.
+                  </div>
+                ) : (
+                  <div className="mt-5 overflow-x-auto">
+                    <table className="w-full min-w-[640px] text-left text-sm">
+                      <thead>
+                        <tr className="border-b text-slate-900">
+                          <th className="px-2 py-3 font-semibold">Mã đổi thưởng</th>
+                          <th className="px-2 py-3 font-semibold">Phần thưởng</th>
+                          <th className="px-2 py-3 font-semibold">Điểm đã dùng</th>
+                          <th className="px-2 py-3 font-semibold">Trạng thái</th>
+                          <th className="px-2 py-3 font-semibold">Ngày đổi</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(redemptionsQuery.data ?? []).map((redemption: RewardRedemption) => {
+                          const reward =
+                            typeof redemption.rewardId === 'object' && redemption.rewardId
+                              ? redemption.rewardId
+                              : null;
+                          const isAvailable = redemption.status === 'available';
+
+                          return (
+                            <tr key={redemption._id} className="border-b last:border-0">
+                              <td className="px-2 py-4 font-mono text-xs text-slate-600">
+                                {redemption.code ?? redemption._id}
+                              </td>
+                              <td className="px-2 py-4 font-semibold text-slate-950">
+                                {reward?.name ?? 'Phần thưởng'}
+                              </td>
+                              <td className="px-2 py-4 text-slate-900">
+                                {formatPoints(redemption.pointsUsed)}
+                              </td>
+                              <td className="px-2 py-4">
+                                {isAvailable ? (
+                                  <Button
+                                    size="sm"
+                                    className="h-8 rounded-md"
+                                    disabled={markUsedMutation.isPending}
+                                    onClick={() => setConfirmRedemptionId(redemption._id)}
+                                  >
+                                    <CheckCircle2 className="size-3.5" />
+                                    Đã dùng
+                                  </Button>
+                                ) : (
+                                  <Badge className="border-slate-200 bg-slate-50 text-slate-500">
+                                    {redemptionStatusLabels[redemption.status] ?? redemption.status}
+                                  </Badge>
+                                )}
+                              </td>
+                              <td className="px-2 py-4 text-slate-600">
+                                {redemption.redeemedAt
+                                  ? formatDate(redemption.redeemedAt)
+                                  : 'Chưa có'}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </section>
 
               <TransactionTable transactions={transactions} />
@@ -352,8 +411,27 @@ export default function StaffLoyaltyLookupPage() {
               thao tác này.
             </DialogDescription>
           </DialogHeader>
-          <div className="rounded-lg bg-slate-50 p-4 text-sm text-slate-700">
-            {confirmRedemptionId}
+          <div className="rounded-lg bg-slate-50 p-4 text-sm">
+            {(() => {
+              const redemption = (redemptionsQuery.data ?? []).find(
+                (r) => r._id === confirmRedemptionId
+              );
+              if (!redemption) return <span className="text-slate-500">{confirmRedemptionId}</span>;
+              const reward =
+                typeof redemption.rewardId === 'object' && redemption.rewardId
+                  ? redemption.rewardId
+                  : null;
+              return (
+                <div className="space-y-1.5">
+                  <p className="font-semibold text-slate-950">
+                    {reward?.name ?? 'Phần thưởng'}
+                  </p>
+                  <p className="text-slate-500">
+                    Mã: {redemption.code ?? redemption._id} · {formatPoints(redemption.pointsUsed)}
+                  </p>
+                </div>
+              );
+            })()}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setConfirmRedemptionId('')}>
@@ -363,8 +441,8 @@ export default function StaffLoyaltyLookupPage() {
               disabled={markUsedMutation.isPending}
               onClick={async () => {
                 await markUsedMutation.mutateAsync(confirmRedemptionId);
-                setRedemptionId('');
                 setConfirmRedemptionId('');
+                redemptionsQuery.refetch();
               }}
             >
               {markUsedMutation.isPending ? (
