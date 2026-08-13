@@ -42,6 +42,7 @@ export function StaffAppointmentFilters({
           <option value="all">Tất cả trạng thái</option>
           <option value="pending">Chờ xác nhận</option>
           <option value="confirmed">Đã xác nhận</option>
+          <option value="in_queue">Đã check-in</option>
           <option value="in_progress">Đang thực hiện</option>
           <option value="completed">Hoàn thành</option>
           <option value="cancelled">Đã hủy</option>

@@ -24,6 +24,14 @@ const timelineSteps = [
     ringColor: 'ring-blue-100',
   },
   {
+    status: 'in_queue',
+    label: 'Đã check-in',
+    shortLabel: 'CI',
+    color: 'bg-cyan-500',
+    textColor: 'text-cyan-600',
+    ringColor: 'ring-cyan-100',
+  },
+  {
     status: 'in_progress',
     label: 'Đang thực hiện',
     shortLabel: 'TH',
@@ -76,7 +84,7 @@ export function AppointmentStatusTimeline({
   return (
     <TooltipProvider delayDuration={150}>
       <div
-        className="grid min-w-[232px] grid-cols-[28px_1fr_28px_1fr_28px_1fr_28px] items-start"
+        className="grid min-w-[300px] grid-cols-[28px_1fr_28px_1fr_28px_1fr_28px_1fr_28px] items-start"
         aria-label={`Trạng thái hiện tại: ${currentStep.label}`}
       >
         {timelineSteps.map((step, index) => {

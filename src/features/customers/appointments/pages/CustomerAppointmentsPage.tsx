@@ -25,6 +25,7 @@ const filters: Array<{ label: string; value: 'all' | 'upcoming' | AppointmentSta
   { label: 'Sắp tới', value: 'upcoming' },
   { label: 'Chờ xác nhận', value: 'pending' },
   { label: 'Đã xác nhận', value: 'confirmed' },
+  { label: 'Đã check-in', value: 'in_queue' },
   { label: 'Hoàn thành', value: 'completed' },
   { label: 'Đã hủy', value: 'cancelled' },
 ];

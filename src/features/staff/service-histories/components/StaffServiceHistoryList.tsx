@@ -18,6 +18,10 @@ const statusMeta: Record<AppointmentStatus, { label: string; className: string }
     label: 'Đã xác nhận',
     className: 'bg-sky-50 text-sky-700 ring-sky-200',
   },
+  in_queue: {
+    label: 'Đã check-in',
+    className: 'bg-cyan-50 text-cyan-700 ring-cyan-200',
+  },
   in_progress: {
     label: 'Đang thực hiện',
     className: 'bg-blue-50 text-blue-700 ring-blue-200',
