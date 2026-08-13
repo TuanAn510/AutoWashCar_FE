@@ -11,14 +11,14 @@ import {
   Loader2,
   Wrench,
 } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { useEffect, useMemo, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { z } from 'zod';
 
 import { Button } from '@/components/ui/button';
 import { DatePicker } from '@/components/ui/date-picker';
 import { Field, FieldError, FieldLabel } from '@/components/ui/field';
-import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   useMyLoyaltyAccount,
@@ -33,8 +33,9 @@ import {
   getPromotionReferenceId,
 } from '@/features/customers/appointments/utils/appointment-pricing';
 import { useMyVehicles } from '@/features/customers/vehicles/hooks/useMyVehicles';
+import { appointmentApi } from '@/services/appointmentService';
 import type { Promotion } from '@/services/promotionService';
-import type { CreateAppointmentPayload } from '@/types/appointment';
+import type { BookingAvailabilitySlot, CreateAppointmentPayload } from '@/types/appointment';
 import { CustomerModalShell } from '@/features/customers/components/CustomerModalShell';
 import { cn, formatTime } from '@/lib/utils';
 
@@ -122,6 +123,28 @@ const createDefaultValues = (): CreateAppointmentFormValues => {
 
 const formatCurrency = (value: number) => `${Math.round(value / 1000)}K`;
 
+const toSlotTime = (startAt: string) => {
+  const date = new Date(startAt);
+  if (Number.isNaN(date.getTime())) return startAt.slice(11, 16);
+  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+};
+
+const availabilityReasonLabels: Record<string, string> = {
+  PAST: 'Đã qua',
+  OUT_OF_TIER_WINDOW: 'Ngoài hạn đặt',
+  OUT_OF_BUSINESS_HOURS: 'Ngoài giờ làm',
+  NO_STAFF: 'Chưa có staff',
+  VEHICLE_BOOKING_LIMIT: 'Xe đã có 2 lịch',
+  VEHICLE_OVERLAP: 'Trùng lịch xe',
+  CAPACITY_FULL: 'Hết slot',
+};
+
+const getSlotLabel = (slot: BookingAvailabilitySlot) => {
+  const time = toSlotTime(slot.startAt);
+  if (slot.available || !slot.reason) return time;
+  return `${time} - ${availabilityReasonLabels[slot.reason] ?? 'Không khả dụng'}`;
+};
+
 const getRedemptionReward = (redemption: RewardRedemption) =>
   typeof redemption.rewardId === 'object' && redemption.rewardId ? redemption.rewardId : null;
 
@@ -202,6 +225,7 @@ export function CreateAppointmentModal({
     () => allServices.filter((service) => values.serviceIds.includes(service._id)),
     [allServices, values.serviceIds]
   );
+  const selectedServiceId = values.serviceIds[0] ?? '';
   const subtotalPrice = selectedServices.reduce((sum, service) => sum + service.price, 0);
   const totalDuration = selectedServices.reduce(
     (sum, service) => sum + service.estimatedDuration,
@@ -267,6 +291,70 @@ export function CreateAppointmentModal({
     : 0;
   const estimatedDiscount = membershipDiscount + promotionDiscount + rewardDiscount;
   const estimatedTotal = Math.max(0, subtotalPrice - estimatedDiscount);
+  const availabilityEnabled = Boolean(
+    isOpen && values.scheduledDate && values.vehicleId && selectedServiceId
+  );
+  const availabilityQuery = useQuery({
+    queryKey: [
+      'booking-availability',
+      values.scheduledDate,
+      values.vehicleId,
+      selectedServiceId,
+      values.rewardRedemptionId,
+    ],
+    queryFn: ({ signal }) =>
+      appointmentApi.getBookingAvailability(
+        {
+          date: values.scheduledDate,
+          vehicleId: values.vehicleId,
+          serviceId: selectedServiceId,
+          rewardRedemptionId: values.rewardRedemptionId || undefined,
+        },
+        signal
+      ),
+    enabled: availabilityEnabled,
+    staleTime: 15_000,
+  });
+  const availabilitySlots = useMemo(
+    () => availabilityQuery.data?.slots ?? [],
+    [availabilityQuery.data?.slots]
+  );
+  const availableSlots = useMemo(
+    () => availabilitySlots.filter((slot) => slot.available),
+    [availabilitySlots]
+  );
+  const selectedSlot = availabilitySlots.find(
+    (slot) => toSlotTime(slot.startAt) === values.scheduledTime
+  );
+  const shouldBlockSelectedSlot =
+    availabilityEnabled &&
+    !availabilityQuery.isLoading &&
+    (!selectedSlot || !selectedSlot.available);
+  const shouldBlockScheduleStep =
+    currentStep === 2 &&
+    (availabilityQuery.isLoading ||
+      availabilityQuery.isError ||
+      shouldBlockSelectedSlot ||
+      availableSlots.length === 0);
+
+  useEffect(() => {
+    if (!availabilityEnabled || availabilityQuery.isLoading || availabilityQuery.isError) return;
+    if (!availabilitySlots.length) return;
+    if (selectedSlot?.available) return;
+
+    setValue('scheduledTime', availableSlots[0] ? toSlotTime(availableSlots[0].startAt) : '', {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+  }, [
+    availabilityEnabled,
+    availabilityQuery.isError,
+    availabilityQuery.isLoading,
+    availabilitySlots,
+    availableSlots,
+    selectedSlot?.available,
+    setValue,
+  ]);
 
   const resetWizard = () => {
     reset(createDefaultValues());
@@ -343,7 +431,7 @@ export function CreateAppointmentModal({
         <Button
           type="button"
           className="w-full sm:w-40"
-          disabled={isInitialOptionsLoading || hasFormOptionsError}
+          disabled={isInitialOptionsLoading || hasFormOptionsError || shouldBlockScheduleStep}
           onClick={handleNext}
         >
           Tiếp tục
@@ -353,7 +441,7 @@ export function CreateAppointmentModal({
         <Button
           type="button"
           className="w-full sm:w-48"
-          disabled={isSubmitting || hasFormOptionsError}
+          disabled={isSubmitting || hasFormOptionsError || shouldBlockSelectedSlot}
           onClick={() => void submitAppointment()}
         >
           {isSubmitting ? (
@@ -483,13 +571,42 @@ export function CreateAppointmentModal({
                     />
                     <FieldError>{errors.scheduledDate?.message}</FieldError>
                   </Field>
-                  <FormInput
-                    type="time"
-                    label="Giờ hẹn"
-                    error={errors.scheduledTime?.message}
-                    disabled={isSubmitting}
-                    {...register('scheduledTime')}
-                  />
+                  <Field>
+                    <FieldLabel>Giờ hẹn</FieldLabel>
+                    <select
+                      className="h-11 rounded-xl border border-[#d8e2ef] bg-white px-3 text-sm font-semibold text-[#64748b] outline-none focus:border-[#0b67c2]"
+                      disabled={isSubmitting || !availabilityEnabled || availabilityQuery.isLoading}
+                      {...register('scheduledTime')}
+                    >
+                      <option value="">
+                        {availabilityQuery.isLoading ? 'Đang kiểm tra slot...' : 'Chọn giờ hẹn'}
+                      </option>
+                      {availabilitySlots.map((slot) => {
+                        const time = toSlotTime(slot.startAt);
+
+                        return (
+                          <option key={slot.startAt} value={time} disabled={!slot.available}>
+                            {getSlotLabel(slot)}
+                          </option>
+                        );
+                      })}
+                    </select>
+                    {availabilityQuery.isError ? (
+                      <FieldError>Không thể kiểm tra slot. Vui lòng thử lại.</FieldError>
+                    ) : null}
+                    {!availabilityQuery.isError &&
+                    availabilityEnabled &&
+                    !availabilityQuery.isLoading &&
+                    availableSlots.length === 0 ? (
+                      <FieldError>Ngày này không còn slot phù hợp.</FieldError>
+                    ) : null}
+                    {!availabilityQuery.isError &&
+                    shouldBlockSelectedSlot &&
+                    availableSlots.length > 0 ? (
+                      <FieldError>Khung giờ đã chọn không còn khả dụng.</FieldError>
+                    ) : null}
+                    <FieldError>{errors.scheduledTime?.message}</FieldError>
+                  </Field>
                 </div>
                 <p className="mt-2 text-xs text-slate-500">
                   Hạng {tierName}: bạn có thể đặt lịch trước tối đa {bookingWindowDays} ngày.
@@ -796,19 +913,5 @@ function ReviewItem({ label, value }: { label: string; value: string }) {
       <p className="text-xs font-black uppercase tracking-[0.12em] text-[#64748b]">{label}</p>
       <p className="mt-1 break-words text-sm font-black text-[#15243a]">{value}</p>
     </div>
-  );
-}
-
-function FormInput({
-  label,
-  error,
-  ...props
-}: React.ComponentProps<typeof Input> & { label: string; error?: string }) {
-  return (
-    <Field>
-      <FieldLabel>{label}</FieldLabel>
-      <Input className="h-11 rounded-xl bg-white" {...props} />
-      <FieldError>{error}</FieldError>
-    </Field>
   );
 }

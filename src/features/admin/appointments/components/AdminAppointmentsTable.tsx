@@ -94,7 +94,11 @@ export function AdminAppointmentsTable({
                 .map((service) => service.nameSnapshot)
                 .join(', ');
               const vehicleLabel = `${appointment.vehicleId.brand} ${appointment.vehicleId.model}`;
-              const staffName = appointment.assignedStaffId?.displayName;
+              const assignedStaffs = appointment.assignedStaffIds?.length
+                ? appointment.assignedStaffIds
+                : appointment.assignedStaffId
+                  ? [appointment.assignedStaffId]
+                  : [];
               const schedule = formatAppointmentSchedule(appointment.scheduledAt);
 
               return (
@@ -148,10 +152,18 @@ export function AdminAppointmentsTable({
                     <p className="mt-0.5 text-xs leading-4 text-slate-500">{schedule.date}</p>
                   </td>
                   <td className="px-2 py-3 text-slate-700">
-                    {staffName ? (
-                      <p className="truncate" title={staffName}>
-                        {staffName}
-                      </p>
+                    {assignedStaffs.length ? (
+                      <div className="flex flex-wrap gap-1.5">
+                        {assignedStaffs.map((staff) => (
+                          <span
+                            key={staff._id}
+                            className="inline-flex max-w-full rounded-md bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700"
+                            title={staff.displayName}
+                          >
+                            <span className="truncate">{staff.displayName}</span>
+                          </span>
+                        ))}
+                      </div>
                     ) : (
                       <span className="inline-flex max-w-full rounded-md bg-slate-100 px-2 py-1 text-xs font-medium text-slate-600">
                         Chưa phân công

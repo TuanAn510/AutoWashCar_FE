@@ -48,6 +48,12 @@ export function AppointmentDetailDialog({
   }
 
   const canPay = appointment.paymentStatus === 'unpaid' || appointment.paymentStatus === 'pending';
+  const assignedStaffs = appointment.assignedStaffIds?.length
+    ? appointment.assignedStaffIds
+    : appointment.assignedStaffId
+      ? [appointment.assignedStaffId]
+      : [];
+  const assignedStaffNames = assignedStaffs.map((staff) => staff.displayName).join(', ');
 
   return (
     <CustomerModalShell
@@ -140,7 +146,7 @@ export function AppointmentDetailDialog({
           <DetailItem
             icon={UserRound}
             label="Nhân viên phụ trách"
-            value={appointment.assignedStaffId?.displayName || 'Sẽ được xác nhận sau'}
+            value={assignedStaffNames || 'Sẽ được xác nhận sau'}
           />
         </div>
       </section>

@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import type { PropsWithChildren, ReactNode } from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { CarFront } from 'lucide-react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -88,10 +89,40 @@ vi.mock('@/features/shared/loyalty/hooks/use-loyalty', () => ({
   }),
 }));
 
+vi.mock('@/services/appointmentService', () => ({
+  appointmentApi: {
+    getBookingAvailability: vi.fn(({ date }: { date: string }) =>
+      Promise.resolve({
+        date,
+        bookingWindowDays: 7,
+        slots: [
+          {
+            startAt: `${date}T09:00:00`,
+            available: true,
+            reason: null,
+          },
+        ],
+      })
+    ),
+  },
+}));
+
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
 });
+
+function renderWithQueryClient(ui: ReactNode) {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+      },
+    },
+  });
+
+  return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
+}
 
 describe('customer journey UI', () => {
   it('renders the shared empty state and invokes its primary action', () => {
@@ -113,7 +144,7 @@ describe('customer journey UI', () => {
 
   it('validates each booking step, preserves values, submits, and shows success', async () => {
     const onSubmit = vi.fn().mockResolvedValue(undefined);
-    const { container } = render(
+    const { container } = renderWithQueryClient(
       <CreateAppointmentModal
         isOpen
         isSubmitting={false}

@@ -22,6 +22,13 @@ export function StaffAppointmentDetailDialog({
     return null;
   }
 
+  const assignedStaffs = appointment.assignedStaffIds?.length
+    ? appointment.assignedStaffIds
+    : appointment.assignedStaffId
+      ? [appointment.assignedStaffId]
+      : [];
+  const assignedStaffNames = assignedStaffs.map((staff) => staff.displayName).join(', ');
+
   return (
     <CustomerModalShell
       open={open}
@@ -56,7 +63,7 @@ export function StaffAppointmentDetailDialog({
           icon={Phone}
           label="Liên hệ"
           value={appointment.customerId.phone}
-          subValue={appointment.assignedStaffId?.displayName || 'Đang phân công cho bạn'}
+          subValue={assignedStaffNames || 'Đang phân công cho bạn'}
         />
         <DetailTile
           icon={CarFront}

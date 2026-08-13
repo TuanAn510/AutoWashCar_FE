@@ -34,6 +34,7 @@ const VehicleAccessRequestsPage = lazy(
   () => import('./features/admin/vehicle-access/pages/VehicleAccessRequestsPage')
 );
 const AdminVehiclesPage = lazy(() => import('./features/admin/vehicles/pages/AdminVehiclesPage'));
+const StaffManagementPage = lazy(() => import('./features/admin/staff/pages/StaffManagementPage'));
 const AppointmentDetailPage = lazy(
   () => import('./features/customers/appointments/pages/AppointmentDetailPage')
 );
@@ -104,6 +105,7 @@ function App() {
                   element={<AppointmentDetailPage />}
                 />
                 <Route path="/admin/customers" element={<CustomerManagementPage />} />
+                <Route path="/admin/staff" element={<StaffManagementPage />} />
                 <Route path="/admin/services" element={<ServicesManagementPage />} />
                 <Route path="/admin/payments" element={<PaymentsPage />} />
                 <Route path="/admin/service-histories" element={<AdminAppointmentsPage />} />

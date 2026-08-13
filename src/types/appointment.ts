@@ -1,4 +1,10 @@
-export type AppointmentStatus = 'pending' | 'confirmed' | 'in_queue' | 'in_progress' | 'completed' | 'cancelled';
+export type AppointmentStatus =
+  | 'pending'
+  | 'confirmed'
+  | 'in_queue'
+  | 'in_progress'
+  | 'completed'
+  | 'cancelled';
 export type AppointmentPaymentMethod = 'cash' | 'vnpay' | 'momo';
 export type AppointmentPaymentStatus = 'unpaid' | 'paid' | 'cancelled' | 'pending';
 
@@ -95,6 +101,7 @@ export interface AppointmentItem {
   customerId: AppointmentCustomer;
   vehicleId: AppointmentVehicle;
   assignedStaffId: AppointmentAssignedStaff | null;
+  assignedStaffIds?: AppointmentAssignedStaff[];
   cancelledBy: AppointmentCancelledBy | null;
   services: AppointmentServiceSnapshot[];
   scheduledAt: string;
@@ -150,6 +157,25 @@ export interface CreateAppointmentPayload {
   rewardRedemptionId?: string;
 }
 
+export interface BookingAvailabilitySlot {
+  startAt: string;
+  available: boolean;
+  reason: string | null;
+}
+
+export interface BookingAvailability {
+  date: string;
+  bookingWindowDays: number;
+  slots: BookingAvailabilitySlot[];
+}
+
+export interface BookingAvailabilityParams {
+  date: string;
+  vehicleId?: string;
+  serviceId?: string;
+  rewardRedemptionId?: string;
+}
+
 export interface CancelAppointmentPayload {
   appointmentId: string;
   cancelReason?: string;
@@ -189,7 +215,8 @@ export interface UpdateAppointmentPaymentStatusPayload {
 }
 
 export interface AssignStaffPayload {
-  staffId: string;
+  staffId?: string;
+  staffIds: string[];
 }
 
 export interface RescheduleAppointmentPayload {

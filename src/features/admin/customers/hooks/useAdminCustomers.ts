@@ -20,6 +20,8 @@ export function useStaffWorkload() {
     queryKey: queryKeys.users.staffs.workload(),
     queryFn: ({ signal }) => staffsApi.workload(signal),
     staleTime: 0,
+    refetchInterval: 10_000,
+    refetchOnWindowFocus: true,
   });
 }
 

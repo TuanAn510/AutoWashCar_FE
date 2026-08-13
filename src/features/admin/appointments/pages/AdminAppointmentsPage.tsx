@@ -99,7 +99,7 @@ export default function AdminAppointmentsPage() {
 
   const [detailAppointment, setDetailAppointment] = useState<AppointmentItem | null>(null);
   const [assignAppointment, setAssignAppointment] = useState<AppointmentItem | null>(null);
-  const [selectedStaffId, setSelectedStaffId] = useState('');
+  const [selectedStaffIds, setSelectedStaffIds] = useState<string[]>([]);
   const [statusAppointment, setStatusAppointment] = useState<AppointmentItem | null>(null);
   const [confirmAppointment, setConfirmAppointment] = useState<AppointmentItem | null>(null);
   const [nextStatus, setNextStatus] = useState<AppointmentStatus | ''>('');
@@ -224,13 +224,13 @@ export default function AdminAppointmentsPage() {
   };
 
   const handleConfirmAssignStaff = async () => {
-    if (!assignAppointment || !selectedStaffId) {
+    if (!assignAppointment || selectedStaffIds.length === 0) {
       return;
     }
 
     await assignStaffMutation.mutateAsync({
       appointmentId: assignAppointment._id,
-      payload: { staffId: selectedStaffId },
+      payload: { staffIds: selectedStaffIds },
     });
     setAssignAppointment(null);
   };
@@ -324,7 +324,13 @@ export default function AdminAppointmentsPage() {
   };
 
   const openAssignStaffDialog = (appointment: AppointmentItem) => {
-    setSelectedStaffId(appointment.assignedStaffId?._id ?? '');
+    setSelectedStaffIds(
+      appointment.assignedStaffIds?.length
+        ? appointment.assignedStaffIds.map((staff) => staff._id)
+        : appointment.assignedStaffId?._id
+          ? [appointment.assignedStaffId._id]
+          : []
+    );
     setAssignAppointment(appointment);
   };
 
@@ -568,17 +574,17 @@ export default function AdminAppointmentsPage() {
       <AssignStaffDialog
         appointment={assignAppointment}
         open={!!assignAppointment}
-        selectedStaffId={selectedStaffId}
+        selectedStaffIds={selectedStaffIds}
         staffOptions={staffOptions}
         isLoadingStaffs={staffsQuery.isLoading}
         isSubmitting={assignStaffMutation.isPending}
         onOpenChange={(open) => {
           if (!open) {
-            setSelectedStaffId('');
+            setSelectedStaffIds([]);
             setAssignAppointment(null);
           }
         }}
-        onSelectedStaffIdChange={setSelectedStaffId}
+        onSelectedStaffIdsChange={setSelectedStaffIds}
         onConfirm={handleConfirmAssignStaff}
       />
 
