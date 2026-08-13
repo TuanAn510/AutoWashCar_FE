@@ -1,4 +1,4 @@
-export type AppointmentStatus = 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled';
+export type AppointmentStatus = 'pending' | 'confirmed' | 'in_queue' | 'in_progress' | 'completed' | 'cancelled';
 export type AppointmentPaymentMethod = 'cash' | 'vnpay' | 'momo';
 export type AppointmentPaymentStatus = 'unpaid' | 'paid' | 'cancelled' | 'pending';
 
@@ -124,6 +124,21 @@ export interface AppointmentItem {
   carTypeSnapshot?: string;
   createdAt?: string;
   updatedAt?: string;
+}
+
+export interface PriorityQueueItem {
+  bookingId: number;
+  scheduledAt: string;
+  customerName: string;
+  licensePlate: string;
+  tierName: string;
+  priorityLevel: number;
+  status: 'in_queue' | 'in_progress';
+  finalAmount: number;
+  checkInAt: string | null;
+  waitingMinutes: number | null;
+  serviceDurationMinutes: number;
+  position: number | null;
 }
 
 export interface CreateAppointmentPayload {

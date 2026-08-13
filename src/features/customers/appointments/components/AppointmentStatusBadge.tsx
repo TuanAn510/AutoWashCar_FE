@@ -3,6 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import type { AppointmentStatus } from '@/types/appointment';
 
 export const appointmentStatusLabels: Record<AppointmentStatus, string> = {
+  in_queue: 'Đã check-in',
   pending: 'Chờ xác nhận',
   confirmed: 'Đã xác nhận',
   in_progress: 'Đang thực hiện',
@@ -11,6 +12,7 @@ export const appointmentStatusLabels: Record<AppointmentStatus, string> = {
 };
 
 const badgeVariant: Record<AppointmentStatus, React.ComponentProps<typeof Badge>['variant']> = {
+  in_queue: 'secondary',
   pending: 'warning',
   confirmed: 'info',
   in_progress: 'secondary',

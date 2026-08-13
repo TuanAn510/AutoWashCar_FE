@@ -8,6 +8,7 @@ import type {
   CancelAppointmentByAdminPayload,
   CancelAppointmentPayload,
   CreateAppointmentPayload,
+  PriorityQueueItem,
   RescheduleAppointmentPayload,
   UpdateAppointmentPaymentStatusPayload,
   UpdateAppointmentStatusPayload,
@@ -140,7 +141,7 @@ export const adminAppointmentsApi = {
   },
 
   async getPriorityQueue(signal?: AbortSignal) {
-    const response = await api.get<ApiEnvelope<AppointmentItem[]>>(
+    const response = await api.get<ApiEnvelope<PriorityQueueItem[]>>(
       '/admin/bookings/priority-queue',
       {
         signal,
