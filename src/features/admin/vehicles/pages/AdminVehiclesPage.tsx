@@ -23,6 +23,7 @@ import { useAdminVehicles } from '@/features/admin/vehicles/hooks/useAdminVehicl
 import { vehiclesApi } from '@/services/vehicleService';
 import { queryKeys } from '@/constants/queryKeys';
 import { cn } from '@/lib/utils';
+import { resolveImageUrl } from '@/lib/image-url';
 import type { ApiVehicle, CarType } from '@/types/vehicle';
 
 const CAR_TYPE_LABELS: Record<CarType, string> = {
@@ -348,7 +349,7 @@ export default function AdminVehiclesPage() {
           if (!open) setDeleteVehicle(null);
         }}
       >
-        <DialogContent className="max-w-[420px] gap-0 rounded-xl border border-[#e5edf6] p-0 shadow-[0_18px_44px_rgba(15,23,42,0.12)]">
+        <DialogContent className="max-w-[420px] gap-0 rounded-xl border border-[#e5edf6] p-0 shadow-[0_18px_44px_rgba(15,23,42,0.12)]" showCloseButton={false}>
           <DialogHeader className="border-b border-[#e5edf6] px-6 py-4">
             <DialogTitle className="text-lg font-black text-[#15243a]">Xóa xe</DialogTitle>
             <DialogDescription className="mt-0.5 text-sm text-[#64748b]">
@@ -420,7 +421,7 @@ function VehicleDetailDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[560px] gap-0 rounded-xl border border-[#e5edf6] p-0 shadow-[0_18px_44px_rgba(15,23,42,0.12)]">
+      <DialogContent className="max-w-[560px] gap-0 rounded-xl border border-[#e5edf6] p-0 shadow-[0_18px_44px_rgba(15,23,42,0.12)]" showCloseButton={false}>
         <DialogHeader className="flex flex-row items-start justify-between border-b border-[#e5edf6] px-6 py-4">
           <div>
             <DialogTitle className="text-lg font-black text-[#15243a]">Chi tiết xe</DialogTitle>
@@ -446,7 +447,7 @@ function VehicleDetailDialog({
               {vehicle.images.map((img) => (
                 <img
                   key={img.id}
-                  src={img.url}
+                  src={resolveImageUrl(img.url)}
                   alt={`${vehicle.brand} ${vehicle.model}`}
                   className="h-32 w-48 shrink-0 rounded-lg border object-cover"
                   loading="lazy"
@@ -590,7 +591,7 @@ function EditVehicleDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[480px] gap-0 rounded-xl border border-[#e5edf6] p-0 shadow-[0_18px_44px_rgba(15,23,42,0.12)]">
+      <DialogContent className="max-w-[480px] gap-0 rounded-xl border border-[#e5edf6] p-0 shadow-[0_18px_44px_rgba(15,23,42,0.12)]" showCloseButton={false}>
         <DialogHeader className="flex flex-row items-start justify-between border-b border-[#e5edf6] px-6 py-4">
           <div>
             <DialogTitle className="text-lg font-black text-[#15243a]">

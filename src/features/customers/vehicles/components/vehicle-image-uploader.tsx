@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { Field, FieldDescription, FieldLabel } from '@/components/ui/field';
+import { resolveImageUrl } from '@/lib/image-url';
 import { type VehicleImage } from '@/types/vehicle';
 
 const acceptedFileTypes = ['image/jpeg', 'image/jpg', 'image/png'];
@@ -96,7 +97,7 @@ export function VehicleImageUploader({
             {existingImages.map((image) => (
               <div key={image.id} className="overflow-hidden rounded-2xl border border-slate-200">
                 <img
-                  src={image.url}
+                  src={resolveImageUrl(image.url)}
                   alt="Ảnh xe hiện tại"
                   className="aspect-square w-full object-cover"
                 />
