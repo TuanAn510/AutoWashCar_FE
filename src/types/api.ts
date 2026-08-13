@@ -25,6 +25,8 @@ export interface PaginatedResult<T> {
 export interface PaginationParams {
   page?: number;
   limit?: number;
+  keyword?: string;
+  carType?: string;
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
 }

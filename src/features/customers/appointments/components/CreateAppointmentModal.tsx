@@ -521,9 +521,7 @@ export function CreateAppointmentModal({
               </Field>
 
               <Field className="mt-4">
-                <FieldLabel>
-                  Chọn gói dịch vụ
-                </FieldLabel>
+                <FieldLabel>Chọn gói dịch vụ</FieldLabel>
                 <div className="grid gap-3 sm:grid-cols-2">
                   {servicesQuery.isLoading &&
                     Array.from({ length: 4 }).map((_, index) => (

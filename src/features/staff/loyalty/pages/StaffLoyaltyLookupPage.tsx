@@ -293,7 +293,7 @@ export default function StaffLoyaltyLookupPage() {
                   </div>
                   <div>
                     <p className="font-semibold text-slate-950">
-{selectedCustomerName || 'Khách hàng'}
+                      {selectedCustomerName || 'Khách hàng'}
                     </p>
                     <p className="text-sm text-slate-500">
                       {selectedCustomerPhone ? `${selectedCustomerPhone} · ` : ''}ID: {customerId}
@@ -423,9 +423,7 @@ export default function StaffLoyaltyLookupPage() {
                   : null;
               return (
                 <div className="space-y-1.5">
-                  <p className="font-semibold text-slate-950">
-                    {reward?.name ?? 'Phần thưởng'}
-                  </p>
+                  <p className="font-semibold text-slate-950">{reward?.name ?? 'Phần thưởng'}</p>
                   <p className="text-slate-500">
                     Mã: {redemption.code ?? redemption._id} · {formatPoints(redemption.pointsUsed)}
                   </p>

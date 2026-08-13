@@ -2,9 +2,10 @@ import type { AppointmentStatus } from '@/types/appointment';
 
 export const ADMIN_APPOINTMENT_STATUS_TRANSITIONS: Record<AppointmentStatus, AppointmentStatus[]> =
   {
-    pending: ['confirmed', 'in_progress', 'completed'],
-    confirmed: ['pending', 'in_progress', 'completed'],
-    in_progress: ['pending', 'confirmed', 'completed'],
+    pending: ['confirmed'],
+    confirmed: ['in_queue'],
+    in_queue: ['in_progress'],
+    in_progress: ['completed'],
     completed: [],
     cancelled: [],
   };
@@ -16,6 +17,7 @@ export const appointmentTimelineStatusLabels: Record<
   Exclude<AppointmentStatus, 'cancelled'>,
   string
 > = {
+  in_queue: 'Đã check-in',
   pending: 'Chờ xác nhận',
   confirmed: 'Đã xác nhận',
   in_progress: 'Đang thực hiện',
