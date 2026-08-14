@@ -255,6 +255,13 @@ export function CreateAppointmentModal({
   const loyaltyQuery = useMyLoyaltyAccount();
 
   const vehicles = vehiclesQuery.data?.vehicles ?? [];
+  // Chỉ cho phép chọn xe ĐÃ xác minh (approve) để đặt lịch. Xe đang chờ xác
+  // minh/admin chưa duyệt hoặc bị từ chối sẽ bị ẩn khỏi dropdown và không thể
+  // chọn — backend cũng chặn ở BookingServiceLayer khi submit.
+  const bookableVehicles = vehicles.filter(
+    (vehicle) =>
+      !vehicle.verificationStatus || vehicle.verificationStatus === 'approved'
+  );
   const categories = categoriesQuery.data ?? [];
   const allServices = useMemo(() => servicesQuery.data ?? [], [servicesQuery.data]);
   const services = useMemo(
@@ -608,17 +615,26 @@ export function CreateAppointmentModal({
                   <FieldLabel>Chọn xe</FieldLabel>
                   <select
                     className="h-[46px] rounded-md border border-[#d8e2ef] bg-white px-3 text-sm font-semibold text-[#64748b] outline-none focus:border-[#0b67c2]"
-                    disabled={isSubmitting || vehiclesQuery.isLoading || !vehicles.length}
+                    disabled={
+                      isSubmitting ||
+                      vehiclesQuery.isLoading ||
+                      !bookableVehicles.length
+                    }
                     {...register('vehicleId')}
                   >
                     <option value="">Chọn xe của bạn</option>
-                    {vehicles.map((vehicle) => (
+                    {bookableVehicles.map((vehicle) => (
                       <option key={vehicle._id} value={vehicle._id}>
                         {vehicle.brand} {vehicle.model} - {vehicle.licensePlate}
                       </option>
                     ))}
                   </select>
                   <FieldError>{errors.vehicleId?.message}</FieldError>
+                  {!vehiclesQuery.isLoading && vehicles.length && !bookableVehicles.length ? (
+                    <p className="mt-1 text-sm text-amber-700">
+                      Chưa có xe nào được xác minh xong để đặt lịch. Hãy chờ admin duyệt xe hoặc liên hệ hỗ trợ.
+                    </p>
+                  ) : null}
                 </Field>
 
                 <div

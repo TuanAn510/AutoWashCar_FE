@@ -1,21 +1,28 @@
 import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router';
-import { CarFront, Plus } from 'lucide-react';
+import { CarFront, Clock, Plus, RotateCcw } from 'lucide-react';
+import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { formatDateTimeVi } from '@/lib/utils';
 import { CustomerEmptyState } from '@/features/customers/components/CustomerEmptyState';
 import {
   type ApiVehicle,
   type CreateVehiclePayload,
   type UpdateVehiclePayload,
+  type VehicleAccessRequest,
 } from '@/types/vehicle';
 import { DeleteVehicleDialog } from '@/features/customers/vehicles/components/delete-vehicle-dialog';
 import { toApiError } from '@/api/errors';
+import { queryKeys } from '@/constants/queryKeys';
 import { VehicleVerificationDialog } from '@/features/customers/vehicles/components/vehicle-verification-dialog';
+import { BrandModelVerificationDialog } from '@/features/customers/vehicles/components/brand-model-verification-dialog';
 import {
   useCreateVehicleAccessRequest,
   useMyVehicleAccessRequests,
+  useResubmitBrandModel,
 } from '@/features/customers/vehicles/hooks/useVehicleAccessRequests';
 
 import { VehicleCard } from '@/features/customers/vehicles/components/vehicle-card';
@@ -34,7 +41,18 @@ export default function MyVehiclesPage() {
   const [editingVehicle, setEditingVehicle] = useState<ApiVehicle | null>(null);
   const [detailVehicle, setDetailVehicle] = useState<ApiVehicle | null>(null);
   const [deletingVehicle, setDeletingVehicle] = useState<ApiVehicle | null>(null);
-  const [verificationPlate, setVerificationPlate] = useState<string | null>(null);
+  const [verificationPlate, setVerificationPlate] = useState<{
+    licensePlate: string;
+    brand?: string;
+    model?: string;
+    /** True khi khách chọn "Khác" (custom) ở hãng và/hoặc dòng → cần xác minh
+     *  thêm hãng/dòng, không chỉ biển số. */
+    needsBrandModelVerification?: boolean;
+  } | null>(null);
+  const [resubmitRequest, setResubmitRequest] = useState<VehicleAccessRequest | null>(null);
+  const [resubmitBrandModelRequest, setResubmitBrandModelRequest] = useState<VehicleAccessRequest | null>(null);
+  // "Yêu cầu đã xác minh" chỉ hiện 3 mới nhất; bấm "Xem thêm" để hiện hết.
+  const [showAllApproved, setShowAllApproved] = useState(false);
 
   const myVehiclesQuery = useMyVehicles();
   const createVehicleMutation = useCreateVehicle();
@@ -42,9 +60,25 @@ export default function MyVehiclesPage() {
   const deleteVehicleMutation = useDeleteVehicle();
   const accessRequestsQuery = useMyVehicleAccessRequests();
   const createAccessRequest = useCreateVehicleAccessRequest();
+  const resubmitBrandModel = useResubmitBrandModel();
+  const queryClient = useQueryClient();
 
   const vehicles = myVehiclesQuery.data?.vehicles ?? [];
-  const pendingAccessRequests = accessRequestsQuery.data?.filter((request) => request.status === 'pending') ?? [];
+  const accessRequests = accessRequestsQuery.data ?? [];
+  const pendingAccessRequests = accessRequests.filter((request) => request.status === 'pending');
+  const approvedAccessRequests = accessRequests.filter((request) => request.status === 'approved');
+  // Ẩn thẻ "Chưa đủ minh chứng" chỉ khi biến số đó còn một yêu cầu khác (pending hoặc approved)
+  // MỚI HƠN — tức là khách đã gửi lại / đã được duyệt xong. Các approved cũ không làm ẩn.
+  const rejectedAccessRequests = accessRequests.filter((request) =>
+    request.status === 'rejected'
+      ? !accessRequests.some(
+          (other) =>
+            other.licensePlate === request.licensePlate &&
+            other.status !== 'rejected' &&
+            other.createdAt > request.createdAt
+        )
+      : false
+  );
   const isCreateRequested = searchParams.get('create') === '1';
   const isCreateDialogOpen = isCreateOpen || isCreateRequested;
 
@@ -62,8 +96,29 @@ export default function MyVehiclesPage() {
     try {
       await createVehicleMutation.mutateAsync(payload as CreateVehiclePayload);
     } catch (error) {
-      if (toApiError(error).code === 'VEHICLE_VERIFICATION_REQUIRED') {
-        setVerificationPlate((payload as CreateVehiclePayload).licensePlate);
+      const code = toApiError(error).code;
+      if (code === 'VEHICLE_VERIFICATION_REQUIRED') {
+        const vehiclePayload = payload as CreateVehiclePayload;
+        // Popup mang đủ hãng/dòng cuối cùng khách chọn: lấy tên custom nếu chọn
+        // "Khác", ngược lại lấy tên catalog — để xe mới khi duyệt không bị kế
+        // thừa nhầm hãng/dòng của xe cũ trong trường hợp chỉ "Khác" 1 trong 2.
+        setVerificationPlate({
+          licensePlate: vehiclePayload.licensePlate,
+          brand: vehiclePayload.suggestedBrandName ?? vehiclePayload.brand,
+          model: vehiclePayload.suggestedModelName ?? vehiclePayload.model,
+          needsBrandModelVerification: Boolean(
+            vehiclePayload.suggestedBrandName || vehiclePayload.suggestedModelName
+          ),
+        });
+        setIsCreateOpen(false);
+        clearCreateSearchParam();
+        return;
+      }
+      if (code === 'BRAND_MODEL_VERIFICATION_REQUIRED') {
+        // Hãng/dòng chọn "Khác": xe chưa được thêm, chờ admin duyệt request.
+        queryClient.invalidateQueries({ queryKey: ['vehicle-access-requests'] });
+        queryClient.invalidateQueries({ queryKey: queryKeys.vehicles.all });
+        toast.success('Đã gửi yêu cầu xác minh hãng/dòng xe cho admin. Chờ duyệt.');
         setIsCreateOpen(false);
         clearCreateSearchParam();
         return;
@@ -171,19 +226,54 @@ export default function MyVehiclesPage() {
             </div>
           </section>
         )}
-        {!!pendingAccessRequests.length && (
+        {approvedAccessRequests.length > 0 && (
+          <section className="rounded-2xl bg-emerald-50/50 p-5 shadow-sm ring-1 ring-emerald-100">
+            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+              <h2 className="text-lg font-semibold">Yêu cầu đã xác minh</h2>
+              <span className="text-sm text-slate-500">({approvedAccessRequests.length})</span>
+            </div>
+            <p className="mt-1 text-sm text-slate-500">
+              Các yêu cầu dưới đây đã được admin xác minh; xe đã được thêm vào "Xe của tôi".
+            </p>
+            <div className="mt-3 grid gap-2">
+              {(showAllApproved
+                ? approvedAccessRequests
+                : approvedAccessRequests.slice(0, 3)
+              ).map((request) => (
+                <RequestCard key={request._id} request={request} />
+              ))}
+            </div>
+            {approvedAccessRequests.length > 3 ? (
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-3 w-full rounded-xl"
+                onClick={() => setShowAllApproved((open) => !open)}
+              >
+                {showAllApproved
+                  ? 'Thu gọn'
+                  : `Xem thêm ${approvedAccessRequests.length - 3} yêu cầu`}
+              </Button>
+            ) : null}
+          </section>
+        )}
+        {(!!pendingAccessRequests.length || !!rejectedAccessRequests.length) && (
           <section className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
             <h2 className="text-lg font-semibold">Yêu cầu xác minh xe</h2>
             <div className="mt-3 grid gap-2">
               {pendingAccessRequests.map((request) => (
-                <div key={request._id} className="rounded-xl border p-3 text-sm">
-                  <div className="flex justify-between gap-3">
-                    <span className="font-semibold">{request.licensePlate}</span>
-                    <span className="capitalize">{request.status}</span>
-                  </div>
-                  <p className="mt-1 text-slate-500">{request.relationship}</p>
-                  {request.reviewNote && <p className="mt-1">Phản hồi: {request.reviewNote}</p>}
-                </div>
+                <RequestCard key={request._id} request={request} />
+              ))}
+              {rejectedAccessRequests.map((request) => (
+                <RequestCard
+                  key={request._id}
+                  request={request}
+                  onSupplement={
+                    request.requestType === 'brand_model_verification'
+                      ? () => setResubmitBrandModelRequest(request)
+                      : () => setResubmitRequest(request)
+                  }
+                />
               ))}
             </div>
           </section>
@@ -233,7 +323,20 @@ export default function MyVehiclesPage() {
       />
 
       <VehicleVerificationDialog
-        plate={verificationPlate ?? ''}
+        title={
+          verificationPlate?.needsBrandModelVerification
+            ? 'Yêu cầu xác minh hãng/dòng xe và biển số'
+            : undefined
+        }
+        description={
+          verificationPlate?.needsBrandModelVerification
+            ? 'Biển số này đã tồn tại và bạn đã chọn hãng/dòng mới. Yêu cầu cần được xác minh cả hãng/dòng xe lẫn quyền sử dụng biển số.'
+            : undefined
+        }
+        plate={verificationPlate?.licensePlate ?? ''}
+        initialBrand={verificationPlate?.brand ?? ''}
+        initialModel={verificationPlate?.model ?? ''}
+        needsBrandModelVerification={Boolean(verificationPlate?.needsBrandModelVerification)}
         open={Boolean(verificationPlate)}
         pending={createAccessRequest.isPending}
         onOpenChange={(open) => {
@@ -241,10 +344,181 @@ export default function MyVehiclesPage() {
         }}
         onSubmit={async (value) => {
           if (!verificationPlate) return;
-          await createAccessRequest.mutateAsync({ licensePlate: verificationPlate, ...value });
+          // Chỉ gửi hãng/dòng đề xuất khi khách thực sự chọn "Khác" (tự nhập).
+          // Nếu chọn hãng/dòng CÓ SẴN trong catalog (chỉ trùng biển) thì KHÔNG
+          // gửi suggestedBrandName/Model → luồng xác minh chỉ là "biển số".
+          await createAccessRequest.mutateAsync({
+            licensePlate: verificationPlate.licensePlate,
+            suggestedBrandName: verificationPlate.needsBrandModelVerification
+              ? verificationPlate.brand
+              : undefined,
+            suggestedModelName: verificationPlate.needsBrandModelVerification
+              ? verificationPlate.model
+              : undefined,
+            ...value,
+          });
           setVerificationPlate(null);
         }}
       />
+
+      <VehicleVerificationDialog
+        title={
+          resubmitRequest?.suggestedBrandName || resubmitRequest?.suggestedModelName
+            ? 'Bổ sung minh chứng hãng/dòng xe và biển số'
+            : 'Bổ sung minh chứng cho xe'
+        }
+        description={
+          resubmitRequest?.suggestedBrandName || resubmitRequest?.suggestedModelName
+            ? 'Yêu cầu trước chưa được chấp nhận. Vui lòng gửi lại minh chứng cho CẢ biển số trùng lẫn hãng/dòng đã chọn để chờ admin xác nhận.'
+            : 'Yêu cầu trước của bạn chưa được chấp nhận do minh chứng không đủ. Vui lòng gửi lại với hình ảnh chứng minh quyền sử dụng xe để chờ admin xác nhận.'
+        }
+        plate={resubmitRequest?.licensePlate ?? ''}
+        initialBrand={resubmitRequest?.suggestedBrandName ?? ''}
+        initialModel={resubmitRequest?.suggestedModelName ?? ''}
+        needsBrandModelVerification={Boolean(
+          resubmitRequest?.suggestedBrandName || resubmitRequest?.suggestedModelName
+        )}
+        initialRelationship={resubmitRequest?.relationship ?? ''}
+        initialNote={resubmitRequest?.note ?? ''}
+        reviewNote={resubmitRequest?.reviewNote}
+        open={Boolean(resubmitRequest)}
+        pending={createAccessRequest.isPending}
+        onOpenChange={(open) => {
+          if (!open) setResubmitRequest(null);
+        }}
+        onSubmit={async (value) => {
+          if (!resubmitRequest) return;
+          // Giữ nguyên hãng/dòng đề xuất (trường hợp cần xác minh cả hãng/dòng
+          // lẫn biển) khi gửi lại, để admin duyệt lại đúng yêu cầu cũ.
+          await createAccessRequest.mutateAsync({
+            licensePlate: resubmitRequest.licensePlate,
+            suggestedBrandName: resubmitRequest.suggestedBrandName,
+            suggestedModelName: resubmitRequest.suggestedModelName,
+            ...value,
+          });
+          setResubmitRequest(null);
+        }}
+      />
+
+      <BrandModelVerificationDialog
+        vehicleName={
+          [resubmitBrandModelRequest?.suggestedBrandName, resubmitBrandModelRequest?.suggestedModelName]
+            .filter(Boolean)
+            .join(' ') || ''
+        }
+        plate={resubmitBrandModelRequest?.licensePlate ?? ''}
+        reviewNote={resubmitBrandModelRequest?.reviewNote}
+        open={Boolean(resubmitBrandModelRequest)}
+        pending={resubmitBrandModel.isPending}
+        onOpenChange={(open) => {
+          if (!open) setResubmitBrandModelRequest(null);
+        }}
+        onSubmit={async (value) => {
+          if (!resubmitBrandModelRequest) return;
+          const linkedVehicleId =
+            resubmitBrandModelRequest.vehicleId &&
+            typeof resubmitBrandModelRequest.vehicleId === 'object'
+              ? resubmitBrandModelRequest.vehicleId._id
+              : undefined;
+          await resubmitBrandModel.mutateAsync({
+            vehicleId: linkedVehicleId,
+            licensePlate: resubmitBrandModelRequest.licensePlate,
+            suggestedBrandName: resubmitBrandModelRequest.suggestedBrandName,
+            suggestedModelName: resubmitBrandModelRequest.suggestedModelName,
+            carType: resubmitBrandModelRequest.carType,
+            manufactureYear: resubmitBrandModelRequest.manufactureYear,
+            note: value.note,
+            documents: value.documents,
+          });
+          setResubmitBrandModelRequest(null);
+        }}
+      />
     </main>
+  );
+}
+
+function RequestCard({
+  request,
+  onSupplement,
+}: {
+  request: VehicleAccessRequest;
+  onSupplement?: (request: VehicleAccessRequest) => void;
+}) {
+  const isPending = request.status === 'pending';
+  const isRejected = request.status === 'rejected';
+  const isBrandModel =
+    (request.requestType ?? 'access_request') === 'brand_model_verification';
+  const supplementText = isBrandModel ? 'Bổ sung minh chứng hãng/dòng' : 'Bổ sung minh chứng';
+
+  const borderClass = isRejected
+    ? 'border-rose-200'
+    : isPending
+      ? 'border-slate-200'
+      : 'border-emerald-200';
+  const badgeClass = isPending
+    ? 'bg-amber-50 text-amber-700'
+    : isRejected
+      ? 'bg-rose-50 text-rose-700'
+      : 'bg-emerald-50 text-emerald-700';
+  const badgeLabel = isPending
+    ? 'Đang chờ xác minh'
+    : isRejected
+      ? 'Chưa đủ minh chứng'
+      : 'Đã xác minh';
+
+  return (
+    <div className={`rounded-xl border p-3 text-sm ${borderClass}`}>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="min-w-0">
+          <p className="font-semibold">
+            {isBrandModel ? 'Xác minh hãng / dòng xe' : 'Yêu cầu quyền sử dụng xe'}
+            <span className="ml-2 text-slate-500">{request.licensePlate}</span>
+          </p>
+          {isBrandModel ? (
+            <p className="mt-0.5 text-xs text-slate-500">
+              Hãng/Dòng đề xuất:{' '}
+              {[request.suggestedBrandName, request.suggestedModelName].filter(Boolean).join(' · ') ||
+                '—'}
+            </p>
+          ) : (
+            <p className="mt-0.5 text-slate-500">{request.relationship}</p>
+          )}
+        </div>
+        <span
+          className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold ${badgeClass}`}
+        >
+          {badgeLabel}
+        </span>
+      </div>
+      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
+        <span className="inline-flex items-center gap-1">
+          <Clock className="size-3.5" />
+          Gửi yêu cầu: {formatDateTimeVi(request.createdAt)}
+        </span>
+        {request.reviewedAt && (
+          <span className="inline-flex items-center gap-1">
+            <Clock className="size-3.5" />
+            {isPending ? 'Chờ xử lý' : 'Xử lý'}: {formatDateTimeVi(request.reviewedAt)}
+          </span>
+        )}
+      </div>
+      {isRejected && (
+        <p className="mt-1 text-rose-600">
+          {request.reviewNote || 'Minh chứng không được chấp nhận. Vui lòng bổ sung.'}
+        </p>
+      )}
+      {isRejected && onSupplement ? (
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className="mt-3 rounded-lg border-rose-200 text-rose-700 hover:bg-rose-50"
+          onClick={() => onSupplement(request)}
+        >
+          <RotateCcw className="size-4" />
+          {supplementText}
+        </Button>
+      ) : null}
+    </div>
   );
 }

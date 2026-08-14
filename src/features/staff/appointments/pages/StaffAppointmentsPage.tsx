@@ -1,4 +1,4 @@
-import { CalendarDays, Loader2 } from 'lucide-react';
+import { ArrowUpDown, CalendarDays, Loader2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -12,7 +12,10 @@ import type {
 import { EmptyStaffAppointmentsState } from '@/features/staff/appointments/components/EmptyStaffAppointmentsState';
 import { StaffAppointmentDetailDialog } from '@/features/staff/appointments/components/StaffAppointmentDetailDialog';
 import { StaffAppointmentFilters } from '@/features/staff/appointments/components/StaffAppointmentFilters';
-import { StaffAppointmentList } from '@/features/staff/appointments/components/StaffAppointmentList';
+import {
+  StaffAppointmentList,
+  type DateSort,
+} from '@/features/staff/appointments/components/StaffAppointmentList';
 import { StaffAppointmentSummaryCards } from '@/features/staff/appointments/components/StaffAppointmentSummaryCards';
 import { UpdateAppointmentStatusDialog } from '@/features/staff/appointments/components/UpdateAppointmentStatusDialog';
 import { getAllowedStaffAppointmentStatuses } from '@/features/staff/appointments/constants/appointmentStatus';
@@ -40,17 +43,20 @@ const getTodayRange = () => {
 };
 
 const APPOINTMENTS_PER_PAGE = 10;
+const APPOINTMENTS_PER_PAGE_BIG = 100;
+
+const appointmentGroupDate = (a: AppointmentItem): Date =>
+  new Date(a.completedAt ?? a.cancelledAt ?? a.scheduledAt);
 
 export default function StaffAppointmentsPage() {
-  const [appointmentTab, setAppointmentTab] = useState<'today' | 'all'>(() =>
-    window.location.pathname.includes('service-histories') ? 'all' : 'today'
-  );
+  const [appointmentTab, setAppointmentTab] = useState<'today' | 'all'>('all');
   const [keyword, setKeyword] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | AppointmentStatus>(() =>
     window.location.pathname.includes('service-histories') ? 'completed' : 'all'
   );
   const [dateFilter, setDateFilter] = useState('');
   const [page, setPage] = useState(1);
+  const [dateSort, setDateSort] = useState<DateSort>('desc');
   const [detailAppointment, setDetailAppointment] = useState<AppointmentItem | null>(null);
   const [statusAppointment, setStatusAppointment] = useState<AppointmentItem | null>(null);
   const [nextStatus, setNextStatus] = useState<AppointmentStatus | ''>('');
@@ -69,7 +75,7 @@ export default function StaffAppointmentsPage() {
       ...(statusFilter !== 'all' ? { status: statusFilter } : {}),
       ...selectedDateRange,
       page,
-      limit: APPOINTMENTS_PER_PAGE,
+      limit: appointmentTab === 'all' ? APPOINTMENTS_PER_PAGE_BIG : APPOINTMENTS_PER_PAGE,
       sortOrder: 'desc',
     };
   }, [appointmentTab, dateFilter, keyword, page, statusFilter]);
@@ -82,53 +88,31 @@ export default function StaffAppointmentsPage() {
     [staffAppointmentsQuery.data?.appointments]
   );
 
-  const { activeAppointments, completedAppointments } = useMemo(() => {
-    const active = appointments.filter((a) => a.status !== 'completed' && a.status !== 'cancelled');
-    const completed = appointments.filter(
-      (a) => a.status === 'completed' || a.status === 'cancelled'
-    );
-    return { activeAppointments: active, completedAppointments: completed };
-  }, [appointments]);
-
-  const { unpaidCompleted, todayCompleted, yesterdayCompleted, olderCompleted } = useMemo(() => {
+  const { processingAppointments, completedAppointments, olderAppointments } = useMemo(() => {
     const now = new Date();
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const yesterdayStart = new Date(todayStart);
-    yesterdayStart.setDate(yesterdayStart.getDate() - 1);
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
 
-    const unpaid: AppointmentItem[] = [];
-    const today: AppointmentItem[] = [];
-    const yesterday: AppointmentItem[] = [];
+    const processing: AppointmentItem[] = [];
+    const completed: AppointmentItem[] = [];
     const older: AppointmentItem[] = [];
 
-    for (const a of completedAppointments) {
-      // Completed but unpaid → separate section for easy payment confirmation
-      if (a.status === 'completed' && a.paymentStatus !== 'paid') {
-        unpaid.push(a);
+    for (const a of appointments) {
+      const isTerminal = a.status === 'completed' || a.status === 'cancelled';
+      if (!isTerminal) {
+        processing.push(a);
         continue;
       }
-      const date = a.completedAt ? new Date(a.completedAt) : null;
-      if (!date) {
-        older.push(a);
-        continue;
-      }
-      const dateStart = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-      if (dateStart.getTime() === todayStart.getTime()) {
-        today.push(a);
-      } else if (dateStart.getTime() === yesterdayStart.getTime()) {
-        yesterday.push(a);
-      } else {
-        older.push(a);
-      }
+      const dateStart = new Date(
+        appointmentGroupDate(a).getFullYear(),
+        appointmentGroupDate(a).getMonth(),
+        appointmentGroupDate(a).getDate()
+      ).getTime();
+      if (dateStart >= todayStart) completed.push(a);
+      else older.push(a);
     }
 
-    return {
-      unpaidCompleted: unpaid,
-      todayCompleted: today,
-      yesterdayCompleted: yesterday,
-      olderCompleted: older,
-    };
-  }, [completedAppointments]);
+    return { processingAppointments: processing, completedAppointments: completed, olderAppointments: older };
+  }, [appointments]);
 
   const summary = staffAppointmentsQuery.data?.summary ?? {
     total: 0,
@@ -155,6 +139,8 @@ export default function StaffAppointmentsPage() {
       payload: { status: targetStatus },
     });
   };
+
+  const toggleDateSort = () => setDateSort((prev) => (prev === 'desc' ? 'asc' : 'desc'));
 
   const handleConfirmStatusUpdate = async () => {
     if (!statusAppointment || !nextStatus) {
@@ -200,8 +186,8 @@ export default function StaffAppointmentsPage() {
               className="max-w-full"
             >
               <TabsList className="grid w-full grid-cols-2 sm:w-auto">
-                <TabsTrigger value="today">Hôm nay</TabsTrigger>
                 <TabsTrigger value="all">Tất cả lịch hẹn</TabsTrigger>
+                <TabsTrigger value="today">Hôm nay</TabsTrigger>
               </TabsList>
             </Tabs>
           </div>
@@ -250,90 +236,83 @@ export default function StaffAppointmentsPage() {
               Thử lại
             </Button>
           </section>
-        ) : activeAppointments.length === 0 && completedAppointments.length === 0 ? (
+        ) : processingAppointments.length === 0 &&
+          completedAppointments.length === 0 &&
+          olderAppointments.length === 0 ? (
           <EmptyStaffAppointmentsState />
         ) : (
-          <section className="space-y-6">
-            {activeAppointments.length > 0 ? (
-              <div className="space-y-4">
-                <div>
-                  <h2 className="text-2xl font-semibold text-slate-950">Lịch hẹn đang xử lý</h2>
-                  <p className="mt-1 text-sm text-slate-500">
-                    {activeAppointments.length} lịch hẹn đang chờ xử lý.
-                  </p>
+          <section className="space-y-8">
+            {processingAppointments.length > 0 ? (
+              <div className="space-y-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h2 className="text-2xl font-semibold text-slate-950">Lịch hẹn đang xử lý</h2>
+                    <p className="mt-1 text-sm text-slate-500">
+                      {processingAppointments.length} lịch hẹn chưa hoàn thành.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={toggleDateSort}
+                    className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50"
+                    title="Sắp xếp theo ngày hẹn"
+                  >
+                    <ArrowUpDown className="size-3.5" />
+                    {dateSort === 'desc' ? 'Mới nhất' : 'Cũ nhất'}
+                  </button>
                 </div>
 
                 <StaffAppointmentList
-                  appointments={activeAppointments}
+                  appointments={processingAppointments}
                   onViewDetail={setDetailAppointment}
                   onOpenStatusDialog={handleOpenStatusDialog}
                   onQuickUpdate={handleQuickUpdate}
+                  dateSort={dateSort}
+                  onDateSortToggle={toggleDateSort}
                 />
               </div>
             ) : null}
 
-            {unpaidCompleted.length > 0 ||
-            todayCompleted.length > 0 ||
-            yesterdayCompleted.length > 0 ||
-            olderCompleted.length > 0 ? (
-              <div className="space-y-6">
+            {completedAppointments.length > 0 ? (
+              <div className="space-y-3">
                 <div>
-                  <h2 className="text-2xl font-semibold text-slate-500">Đã hoàn thành / Đã hủy</h2>
-                  <p className="mt-1 text-sm text-slate-400">
-                    {completedAppointments.length} lịch hẹn đã kết thúc.
+                  <h2 className="text-2xl font-semibold text-emerald-700">
+                    Lịch hẹn đã xử lý {appointmentTab === 'today' ? '' : '(hôm nay trở đi)'}
+                  </h2>
+                  <p className="mt-1 text-sm text-slate-500">
+                    {completedAppointments.length} lịch hẹn hoàn thành hoặc đã hủy từ ngày thực tế
+                    trở đi.
                   </p>
                 </div>
 
-                {unpaidCompleted.length > 0 ? (
-                  <div className="space-y-3">
-                    <h3 className="text-lg font-semibold text-rose-600">Chưa thanh toán</h3>
-                    <p className="text-sm text-rose-500">
-                      {unpaidCompleted.length} lịch hẹn đã hoàn thành nhưng chưa thanh toán.
-                    </p>
-                    <StaffAppointmentList
-                      appointments={unpaidCompleted}
-                      onViewDetail={setDetailAppointment}
-                      onOpenStatusDialog={handleOpenStatusDialog}
-                      onQuickUpdate={handleQuickUpdate}
-                    />
-                  </div>
-                ) : null}
+                <StaffAppointmentList
+                  appointments={completedAppointments}
+                  onViewDetail={setDetailAppointment}
+                  onOpenStatusDialog={handleOpenStatusDialog}
+                  onQuickUpdate={handleQuickUpdate}
+                  dateSort={dateSort}
+                  onDateSortToggle={toggleDateSort}
+                />
+              </div>
+            ) : null}
 
-                {todayCompleted.length > 0 ? (
-                  <div className="space-y-3">
-                    <h3 className="text-lg font-semibold text-emerald-700">Hôm nay</h3>
-                    <StaffAppointmentList
-                      appointments={todayCompleted}
-                      onViewDetail={setDetailAppointment}
-                      onOpenStatusDialog={handleOpenStatusDialog}
-                      onQuickUpdate={handleQuickUpdate}
-                    />
-                  </div>
-                ) : null}
+            {olderAppointments.length > 0 ? (
+              <div className="space-y-3">
+                <div>
+                  <h2 className="text-2xl font-semibold text-slate-400">Lịch hẹn cũ</h2>
+                  <p className="mt-1 text-sm text-slate-500">
+                    {olderAppointments.length} lịch hẹn hoàn thành/hủy trước hôm nay.
+                  </p>
+                </div>
 
-                {yesterdayCompleted.length > 0 ? (
-                  <div className="space-y-3">
-                    <h3 className="text-lg font-semibold text-amber-700">Hôm qua</h3>
-                    <StaffAppointmentList
-                      appointments={yesterdayCompleted}
-                      onViewDetail={setDetailAppointment}
-                      onOpenStatusDialog={handleOpenStatusDialog}
-                      onQuickUpdate={handleQuickUpdate}
-                    />
-                  </div>
-                ) : null}
-
-                {olderCompleted.length > 0 ? (
-                  <div className="space-y-3">
-                    <h3 className="text-lg font-semibold text-slate-400">Cũ hơn</h3>
-                    <StaffAppointmentList
-                      appointments={olderCompleted}
-                      onViewDetail={setDetailAppointment}
-                      onOpenStatusDialog={handleOpenStatusDialog}
-                      onQuickUpdate={handleQuickUpdate}
-                    />
-                  </div>
-                ) : null}
+                <StaffAppointmentList
+                  appointments={olderAppointments}
+                  onViewDetail={setDetailAppointment}
+                  onOpenStatusDialog={handleOpenStatusDialog}
+                  onQuickUpdate={handleQuickUpdate}
+                  dateSort={dateSort}
+                  onDateSortToggle={toggleDateSort}
+                />
               </div>
             ) : null}
 

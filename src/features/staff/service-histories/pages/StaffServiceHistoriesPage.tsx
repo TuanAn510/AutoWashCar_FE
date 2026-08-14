@@ -1,13 +1,12 @@
-import { Activity, CalendarClock, CheckCircle2, WalletCards } from 'lucide-react';
+import { CalendarClock, CheckCircle2, WalletCards } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { EmptyStaffServiceHistoriesState } from '@/features/staff/service-histories/components/EmptyStaffServiceHistoriesState';
 import { StaffServiceHistoryDetailDialog } from '@/features/staff/service-histories/components/StaffServiceHistoryDetailDialog';
 import { StaffServiceHistoryFilters } from '@/features/staff/service-histories/components/StaffServiceHistoryFilters';
-import { StaffServiceHistoryList } from '@/features/staff/service-histories/components/StaffServiceHistoryList';
+import { StaffServiceHistoryList, type DateSort } from '@/features/staff/service-histories/components/StaffServiceHistoryList';
 import { useMyStaffServiceHistories } from '@/features/staff/service-histories/hooks/useMyStaffServiceHistories';
-import type { AppointmentStatus } from '@/types/appointment';
 import type { ServiceHistoryItem } from '@/types/serviceHistory';
 import { formatServiceHistoryPrice } from '@/lib/utils';
 
@@ -16,20 +15,21 @@ const isSameLocalDate = (dateA: Date, dateB: Date) =>
   dateA.getMonth() === dateB.getMonth() &&
   dateA.getDate() === dateB.getDate();
 
-const isRevenueStatus = (status: AppointmentStatus) =>
-  status === 'completed' || status === 'in_progress';
-
 export default function StaffServiceHistoriesPage() {
   const [keyword, setKeyword] = useState('');
   const [dateFilter, setDateFilter] = useState('');
+  const [dateSort, setDateSort] = useState<DateSort>('desc');
   const [detailServiceHistory, setDetailServiceHistory] = useState<ServiceHistoryItem | null>(null);
 
   const serviceHistoriesQuery = useMyStaffServiceHistories();
   const serviceHistories = useMemo(() => {
     const items = serviceHistoriesQuery.data?.items ?? [];
-    return [...items].sort(
-      (a, b) => new Date(b.servicedAt).getTime() - new Date(a.servicedAt).getTime()
-    );
+    // Only show completed service histories, sorted by completion time (newest first)
+    return items
+      .filter((serviceHistory) => serviceHistory.appointmentId.status === 'completed')
+      .sort(
+        (a, b) => new Date(b.servicedAt).getTime() - new Date(a.servicedAt).getTime()
+      );
   }, [serviceHistoriesQuery.data?.items]);
 
   const filteredServiceHistories = useMemo(() => {
@@ -64,23 +64,10 @@ export default function StaffServiceHistoriesPage() {
   }, [dateFilter, keyword, serviceHistories]);
 
   const summary = useMemo(
-    () =>
-      filteredServiceHistories.reduce(
-        (acc, serviceHistory) => {
-          const status = serviceHistory.appointmentId.status;
-          if (status === 'completed') {
-            acc.completed += 1;
-          }
-          if (status === 'in_progress') {
-            acc.inProgress += 1;
-          }
-          if (isRevenueStatus(status)) {
-            acc.revenue += serviceHistory.totalPrice;
-          }
-          return acc;
-        },
-        { completed: 0, inProgress: 0, revenue: 0 }
-      ),
+    () => ({
+      completed: filteredServiceHistories.length,
+      revenue: filteredServiceHistories.reduce((sum, serviceHistory) => sum + serviceHistory.totalPrice, 0),
+    }),
     [filteredServiceHistories]
   );
 
@@ -97,28 +84,21 @@ export default function StaffServiceHistoriesPage() {
               Lịch sử và tiến độ dịch vụ
             </h1>
             <p className="mt-3 max-w-2xl text-base leading-7 text-slate-500">
-              Theo dõi các đơn đã thực hiện, đơn đang thực hiện và tổng giá trị công việc được phân
-              công cho bạn.
+              Danh sách các đơn đã hoàn thành và tổng giá trị công việc đã thực hiện.
             </p>
           </div>
         </section>
 
-        <section className="grid gap-4 md:grid-cols-3">
+        <section className="grid gap-4 md:grid-cols-2">
           <SummaryCard
             icon={CheckCircle2}
-            label="Đơn đã thực hiện"
+            label="Đơn đã hoàn thành"
             value={`${summary.completed}`}
             tone="emerald"
           />
           <SummaryCard
-            icon={Activity}
-            label="Đơn đang thực hiện"
-            value={`${summary.inProgress}`}
-            tone="blue"
-          />
-          <SummaryCard
             icon={WalletCards}
-            label="Tổng tiền từ các đơn"
+            label="Tổng tiền từ đơn hoàn thành"
             value={formatServiceHistoryPrice(summary.revenue)}
             tone="slate"
           />
@@ -166,6 +146,8 @@ export default function StaffServiceHistoriesPage() {
             <StaffServiceHistoryList
               serviceHistories={filteredServiceHistories}
               onViewDetail={setDetailServiceHistory}
+              dateSort={dateSort}
+              onDateSortToggle={() => setDateSort((prev) => (prev === 'desc' ? 'asc' : 'desc'))}
             />
           </section>
         )}
