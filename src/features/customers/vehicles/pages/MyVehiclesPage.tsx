@@ -44,6 +44,7 @@ export default function MyVehiclesPage() {
   const createAccessRequest = useCreateVehicleAccessRequest();
 
   const vehicles = myVehiclesQuery.data?.vehicles ?? [];
+  const pendingAccessRequests = accessRequestsQuery.data?.filter((request) => request.status === 'pending') ?? [];
   const isCreateRequested = searchParams.get('create') === '1';
   const isCreateDialogOpen = isCreateOpen || isCreateRequested;
 
@@ -170,11 +171,11 @@ export default function MyVehiclesPage() {
             </div>
           </section>
         )}
-        {!!accessRequestsQuery.data?.length && (
+        {!!pendingAccessRequests.length && (
           <section className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
             <h2 className="text-lg font-semibold">Yêu cầu xác minh xe</h2>
             <div className="mt-3 grid gap-2">
-              {accessRequestsQuery.data.map((request) => (
+              {pendingAccessRequests.map((request) => (
                 <div key={request._id} className="rounded-xl border p-3 text-sm">
                   <div className="flex justify-between gap-3">
                     <span className="font-semibold">{request.licensePlate}</span>

@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { z } from 'zod';
 
@@ -13,12 +13,13 @@ import {
   type VehicleImage,
 } from '@/types/vehicle';
 import { VehicleImageUploader } from '@/features/customers/vehicles/components/vehicle-image-uploader';
+import { OTHER_VEHICLE_VALUE } from '@/features/customers/vehicles/data/car-catalog';
 import {
-  carBrands,
-  carModelsByBrand,
-  OTHER_VEHICLE_VALUE,
-  popularCarBrands,
-} from '@/features/customers/vehicles/data/car-catalog';
+  type CatalogBrand,
+  fallbackModelsForBrand,
+  useVehicleBrands,
+  useVehicleModels,
+} from '@/features/customers/vehicles/hooks/useVehicleCatalog';
 
 const currentYear = new Date().getFullYear();
 const productionYears = Array.from(
@@ -31,6 +32,16 @@ const carTypeOptions: Array<{ value: CarType; label: string }> = [
   { value: 'suv', label: 'SUV' },
   { value: 'pickup', label: 'Pickup / Bán tải' },
 ];
+const commonModelOptions: Array<{ id?: string; name: string }> = [
+  'Sedan',
+  'SUV',
+  'Hatchback',
+  'Coupe',
+  'Convertible',
+  'Pickup',
+  'MPV',
+  'Crossover',
+].map((name) => ({ name }));
 
 const vehicleSchema = z
   .object({
@@ -54,12 +65,15 @@ const vehicleSchema = z
     carType: z.enum(['sedan', 'suv', 'pickup'], { message: 'Vui lòng chọn loại xe.' }),
   })
   .superRefine((values, ctx) => {
-    if (values.brand === OTHER_VEHICLE_VALUE && !values.customBrand?.trim()) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['customBrand'],
-        message: 'Vui lòng nhập hãng xe.',
-      });
+    if (values.brand === OTHER_VEHICLE_VALUE) {
+      if (!values.customBrand?.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['customBrand'],
+          message: 'Vui lòng nhập hãng xe.',
+        });
+      }
+
     }
 
     if (values.model === OTHER_VEHICLE_VALUE && !values.customModel?.trim()) {
@@ -83,13 +97,17 @@ interface VehicleFormProps {
   onSubmit: (payload: CreateVehiclePayload | UpdateVehiclePayload) => Promise<void> | void;
 }
 
-const createDefaultValues = (vehicle?: ApiVehicle | null): VehicleFormValues => {
+const createDefaultValues = (
+  vehicle: ApiVehicle | null | undefined,
+  brands: CatalogBrand[]
+): VehicleFormValues => {
   const brand = vehicle?.brand ?? '';
-  const isKnownBrand = carBrands.includes(brand);
+  const isKnownBrand = brands.some((option) => option.name === brand);
   const brandValue = brand && !isKnownBrand ? OTHER_VEHICLE_VALUE : brand;
-  const availableModels = carModelsByBrand[brand] ?? [];
+  const brandOption = brands.find((option) => option.name === brand);
+  const knownModels = brandOption?.models?.length ? brandOption.models : fallbackModelsForBrand(brand);
   const model = vehicle?.model ?? '';
-  const isKnownModel = availableModels.includes(model);
+  const isKnownModel = knownModels.some((option) => option.name === model);
 
   return {
     brand: brandValue,
@@ -111,39 +129,64 @@ export function VehicleForm({
   onFilesChange,
   onSubmit,
 }: VehicleFormProps) {
-  const defaultValues = useMemo(() => createDefaultValues(initialValue), [initialValue]);
+  const { brands } = useVehicleBrands();
   const {
     register,
     handleSubmit,
     reset,
     setValue,
     control,
-    formState: { errors },
+    formState: { errors, isDirty },
   } = useForm<VehicleFormValues>({
     resolver: zodResolver(vehicleSchema),
-    defaultValues,
+    defaultValues: {},
   });
+  const hasMounted = useRef(false);
 
   const selectedBrand = useWatch({ control, name: 'brand' });
   const selectedModel = useWatch({ control, name: 'model' });
-  const modelOptions = useMemo(
-    () =>
-      selectedBrand && selectedBrand !== OTHER_VEHICLE_VALUE
-        ? (carModelsByBrand[selectedBrand] ?? [])
-        : [],
-    [selectedBrand]
+
+  const selectedBrandOption = useMemo(
+    () => brands.find((option) => option.name === selectedBrand) ?? null,
+    [brands, selectedBrand]
+  );
+  const needsApiModels = Boolean(selectedBrandOption?.id) && !selectedBrandOption?.models?.length;
+  const { models: fetchedModels } = useVehicleModels(
+    needsApiModels ? selectedBrandOption?.id : undefined
+  );
+  const modelOptions = useMemo(() => {
+    if (selectedBrand === OTHER_VEHICLE_VALUE) return commonModelOptions;
+    if (!selectedBrand || !selectedBrandOption) return [];
+    if (selectedBrandOption.models?.length) return selectedBrandOption.models;
+    if (selectedBrandOption.id) return fetchedModels;
+    return fallbackModelsForBrand(selectedBrand);
+  }, [selectedBrand, selectedBrandOption, fetchedModels]);
+
+  const defaultValues = useMemo(
+    () => createDefaultValues(initialValue, brands),
+    [initialValue, brands]
   );
 
   useEffect(() => {
-    reset(defaultValues);
-  }, [defaultValues, reset]);
-
-  useEffect(() => {
-    if (!selectedBrand || selectedBrand === OTHER_VEHICLE_VALUE || !selectedModel) {
+    if (!hasMounted.current) {
+      hasMounted.current = true;
+      reset(defaultValues);
       return;
     }
 
-    if (selectedModel !== OTHER_VEHICLE_VALUE && !modelOptions.includes(selectedModel)) {
+    // Re-resolve defaults when the catalog/models finish loading, but never
+    // overwrite values the user has already edited.
+    if (!isDirty) {
+      reset(defaultValues);
+    }
+  }, [defaultValues, isDirty, reset]);
+
+  useEffect(() => {
+    if (!selectedBrand || !selectedModel || selectedModel === OTHER_VEHICLE_VALUE) {
+      return;
+    }
+
+    if (!modelOptions.some((option) => option.name === selectedModel)) {
       setValue('model', '');
       setValue('customModel', '');
     }
@@ -154,20 +197,36 @@ export function VehicleForm({
   const resolveModel = (values: VehicleFormValues) =>
     (values.model === OTHER_VEHICLE_VALUE ? values.customModel : values.model)?.trim() ?? '';
 
+  const submitForm = (values: VehicleFormValues) => {
+    const selectedModelOption = modelOptions.find((option) => option.name === values.model) ?? null;
+
+    onSubmit({
+      brand: resolveBrand(values),
+      model: resolveModel(values),
+      ...(values.brand !== OTHER_VEHICLE_VALUE && selectedBrandOption?.id
+        ? { brandId: selectedBrandOption.id }
+        : {}),
+      ...(values.model !== OTHER_VEHICLE_VALUE && selectedModelOption?.id
+        ? { modelId: selectedModelOption.id }
+        : {}),
+      ...(values.brand === OTHER_VEHICLE_VALUE && values.customBrand?.trim()
+        ? { suggestedBrandName: values.customBrand.trim() }
+        : {}),
+      ...(values.model === OTHER_VEHICLE_VALUE && values.customModel?.trim()
+        ? { suggestedModelName: values.customModel.trim() }
+        : {}),
+      licensePlate: values.licensePlate.replace(/\s+/g, '').toUpperCase(),
+      year: values.year,
+      carType: values.carType,
+      files: selectedFiles,
+    });
+  };
+
   return (
     <form
       id={formId}
       className="grid gap-6"
-      onSubmit={handleSubmit((values) =>
-        onSubmit({
-          brand: resolveBrand(values),
-          model: resolveModel(values),
-          licensePlate: values.licensePlate.replace(/\s+/g, '').toUpperCase(),
-          year: values.year,
-          carType: values.carType,
-          files: selectedFiles,
-        })
-      )}
+      onSubmit={handleSubmit(submitForm)}
     >
       <section className="rounded-[24px] border border-slate-200 bg-slate-50 p-4 sm:p-5">
         <div className="grid gap-4 lg:grid-cols-2 xl:gap-5">
@@ -179,22 +238,11 @@ export function VehicleForm({
               {...register('brand')}
             >
               <option value="">Chọn hãng xe</option>
-              <optgroup label="Thương hiệu phổ biến">
-                {popularCarBrands.map((brand) => (
-                  <option key={brand} value={brand}>
-                    {brand}
-                  </option>
-                ))}
-              </optgroup>
-              <optgroup label="Tất cả thương hiệu">
-                {carBrands
-                  .filter((brand) => !popularCarBrands.includes(brand))
-                  .map((brand) => (
-                    <option key={brand} value={brand}>
-                      {brand}
-                    </option>
-                  ))}
-              </optgroup>
+              {brands.map((brand) => (
+                <option key={brand.id ?? brand.name} value={brand.name}>
+                  {brand.name}
+                </option>
+              ))}
               <option value={OTHER_VEHICLE_VALUE}>Khác</option>
             </select>
             <FieldError>{errors.brand?.message}</FieldError>
@@ -215,22 +263,16 @@ export function VehicleForm({
             <FieldLabel>Dòng xe</FieldLabel>
             <select
               className="h-11 rounded-xl border border-input bg-white px-3 text-sm outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/10 disabled:bg-slate-100 disabled:text-slate-400"
-              disabled={isSubmitting || !selectedBrand}
+              disabled={isSubmitting}
               {...register('model')}
             >
-              <option value="">
-                {!selectedBrand
-                  ? 'Chọn hãng xe trước'
-                  : modelOptions.length > 0
-                    ? 'Chọn dòng xe'
-                    : 'Chọn Khác để tự nhập'}
-              </option>
+              <option value="">Chọn dòng xe</option>
               {modelOptions.map((model) => (
-                <option key={model} value={model}>
-                  {model}
+                <option key={model.id ?? model.name} value={model.name}>
+                  {model.name}
                 </option>
               ))}
-              {selectedBrand ? <option value={OTHER_VEHICLE_VALUE}>Khác</option> : null}
+              <option value={OTHER_VEHICLE_VALUE}>Khác</option>
             </select>
             <FieldError>{errors.model?.message}</FieldError>
             {selectedModel === OTHER_VEHICLE_VALUE ? (

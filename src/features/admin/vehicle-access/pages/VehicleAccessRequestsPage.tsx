@@ -46,9 +46,13 @@ function formatDate(value?: string) {
 function isImage(mime?: string, name?: string) {
   return mime?.startsWith('image/') || /\.(jpe?g|png|gif|webp|avif)$/i.test(name ?? '');
 }
+function suggestedVehicleText(request: VehicleAccessRequest) {
+  return [request.suggestedBrandName, request.suggestedModelName].filter(Boolean).join(' · ');
+}
 
 export default function VehicleAccessRequestsPage() {
   const [status, setStatus] = useState<VehicleAccessRequestStatus | 'all'>('pending');
+  const [requestType, setRequestType] = useState<'brand_model_verification' | 'access_request'>('brand_model_verification');
   const [keyword, setKeyword] = useState('');
   const [notes, setNotes] = useState<Record<string, string>>({});
   const client = useQueryClient();
@@ -65,7 +69,9 @@ export default function VehicleAccessRequestsPage() {
       client.invalidateQueries({ queryKey });
       setNotes((current) => ({ ...current, [variables.request._id]: '' }));
       toast.success(
-        variables.action === 'approve' ? 'Đã chấp thuận yêu cầu.' : 'Đã từ chối yêu cầu.'
+        variables.action === 'approve'
+          ? 'Đã chấp thuận hãng/dòng xe đề xuất.'
+          : 'Đã từ chối hãng/dòng xe đề xuất.'
       );
     },
     onError: () => toast.error('Không thể cập nhật yêu cầu. Vui lòng thử lại.'),
@@ -74,21 +80,31 @@ export default function VehicleAccessRequestsPage() {
   const filtered = useMemo(() => {
     const word = keyword.trim().toLocaleLowerCase('vi');
     return requests.filter((item) => {
-      const text = [item.licensePlate, item.relationship, item.note, personName(item)]
+      const text = [
+        item.licensePlate,
+        item.relationship,
+        item.note,
+        personName(item),
+        item.suggestedBrandName,
+        item.suggestedModelName,
+      ]
         .join(' ')
         .toLocaleLowerCase('vi');
-      return (status === 'all' || item.status === status) && (!word || text.includes(word));
+      const normalizedType = item.requestType ?? 'access_request';
+      return normalizedType === requestType
+        && (status === 'all' || item.status === status)
+        && (!word || text.includes(word));
     });
-  }, [keyword, requests, status]);
+  }, [keyword, requestType, requests, status]);
   const count = (value: VehicleAccessRequestStatus) =>
     requests.filter((item) => item.status === value).length;
 
   return (
     <PageLayout>
       <section>
-        <h1 className="text-3xl font-bold text-slate-950 sm:text-4xl">Xác minh quyền sử dụng xe</h1>
+        <h1 className="text-3xl font-bold text-slate-950 sm:text-4xl">Xác minh xe</h1>
         <p className="mt-2 text-base text-slate-500">
-          Kiểm tra minh chứng và duyệt quyền sử dụng xe đã tồn tại trong hệ thống.
+          Tách riêng yêu cầu xác minh hãng/dòng xe và xác minh biển số/quyền sử dụng.
         </p>
       </section>
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -114,6 +130,38 @@ export default function VehicleAccessRequestsPage() {
         />
       </section>
       <PageSection className="rounded-lg border border-border/80 bg-white p-4">
+        <div className="mb-4 grid gap-2 sm:grid-cols-2">
+          <button
+            type="button"
+            className={cn(
+              'rounded-xl border px-4 py-3 text-left text-sm font-semibold transition',
+              requestType === 'brand_model_verification'
+                ? 'border-sky-200 bg-sky-50 text-sky-800'
+                : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+            )}
+            onClick={() => setRequestType('brand_model_verification')}
+          >
+            Xác minh hãng/dòng xe
+            <span className="ml-2 rounded-full bg-white px-2 py-0.5 text-xs text-slate-500">
+              {requests.filter((item) => item.requestType === 'brand_model_verification').length}
+            </span>
+          </button>
+          <button
+            type="button"
+            className={cn(
+              'rounded-xl border px-4 py-3 text-left text-sm font-semibold transition',
+              requestType === 'access_request'
+                ? 'border-sky-200 bg-sky-50 text-sky-800'
+                : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+            )}
+            onClick={() => setRequestType('access_request')}
+          >
+            Xác minh biển số/quyền sử dụng
+            <span className="ml-2 rounded-full bg-white px-2 py-0.5 text-xs text-slate-500">
+              {requests.filter((item) => (item.requestType ?? 'access_request') === 'access_request').length}
+            </span>
+          </button>
+        </div>
         <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_190px]">
           <div className="relative">
             <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
@@ -163,7 +211,14 @@ export default function VehicleAccessRequestsPage() {
               )}
               {filtered.map((request) => (
                 <tr key={request._id} className="border-b border-border/70 align-top last:border-0">
-                  <td className="px-2 py-4 font-semibold text-slate-950">{request.licensePlate}</td>
+                  <td className="px-2 py-4">
+                    <p className="font-semibold text-slate-950">{request.licensePlate}</p>
+                    {suggestedVehicleText(request) ? (
+                      <p className="mt-1 max-w-56 text-xs text-slate-500">
+                        Hãng/Dòng đề xuất: {suggestedVehicleText(request)}
+                      </p>
+                    ) : null}
+                  </td>
                   <td className="px-2 py-4">
                     <p className="font-medium">{personName(request)}</p>
                     {typeof request.requesterId === 'object' && (
@@ -197,7 +252,7 @@ export default function VehicleAccessRequestsPage() {
                       <div className="space-y-2">
                         <Input
                           className="h-9"
-                          placeholder="Ghi chú duyệt (ít nhất 2 ký tự)"
+                          placeholder="Ghi chú xác minh hãng/dòng xe (ít nhất 2 ký tự)"
                           value={notes[request._id] ?? ''}
                           onChange={(e) =>
                             setNotes((current) => ({ ...current, [request._id]: e.target.value }))
