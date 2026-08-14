@@ -200,6 +200,7 @@ export interface AppointmentStatusSummary {
   total: number;
   pending: number;
   confirmed: number;
+  inQueue: number;
   inProgress: number;
   completed: number;
   cancelled: number;

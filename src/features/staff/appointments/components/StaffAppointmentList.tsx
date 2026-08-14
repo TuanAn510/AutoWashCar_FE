@@ -8,6 +8,10 @@ import type { AppointmentItem, AppointmentStatus } from '@/types/appointment';
 
 const getQuickAction = (status: AppointmentStatus) => {
   if (status === 'confirmed') {
+    return { label: 'Check-in', nextStatus: 'in_queue' as const };
+  }
+
+  if (status === 'in_queue') {
     return { label: 'Bắt đầu', nextStatus: 'in_progress' as const };
   }
 
@@ -27,7 +31,10 @@ export function StaffAppointmentList({
   appointments: AppointmentItem[];
   onViewDetail: (appointment: AppointmentItem) => void;
   onOpenStatusDialog: (appointment: AppointmentItem) => void;
-  onQuickUpdate: (appointment: AppointmentItem, nextStatus: 'in_progress' | 'completed') => void;
+  onQuickUpdate: (
+    appointment: AppointmentItem,
+    nextStatus: 'in_queue' | 'in_progress' | 'completed'
+  ) => void;
 }) {
   return (
     <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
