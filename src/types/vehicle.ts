@@ -94,11 +94,20 @@ export interface VehicleAccessRequest {
   reviewedAt?: string;
   requesterId?: string | { _id: string; displayName?: string; phone?: string; email?: string };
   vehicleId?: ApiVehicle;
-  documents?: Array<{ url: string; id: string; mimeType: string; name?: string }>;
+  documents?: Array<{ url: string; id: string; mimeType: string; name?: string; documentType?: 'BRAND_MODEL' | 'PLATE' }>;
+  /** Vehicle draft carried by a BRAND_MODEL_VERIFICATION request that is waiting
+   *  on admin approval before the vehicle is actually created. */
+  carType?: CarType;
+  manufactureYear?: number;
 }
 export interface CreateVehicleAccessRequestPayload {
   licensePlate: string;
   relationship: string;
   note?: string;
   documents?: File[];
+  /** Minh chứng hãng/dòng xe — only for the combined (biển + hãng/dòng) flow. */
+  brandModelDocuments?: File[];
+  /** Tên hãng/dòng đề xuất (trường hợp trùng biển số + chọn "Khác"). */
+  suggestedBrandName?: string;
+  suggestedModelName?: string;
 }

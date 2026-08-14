@@ -176,31 +176,6 @@ export default function PaymentPage() {
     navigate('/customer/appointments');
   };
 
-  if (isLoading) {
-    return (
-      <main className="flex min-h-[calc(100vh-73px)] items-center justify-center bg-[#f8fafc] px-4">
-        <div className="w-full max-w-[1040px] space-y-4">
-          <Skeleton className="h-48 rounded-xl" />
-          <Skeleton className="h-64 rounded-xl" />
-        </div>
-      </main>
-    );
-  }
-
-  if (isError || !appointment) {
-    return (
-      <main className="flex min-h-[calc(100vh-73px)] items-center justify-center bg-[#f8fafc] px-4">
-        <section className="w-full max-w-[560px] rounded-xl border border-rose-200 bg-white px-6 py-12 text-center shadow-[0_18px_44px_rgba(15,23,42,0.08)]">
-          <XCircle className="mx-auto size-12 text-rose-500" />
-          <h2 className="mt-4 text-xl font-black text-[#15243a]">Không tìm thấy lịch hẹn</h2>
-          <p className="mt-2 text-sm text-[#64748b]">
-            Lịch hẹn không tồn tại hoặc bạn không có quyền truy cập.
-          </p>
-        </section>
-      </main>
-    );
-  }
-
   if (paymentStatus === 'success') {
     return (
       <main className="flex min-h-[calc(100vh-73px)] items-center justify-center bg-[#f8fafc] px-4">
@@ -234,12 +209,46 @@ export default function PaymentPage() {
           <p className="mt-2 text-sm text-[#64748b]">
             Giao dịch không thành công. Vui lòng thử lại hoặc chọn phương thức thanh toán khác.
           </p>
-          <Button
-            className="mt-6 h-[42px] rounded-md shadow-[0_12px_26px_rgba(11,103,194,0.24)]"
-            onClick={() => (window.location.href = `/customer/payment/${appointmentId}`)}
-          >
-            Thử lại
-          </Button>
+          {appointmentId && appointmentId !== 'result' ? (
+            <Button
+              className="mt-6 h-[42px] rounded-md shadow-[0_12px_26px_rgba(11,103,194,0.24)]"
+              onClick={() => (window.location.href = `/customer/payment/${appointmentId}`)}
+            >
+              Thử lại
+            </Button>
+          ) : (
+            <Button
+              className="mt-6 h-[42px] rounded-md shadow-[0_12px_26px_rgba(11,103,194,0.24)]"
+              onClick={() => navigate('/customer/appointments')}
+            >
+              Quay lại lịch hẹn
+            </Button>
+          )}
+        </section>
+      </main>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <main className="flex min-h-[calc(100vh-73px)] items-center justify-center bg-[#f8fafc] px-4">
+        <div className="w-full max-w-[1040px] space-y-4">
+          <Skeleton className="h-48 rounded-xl" />
+          <Skeleton className="h-64 rounded-xl" />
+        </div>
+      </main>
+    );
+  }
+
+  if (isError || !appointment) {
+    return (
+      <main className="flex min-h-[calc(100vh-73px)] items-center justify-center bg-[#f8fafc] px-4">
+        <section className="w-full max-w-[560px] rounded-xl border border-rose-200 bg-white px-6 py-12 text-center shadow-[0_18px_44px_rgba(15,23,42,0.08)]">
+          <XCircle className="mx-auto size-12 text-rose-500" />
+          <h2 className="mt-4 text-xl font-black text-[#15243a]">Không tìm thấy lịch hẹn</h2>
+          <p className="mt-2 text-sm text-[#64748b]">
+            Lịch hẹn không tồn tại hoặc bạn không có quyền truy cập.
+          </p>
         </section>
       </main>
     );

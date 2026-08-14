@@ -1,6 +1,7 @@
 import { PageSection } from '@/components/common/PageSection';
 import { PageLayout } from '@/components/layout/PageLayout';
-import { useMemo, useState } from 'react';
+import { useMemo, useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   CheckCircle2,
@@ -16,6 +17,7 @@ import { StatCard } from '@/components/dashboard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import { resolveImageUrl } from '@/lib/image-url';
 import { vehicleAccessRequestApi } from '@/services/vehicleAccessRequestService';
 import type { VehicleAccessRequest, VehicleAccessRequestStatus } from '@/types/vehicle';
 
@@ -51,9 +53,16 @@ function suggestedVehicleText(request: VehicleAccessRequest) {
 }
 
 export default function VehicleAccessRequestsPage() {
-  const [status, setStatus] = useState<VehicleAccessRequestStatus | 'all'>('pending');
-  const [requestType, setRequestType] = useState<'brand_model_verification' | 'access_request'>('brand_model_verification');
-  const [keyword, setKeyword] = useState('');
+  // Cho phép lọc sẵn theo biển số khi chuyển từ "Quản lý xe" sang (nút Xác minh).
+  const [searchParams] = useSearchParams();
+  const initialKeyword = searchParams.get('keyword') ?? '';
+  const [status, setStatus] = useState<VehicleAccessRequestStatus | 'all'>(
+    initialKeyword ? 'all' : 'pending'
+  );
+  const [requestType, setRequestType] = useState<
+    'brand_model_verification' | 'access_request' | 'combined'
+  >('brand_model_verification');
+  const [keyword, setKeyword] = useState(initialKeyword);
   const [notes, setNotes] = useState<Record<string, string>>({});
   const client = useQueryClient();
   const query = useQuery({ queryKey, queryFn: () => vehicleAccessRequestApi.listAdmin() });
@@ -77,6 +86,15 @@ export default function VehicleAccessRequestsPage() {
     onError: () => toast.error('Không thể cập nhật yêu cầu. Vui lòng thử lại.'),
   });
   const requests = query.data ?? EMPTY_REQUESTS;
+  const isCombined = (item: VehicleAccessRequest) =>
+    (item.requestType ?? 'access_request') === 'access_request' &&
+    Boolean(item.suggestedBrandName || item.suggestedModelName);
+  const matchesType = (item: VehicleAccessRequest) => {
+    if (requestType === 'brand_model_verification')
+      return (item.requestType ?? 'access_request') === 'brand_model_verification';
+    if (requestType === 'combined') return isCombined(item);
+    return (item.requestType ?? 'access_request') === 'access_request' && !isCombined(item);
+  };
   const filtered = useMemo(() => {
     const word = keyword.trim().toLocaleLowerCase('vi');
     return requests.filter((item) => {
@@ -90,14 +108,46 @@ export default function VehicleAccessRequestsPage() {
       ]
         .join(' ')
         .toLocaleLowerCase('vi');
-      const normalizedType = item.requestType ?? 'access_request';
-      return normalizedType === requestType
+      return matchesType(item)
         && (status === 'all' || item.status === status)
         && (!word || text.includes(word));
     });
   }, [keyword, requestType, requests, status]);
+
+  // Khi chuyển từ "Quản lý xe" (có ?keyword=biển số): tự chọn đúng tab chứa
+  // request của xe đó (ưu tiên request đang chờ) thay vì mặc định tab hãng/dòng.
+  useEffect(() => {
+    if (!initialKeyword) return;
+    const word = initialKeyword.toLocaleLowerCase('vi');
+    const priority = { pending: 0, rejected: 1, approved: 2 } as const;
+    const matched =
+      requests
+        .filter((item) => item.licensePlate.toLocaleLowerCase('vi').includes(word))
+        .sort(
+          (a, b) =>
+            (priority[a.status] ?? 3) - (priority[b.status] ?? 3)
+        );
+    const target = matched[0];
+    if (!target) return;
+    if ((target.requestType ?? 'access_request') === 'brand_model_verification') {
+      setRequestType('brand_model_verification');
+    } else if (isCombined(target)) {
+      setRequestType('combined');
+    } else {
+      setRequestType('access_request');
+    }
+    // Chỉ chạy khi dữ liệu tải về; không cần phụ thuộc keyword (lọc theo request).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [requests]);
+
   const count = (value: VehicleAccessRequestStatus) =>
     requests.filter((item) => item.status === value).length;
+  const notePlaceholder =
+    requestType === 'brand_model_verification'
+      ? 'Ghi chú xác minh hãng/dòng xe (ít nhất 2 ký tự)'
+      : requestType === 'combined'
+        ? 'Ghi chú xác minh biển số lẫn hãng/dòng (ít nhất 2 ký tự)'
+        : 'Ghi chú xác minh biển số/quyền sử dụng (ít nhất 2 ký tự)';
 
   return (
     <PageLayout>
@@ -130,7 +180,7 @@ export default function VehicleAccessRequestsPage() {
         />
       </section>
       <PageSection className="rounded-lg border border-border/80 bg-white p-4">
-        <div className="mb-4 grid gap-2 sm:grid-cols-2">
+        <div className="grid gap-2 sm:grid-cols-3">
           <button
             type="button"
             className={cn(
@@ -158,11 +208,39 @@ export default function VehicleAccessRequestsPage() {
           >
             Xác minh biển số/quyền sử dụng
             <span className="ml-2 rounded-full bg-white px-2 py-0.5 text-xs text-slate-500">
-              {requests.filter((item) => (item.requestType ?? 'access_request') === 'access_request').length}
+              {
+                requests.filter(
+                  (item) =>
+                    (item.requestType ?? 'access_request') === 'access_request' &&
+                    !item.suggestedBrandName &&
+                    !item.suggestedModelName
+                ).length
+              }
+            </span>
+          </button>
+          <button
+            type="button"
+            className={cn(
+              'rounded-xl border px-4 py-3 text-left text-sm font-semibold transition',
+              requestType === 'combined'
+                ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+            )}
+            onClick={() => setRequestType('combined')}
+          >
+            Xác minh biển + hãng/dòng xe
+            <span className="ml-2 rounded-full bg-white px-2 py-0.5 text-xs text-slate-500">
+              {
+                requests.filter(
+                  (item) =>
+                    (item.requestType ?? 'access_request') === 'access_request' &&
+                    Boolean(item.suggestedBrandName || item.suggestedModelName)
+                ).length
+              }
             </span>
           </button>
         </div>
-        <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_190px]">
+        <div className="mt-4 grid gap-3 md:grid-cols-[minmax(0,1fr)_190px]">
           <div className="relative">
             <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
             <Input
@@ -252,7 +330,7 @@ export default function VehicleAccessRequestsPage() {
                       <div className="space-y-2">
                         <Input
                           className="h-9"
-                          placeholder="Ghi chú xác minh hãng/dòng xe (ít nhất 2 ký tự)"
+                          placeholder={notePlaceholder}
                           value={notes[request._id] ?? ''}
                           onChange={(e) =>
                             setNotes((current) => ({ ...current, [request._id]: e.target.value }))
@@ -302,20 +380,50 @@ export default function VehicleAccessRequestsPage() {
 function Evidence({ documents }: { documents?: VehicleAccessRequest['documents'] }) {
   if (!documents?.length)
     return <span className="text-xs italic text-slate-400">Chưa có minh chứng</span>;
+
+  const brandModelDocs = documents.filter((d) => d.documentType === 'BRAND_MODEL');
+  const plateDocs = documents.filter(
+    (d) => d.documentType === 'PLATE' || d.documentType == null
+  );
+  // Hiện 2 nhóm tách biệt (hãng/dòng + biển số) nếu cả hai đều có tài liệu;
+  // ngược lại hiện 1 nhóm không nhãn như trước để khỏi rối.
+  const groups: { label?: string; docs: (typeof documents)[number][] }[] = [];
+  if (brandModelDocs.length && plateDocs.length) {
+    if (brandModelDocs.length) groups.push({ label: 'Hãng/Dòng', docs: brandModelDocs });
+    if (plateDocs.length) groups.push({ label: 'Biển số', docs: plateDocs });
+    return (
+      <div className="space-y-2">
+        {groups.map((group) => (
+          <div key={group.label}>
+            <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+              {group.label}
+            </p>
+            <DocThumbnails documents={group.docs} />
+          </div>
+        ))}
+      </div>
+    );
+  }
+  return <DocThumbnails documents={brandModelDocs.length ? brandModelDocs : plateDocs} />;
+}
+
+function DocThumbnails({ documents }: { documents: VehicleAccessRequest['documents'] }) {
+  if (!documents?.length)
+    return <span className="text-xs italic text-slate-400">Chưa có minh chứng</span>;
   return (
     <div className="flex flex-wrap gap-2">
       {documents.map((doc) =>
         isImage(doc.mimeType, doc.name) ? (
           <a
             key={doc.id}
-            href={doc.url}
+            href={resolveImageUrl(doc.url)}
             target="_blank"
             rel="noreferrer"
             className="group relative block size-16 overflow-hidden rounded-md border bg-slate-100"
             title={doc.name || 'Xem ảnh'}
           >
             <img
-              src={doc.url}
+              src={resolveImageUrl(doc.url)}
               alt={doc.name || 'Ảnh minh chứng xe'}
               className="size-full object-cover transition group-hover:scale-105"
               loading="lazy"
@@ -327,7 +435,7 @@ function Evidence({ documents }: { documents?: VehicleAccessRequest['documents']
         ) : (
           <a
             key={doc.id}
-            href={doc.url}
+            href={resolveImageUrl(doc.url)}
             target="_blank"
             rel="noreferrer"
             className="flex size-16 flex-col items-center justify-center gap-1 rounded-md border bg-slate-50 text-slate-600"

@@ -1,4 +1,4 @@
-import { Loader2 } from 'lucide-react';
+import { ArrowUpDown, Loader2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -20,7 +20,7 @@ import type {
 } from '@/types/appointment';
 import { AdminAppointmentSummaryCards } from '@/features/admin/appointments/components/AdminAppointmentSummaryCards';
 import { AdminAppointmentFilters } from '@/features/admin/appointments/components/AdminAppointmentFilters';
-import { AdminAppointmentsTable } from '@/features/admin/appointments/components/AdminAppointmentsTable';
+import { AdminAppointmentsTable, type DateSort } from '@/features/admin/appointments/components/AdminAppointmentsTable';
 import { AdminAppointmentDetailDialog } from '@/features/admin/appointments/components/AppointmentDetailDialog';
 import { AssignStaffDialog } from '@/features/admin/appointments/components/AssignStaffDialog';
 import { CancelAppointmentDialog } from '@/features/admin/appointments/components/CancelAppointmentDialog';
@@ -67,8 +67,18 @@ const getTodayRange = () => {
 };
 
 const APPOINTMENTS_PER_PAGE = 10;
+const APPOINTMENTS_PER_PAGE_BIG = 100;
 type TimelineStatus = Exclude<AppointmentStatus, 'cancelled'>;
 type AppointmentTab = 'today' | 'all' | 'priority';
+
+const isWaitingStatus = (a: AppointmentItem) =>
+  a.status === 'pending' ||
+  a.status === 'confirmed' ||
+  a.status === 'in_queue' ||
+  a.status === 'in_progress';
+
+const appointmentGroupDate = (a: AppointmentItem): Date =>
+  new Date(a.completedAt ?? a.cancelledAt ?? a.scheduledAt);
 
 const TIER_PRIORITY: Record<string, number> = {
   Platinum: 4,
@@ -86,9 +96,7 @@ const getTierPriority = (appointment: AppointmentItem): number => {
 };
 
 export default function AdminAppointmentsPage() {
-  const [appointmentTab, setAppointmentTab] = useState<AppointmentTab>(() =>
-    window.location.pathname.includes('service-histories') ? 'all' : 'today'
-  );
+  const [appointmentTab, setAppointmentTab] = useState<AppointmentTab>('all');
   const [keyword, setKeyword] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | AppointmentStatus>(() =>
     window.location.pathname.includes('service-histories') ? 'completed' : 'all'
@@ -96,6 +104,7 @@ export default function AdminAppointmentsPage() {
   const [staffFilter, setStaffFilter] = useState<'all' | string>('all');
   const [dateFilter, setDateFilter] = useState('');
   const [page, setPage] = useState(1);
+  const [dateSort, setDateSort] = useState<DateSort>('desc');
 
   const [detailAppointment, setDetailAppointment] = useState<AppointmentItem | null>(null);
   const [assignAppointment, setAssignAppointment] = useState<AppointmentItem | null>(null);
@@ -114,7 +123,7 @@ export default function AdminAppointmentsPage() {
   const appointmentFilters = useMemo<AdminAppointmentFilterParams>(() => {
     const trimmedKeyword = keyword.trim();
     const selectedDateRange =
-      appointmentTab === 'today'
+      appointmentTab === 'today' || appointmentTab === 'priority'
         ? getTodayRange()
         : dateFilter
           ? getLocalDateRange(dateFilter)
@@ -126,7 +135,10 @@ export default function AdminAppointmentsPage() {
       ...(staffFilter !== 'all' ? { staffId: staffFilter } : {}),
       ...selectedDateRange,
       page,
-      limit: APPOINTMENTS_PER_PAGE,
+      limit:
+        appointmentTab === 'all' || appointmentTab === 'priority'
+          ? APPOINTMENTS_PER_PAGE_BIG
+          : APPOINTMENTS_PER_PAGE,
       sortOrder: 'desc',
     };
   }, [appointmentTab, dateFilter, keyword, page, staffFilter, statusFilter]);
@@ -140,63 +152,70 @@ export default function AdminAppointmentsPage() {
   const cancelMutation = useCancelAppointmentByAdmin();
   const confirmPaymentMutation = useConfirmAppointmentPayment();
 
-  const appointments = useMemo(() => {
-    const raw = appointmentsQuery.data?.appointments ?? [];
-    if (appointmentTab === 'priority') {
-      return raw
-        .filter((a) => a.status === 'pending' || a.status === 'confirmed')
-        .sort((a, b) => getTierPriority(b) - getTierPriority(a));
-    }
-    return raw;
-  }, [appointmentsQuery.data?.appointments, appointmentTab]);
+  const appointments = useMemo(
+    () => appointmentsQuery.data?.appointments ?? [],
+    [appointmentsQuery.data?.appointments]
+  );
 
-  const { activeAppointments, completedAppointments } = useMemo(() => {
-    const active = appointments.filter((a) => a.status !== 'completed' && a.status !== 'cancelled');
-    const completed = appointments.filter(
-      (a) => a.status === 'completed' || a.status === 'cancelled'
-    );
-    return { activeAppointments: active, completedAppointments: completed };
+  // Priority queue: waiting appointments of the real (today) day, sorted by tier desc
+  const priorityList = useMemo(() => {
+    return appointments
+      .filter((a) => isWaitingStatus(a))
+      .sort((a, b) => {
+        const tierDiff = getTierPriority(b) - getTierPriority(a);
+        if (tierDiff !== 0) return tierDiff;
+        return new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime();
+      });
   }, [appointments]);
 
-  const { unpaidCompleted, todayCompleted, yesterdayCompleted, olderCompleted } = useMemo(() => {
-    const now = new Date();
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const yesterdayStart = new Date(todayStart);
-    yesterdayStart.setDate(yesterdayStart.getDate() - 1);
+  // Split into the 4 buckets shown in "Tất cả lịch hẹn" (and reused for "Hôm nay")
+  const { processingAppointments, unpaidAppointments, completedAppointments, olderAppointments } =
+    useMemo(() => {
+      const now = new Date();
+      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
 
-    const unpaid: AppointmentItem[] = [];
-    const today: AppointmentItem[] = [];
-    const yesterday: AppointmentItem[] = [];
-    const older: AppointmentItem[] = [];
+      const processing: AppointmentItem[] = [];
+      const unpaid: AppointmentItem[] = [];
+      const completed: AppointmentItem[] = [];
+      const older: AppointmentItem[] = [];
 
-    for (const a of completedAppointments) {
-      // Completed but unpaid → separate section for easy payment confirmation
-      if (a.status === 'completed' && a.paymentStatus !== 'paid') {
-        unpaid.push(a);
-        continue;
+      for (const a of appointments) {
+        // Cancelled always lives with the completed/older groups (renders as "Đã hủy")
+        if (a.status === 'cancelled') {
+          const dateStart = new Date(
+            appointmentGroupDate(a).getFullYear(),
+            appointmentGroupDate(a).getMonth(),
+            appointmentGroupDate(a).getDate()
+          ).getTime();
+          if (dateStart >= todayStart) completed.push(a);
+          else older.push(a);
+          continue;
+        }
+        // Any non-cancelled unpaid order → "Chưa thanh toán" (needs admin payment confirmation)
+        if (a.paymentStatus !== 'paid') {
+          unpaid.push(a);
+          continue;
+        }
+        if (a.status === 'completed') {
+          const dateStart = new Date(
+            appointmentGroupDate(a).getFullYear(),
+            appointmentGroupDate(a).getMonth(),
+            appointmentGroupDate(a).getDate()
+          ).getTime();
+          if (dateStart >= todayStart) completed.push(a);
+          else older.push(a);
+          continue;
+        }
+        processing.push(a);
       }
-      const date = a.completedAt ? new Date(a.completedAt) : null;
-      if (!date) {
-        older.push(a);
-        continue;
-      }
-      const dateStart = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-      if (dateStart.getTime() === todayStart.getTime()) {
-        today.push(a);
-      } else if (dateStart.getTime() === yesterdayStart.getTime()) {
-        yesterday.push(a);
-      } else {
-        older.push(a);
-      }
-    }
 
-    return {
-      unpaidCompleted: unpaid,
-      todayCompleted: today,
-      yesterdayCompleted: yesterday,
-      olderCompleted: older,
-    };
-  }, [completedAppointments]);
+      return {
+        processingAppointments: processing,
+        unpaidAppointments: unpaid,
+        completedAppointments: completed,
+        olderAppointments: older,
+      };
+    }, [appointments]);
 
   const detailData = detailQuery.data ?? detailAppointment;
   const staffOptions = useMemo<Array<AppointmentAssignedStaff & StaffWorkload>>(() => {
@@ -248,13 +267,6 @@ export default function AdminAppointmentsPage() {
       payload: { status: statusBeingApplied },
     });
     setStatusAppointment(null);
-
-    if (statusBeingApplied === 'completed') {
-      setPaymentAppointment({
-        ...appointmentBeingUpdated,
-        status: 'completed',
-      });
-    }
   };
 
   const handleConfirmPendingAppointment = async () => {
@@ -278,10 +290,6 @@ export default function AdminAppointmentsPage() {
       payload: { status },
     });
     setTimelineStatusChange(null);
-
-    if (status === 'completed') {
-      setPaymentAppointment({ ...appointment, status });
-    }
   };
 
   const handleConfirmReschedule = async (scheduledAt: string) => {
@@ -344,6 +352,8 @@ export default function AdminAppointmentsPage() {
     setStatusAppointment(appointment);
   };
 
+  const toggleDateSort = () => setDateSort((prev) => (prev === 'desc' ? 'asc' : 'desc'));
+
   return (
     <main className="min-h-screen min-w-0 overflow-x-hidden bg-[#f8fafc] px-4 py-8 sm:px-6 lg:px-8">
       <div className="mx-auto flex w-full max-w-[1540px] min-w-0 flex-col gap-7">
@@ -367,9 +377,9 @@ export default function AdminAppointmentsPage() {
             }}
           >
             <TabsList className="grid w-full grid-cols-3 sm:w-auto">
+              <TabsTrigger value="all">Tất cả lịch hẹn</TabsTrigger>
               <TabsTrigger value="today">Hôm nay</TabsTrigger>
               <TabsTrigger value="priority">Hàng đợi ưu tiên</TabsTrigger>
-              <TabsTrigger value="all">Tất cả lịch hẹn</TabsTrigger>
             </TabsList>
           </Tabs>
         </section>
@@ -426,129 +436,153 @@ export default function AdminAppointmentsPage() {
               Thử lại
             </Button>
           </section>
-        ) : activeAppointments.length === 0 && completedAppointments.length === 0 ? (
+        ) : appointmentTab === 'priority' ? (
+          priorityList.length === 0 ? (
+            <EmptyAdminAppointmentsState
+              title="Hàng đợi ưu tiên trống"
+              description="Không có lịch hẹn nào đang chờ xử lý trong hôm nay. Hàng đợi ưu tiên sắp xếp theo hạng Platinum → Gold → Silver → Member, khách hạng cao xếp trước."
+            />
+          ) : (
+            <section className="space-y-4">
+              <div>
+                <h2 className="text-2xl font-semibold text-slate-950">Hàng đợi ưu tiên</h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  {priorityList.length} lịch hẹn đang chờ trong hôm nay, xếp theo hạng thành viên
+                  (Platinum → Gold → Silver → Member).
+                </p>
+              </div>
+              <AdminAppointmentsTable
+                appointments={priorityList}
+                onViewDetail={setDetailAppointment}
+                onAssignStaff={openAssignStaffDialog}
+                onUpdateStatus={openStatusDialog}
+                onConfirmPayment={setPaymentAppointment}
+                onReschedule={setRescheduleAppointment}
+                onCancel={setCancelAppointment}
+              />
+            </section>
+          )
+        ) : processingAppointments.length === 0 &&
+          unpaidAppointments.length === 0 &&
+          completedAppointments.length === 0 &&
+          olderAppointments.length === 0 ? (
           <EmptyAdminAppointmentsState
             title={
               appointmentTab === 'today'
                 ? 'Hôm nay chưa có lịch hẹn nào'
-                : appointmentTab === 'priority'
-                  ? 'Hàng đợi ưu tiên trống'
-                  : dateFilter
-                    ? 'Không có lịch hẹn nào trong ngày đã chọn'
-                    : undefined
+                : dateFilter
+                  ? 'Không có lịch hẹn nào trong ngày đã chọn'
+                  : undefined
             }
             description={
               appointmentTab === 'today'
                 ? 'Chuyển sang tab Hàng đợi ưu tiên để xem lịch sắp xếp theo hạng thành viên.'
-                : appointmentTab === 'priority'
-                  ? 'Không có lịch hẹn nào đang chờ xử lý. Hàng đợi ưu tiên sắp xếp theo hạng Platinum → Gold → Silver → Member.'
-                  : dateFilter
-                    ? 'Hãy chọn ngày khác hoặc xóa bộ lọc ngày hẹn để xem toàn bộ lịch.'
-                    : undefined
+                : dateFilter
+                  ? 'Hãy chọn ngày khác hoặc xóa bộ lọc ngày hẹn để xem toàn bộ lịch.'
+                  : undefined
             }
           />
         ) : (
-          <section className="space-y-6">
-            {activeAppointments.length > 0 ? (
-              <div className="space-y-4">
-                <div>
-                  <h2 className="text-2xl font-semibold text-slate-950">
-                    {appointmentTab === 'priority' ? 'Hàng đợi ưu tiên' : 'Lịch hẹn đang xử lý'}
-                  </h2>
-                  <p className="mt-1 text-sm text-slate-500">
-                    {appointmentTab === 'priority'
-                      ? `${activeAppointments.length} lịch hẹn xếp theo hạng thành viên.`
-                      : `${activeAppointments.length} lịch hẹn đang chờ xử lý.`}
-                  </p>
+          <section className="space-y-8">
+            {processingAppointments.length > 0 ? (
+              <div className="space-y-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h3 className="text-xl font-semibold text-slate-950">Đang xử lý</h3>
+                    <p className="mt-1 text-sm text-slate-500">
+                      {processingAppointments.length} lịch hẹn chưa hoàn thành và đã thanh toán.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={toggleDateSort}
+                    className="inline-flex items-center gap-1.5 rounded-md border border-border bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50"
+                    title="Sắp xếp theo ngày hẹn"
+                  >
+                    <ArrowUpDown className="size-3.5" />
+                    {dateSort === 'desc' ? 'Mới nhất' : 'Cũ nhất'}
+                  </button>
                 </div>
-
                 <AdminAppointmentsTable
-                  appointments={activeAppointments}
+                  appointments={processingAppointments}
                   onViewDetail={setDetailAppointment}
                   onAssignStaff={openAssignStaffDialog}
                   onUpdateStatus={openStatusDialog}
                   onConfirmPayment={setPaymentAppointment}
                   onReschedule={setRescheduleAppointment}
                   onCancel={setCancelAppointment}
+                  dateSort={dateSort}
+                  onDateSortToggle={toggleDateSort}
                 />
               </div>
             ) : null}
 
-            {appointmentTab !== 'priority' &&
-            (unpaidCompleted.length > 0 ||
-              todayCompleted.length > 0 ||
-              yesterdayCompleted.length > 0 ||
-              olderCompleted.length > 0) ? (
-              <div className="space-y-6">
+            {unpaidAppointments.length > 0 ? (
+              <div className="space-y-3">
                 <div>
-                  <h2 className="text-2xl font-semibold text-slate-500">Đã hoàn thành / Đã hủy</h2>
-                  <p className="mt-1 text-sm text-slate-400">
-                    {completedAppointments.length} lịch hẹn đã kết thúc.
+                  <h3 className="text-xl font-semibold text-rose-700">Chưa thanh toán</h3>
+                  <p className="mt-1 text-sm text-rose-600">
+                    {unpaidAppointments.length} lịch hẹn chưa thanh toán, cần xác nhận thu tiền.
                   </p>
                 </div>
+                <AdminAppointmentsTable
+                  appointments={unpaidAppointments}
+                  onViewDetail={setDetailAppointment}
+                  onAssignStaff={openAssignStaffDialog}
+                  onUpdateStatus={openStatusDialog}
+                  onConfirmPayment={setPaymentAppointment}
+                  onReschedule={setRescheduleAppointment}
+                  onCancel={setCancelAppointment}
+                  dateSort={dateSort}
+                  onDateSortToggle={toggleDateSort}
+                />
+              </div>
+            ) : null}
 
-                {unpaidCompleted.length > 0 ? (
-                  <div className="space-y-3">
-                    <h3 className="text-lg font-semibold text-rose-600">Chưa thanh toán</h3>
-                    <p className="text-sm text-rose-500">
-                      {unpaidCompleted.length} lịch hẹn đã hoàn thành nhưng chưa thanh toán.
-                    </p>
-                    <AdminAppointmentsTable
-                      appointments={unpaidCompleted}
-                      onViewDetail={setDetailAppointment}
-                      onAssignStaff={openAssignStaffDialog}
-                      onUpdateStatus={openStatusDialog}
-                      onConfirmPayment={setPaymentAppointment}
-                      onReschedule={setRescheduleAppointment}
-                      onCancel={setCancelAppointment}
-                    />
-                  </div>
-                ) : null}
+            {completedAppointments.length > 0 ? (
+              <div className="space-y-3">
+                <div>
+                  <h3 className="text-xl font-semibold text-emerald-700">
+                    Đã hoàn thành {appointmentTab === 'today' ? '' : '(hôm nay trở đi)'}
+                  </h3>
+                  <p className="mt-1 text-sm text-slate-500">
+                    {completedAppointments.length} lịch hẹn hoàn thành hoặc đã hủy được hiển thị
+                    tại đây.
+                  </p>
+                </div>
+                <AdminAppointmentsTable
+                  appointments={completedAppointments}
+                  onViewDetail={setDetailAppointment}
+                  onAssignStaff={openAssignStaffDialog}
+                  onUpdateStatus={openStatusDialog}
+                  onConfirmPayment={setPaymentAppointment}
+                  onReschedule={setRescheduleAppointment}
+                  onCancel={setCancelAppointment}
+                  dateSort={dateSort}
+                  onDateSortToggle={toggleDateSort}
+                />
+              </div>
+            ) : null}
 
-                {todayCompleted.length > 0 ? (
-                  <div className="space-y-3">
-                    <h3 className="text-lg font-semibold text-emerald-700">Hôm nay</h3>
-                    <AdminAppointmentsTable
-                      appointments={todayCompleted}
-                      onViewDetail={setDetailAppointment}
-                      onAssignStaff={openAssignStaffDialog}
-                      onUpdateStatus={openStatusDialog}
-                      onConfirmPayment={setPaymentAppointment}
-                      onReschedule={setRescheduleAppointment}
-                      onCancel={setCancelAppointment}
-                    />
-                  </div>
-                ) : null}
-
-                {yesterdayCompleted.length > 0 ? (
-                  <div className="space-y-3">
-                    <h3 className="text-lg font-semibold text-amber-700">Hôm qua</h3>
-                    <AdminAppointmentsTable
-                      appointments={yesterdayCompleted}
-                      onViewDetail={setDetailAppointment}
-                      onAssignStaff={openAssignStaffDialog}
-                      onUpdateStatus={openStatusDialog}
-                      onConfirmPayment={setPaymentAppointment}
-                      onReschedule={setRescheduleAppointment}
-                      onCancel={setCancelAppointment}
-                    />
-                  </div>
-                ) : null}
-
-                {olderCompleted.length > 0 ? (
-                  <div className="space-y-3">
-                    <h3 className="text-lg font-semibold text-slate-400">Cũ hơn</h3>
-                    <AdminAppointmentsTable
-                      appointments={olderCompleted}
-                      onViewDetail={setDetailAppointment}
-                      onAssignStaff={openAssignStaffDialog}
-                      onUpdateStatus={openStatusDialog}
-                      onConfirmPayment={setPaymentAppointment}
-                      onReschedule={setRescheduleAppointment}
-                      onCancel={setCancelAppointment}
-                    />
-                  </div>
-                ) : null}
+            {olderAppointments.length > 0 ? (
+              <div className="space-y-3">
+                <div>
+                  <h3 className="text-xl font-semibold text-slate-400">Cũ hơn</h3>
+                  <p className="mt-1 text-sm text-slate-500">
+                    {olderAppointments.length} lịch hẹn hoàn thành/hủy trước hôm nay.
+                  </p>
+                </div>
+                <AdminAppointmentsTable
+                  appointments={olderAppointments}
+                  onViewDetail={setDetailAppointment}
+                  onAssignStaff={openAssignStaffDialog}
+                  onUpdateStatus={openStatusDialog}
+                  onConfirmPayment={setPaymentAppointment}
+                  onReschedule={setRescheduleAppointment}
+                  onCancel={setCancelAppointment}
+                  dateSort={dateSort}
+                  onDateSortToggle={toggleDateSort}
+                />
               </div>
             ) : null}
 
