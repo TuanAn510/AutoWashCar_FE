@@ -10,6 +10,10 @@ export type DateSort = 'asc' | 'desc';
 
 const getQuickAction = (status: AppointmentStatus) => {
   if (status === 'confirmed') {
+    return { label: 'Check-in', nextStatus: 'in_queue' as const };
+  }
+
+  if (status === 'in_queue') {
     return { label: 'Bắt đầu', nextStatus: 'in_progress' as const };
   }
 

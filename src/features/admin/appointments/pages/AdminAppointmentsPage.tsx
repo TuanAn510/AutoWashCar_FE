@@ -237,6 +237,7 @@ export default function AdminAppointmentsPage() {
     total: 0,
     pending: 0,
     confirmed: 0,
+    inQueue: 0,
     inProgress: 0,
     completed: 0,
     cancelled: 0,
@@ -388,6 +389,7 @@ export default function AdminAppointmentsPage() {
           total={summary.total}
           pending={summary.pending}
           confirmed={summary.confirmed}
+          inQueue={summary.inQueue}
           inProgress={summary.inProgress}
           completed={summary.completed}
           cancelled={summary.cancelled}

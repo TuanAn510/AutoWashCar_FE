@@ -4,6 +4,7 @@ import {
   CircleCheckBig,
   CircleDashed,
   CirclePlay,
+  LogIn,
   XCircle,
 } from 'lucide-react';
 
@@ -11,6 +12,7 @@ interface AdminAppointmentSummaryCardsProps {
   total: number;
   pending: number;
   confirmed: number;
+  inQueue: number;
   inProgress: number;
   completed: number;
   cancelled: number;
@@ -20,6 +22,7 @@ const cards = [
   { key: 'total', label: 'Tổng lịch hẹn', icon: CalendarRange },
   { key: 'pending', label: 'Chờ xác nhận', icon: CircleDashed },
   { key: 'confirmed', label: 'Đã xác nhận', icon: CircleAlert },
+  { key: 'inQueue', label: 'Đã check-in', icon: LogIn },
   { key: 'inProgress', label: 'Đang thực hiện', icon: CirclePlay },
   { key: 'completed', label: 'Hoàn thành', icon: CircleCheckBig },
   { key: 'cancelled', label: 'Đã hủy', icon: XCircle },
@@ -27,7 +30,7 @@ const cards = [
 
 export function AdminAppointmentSummaryCards(props: AdminAppointmentSummaryCardsProps) {
   return (
-    <section className="grid grid-cols-2 gap-3 lg:grid-cols-3 2xl:grid-cols-6">
+    <section className="grid grid-cols-2 gap-3 lg:grid-cols-4 2xl:grid-cols-7">
       {cards.map((card) => {
         const Icon = card.icon;
 

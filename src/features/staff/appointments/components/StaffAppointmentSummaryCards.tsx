@@ -1,9 +1,10 @@
-import { CalendarDays, CircleDashed, CirclePlay, CircleCheckBig } from 'lucide-react';
+import { CalendarDays, CircleDashed, CirclePlay, CircleCheckBig, LogIn } from 'lucide-react';
 
 interface StaffAppointmentSummaryCardsProps {
   scope: 'today' | 'all';
   totalCount: number;
   pendingCount: number;
+  inQueueCount: number;
   inProgressCount: number;
   completedCount: number;
 }
@@ -20,6 +21,12 @@ const cards = [
     label: 'Chờ xử lý',
     icon: CircleDashed,
     accent: 'bg-amber-50 text-amber-700',
+  },
+  {
+    key: 'inQueueCount',
+    label: 'Đã check-in',
+    icon: LogIn,
+    accent: 'bg-cyan-50 text-cyan-700',
   },
   {
     key: 'inProgressCount',
@@ -39,13 +46,14 @@ export function StaffAppointmentSummaryCards({
   scope,
   totalCount,
   pendingCount,
+  inQueueCount,
   inProgressCount,
   completedCount,
 }: StaffAppointmentSummaryCardsProps) {
-  const values = { totalCount, pendingCount, inProgressCount, completedCount };
+  const values = { totalCount, pendingCount, inQueueCount, inProgressCount, completedCount };
 
   return (
-    <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
       {cards.map((card) => {
         const Icon = card.icon;
 

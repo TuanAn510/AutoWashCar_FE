@@ -118,6 +118,7 @@ export default function StaffAppointmentsPage() {
     total: 0,
     pending: 0,
     confirmed: 0,
+    inQueue: 0,
     inProgress: 0,
     completed: 0,
     cancelled: 0,
@@ -131,7 +132,7 @@ export default function StaffAppointmentsPage() {
 
   const handleQuickUpdate = async (
     appointment: AppointmentItem,
-    targetStatus: 'in_progress' | 'completed'
+    targetStatus: 'in_queue' | 'in_progress' | 'completed'
   ) => {
     await updateStatusMutation.mutateAsync({
       appointmentId: appointment._id,
@@ -196,6 +197,7 @@ export default function StaffAppointmentsPage() {
           scope={appointmentTab}
           totalCount={summary.total}
           pendingCount={summary.pending + summary.confirmed}
+          inQueueCount={summary.inQueue}
           inProgressCount={summary.inProgress}
           completedCount={summary.completed}
         />
