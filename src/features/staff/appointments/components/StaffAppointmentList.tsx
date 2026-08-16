@@ -35,7 +35,10 @@ export function StaffAppointmentList({
   appointments: AppointmentItem[];
   onViewDetail: (appointment: AppointmentItem) => void;
   onOpenStatusDialog: (appointment: AppointmentItem) => void;
-  onQuickUpdate: (appointment: AppointmentItem, nextStatus: 'in_progress' | 'completed') => void;
+  onQuickUpdate: (
+    appointment: AppointmentItem,
+    nextStatus: 'in_queue' | 'in_progress' | 'completed'
+  ) => void;
   dateSort?: DateSort;
   onDateSortToggle?: () => void;
 }) {
