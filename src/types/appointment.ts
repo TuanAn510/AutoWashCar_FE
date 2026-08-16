@@ -95,6 +95,7 @@ export interface AppointmentItem {
   customerId: AppointmentCustomer;
   vehicleId: AppointmentVehicle;
   assignedStaffId: AppointmentAssignedStaff | null;
+  assignedStaffIds?: AppointmentAssignedStaff[];
   cancelledBy: AppointmentCancelledBy | null;
   services: AppointmentServiceSnapshot[];
   scheduledAt: string;
@@ -150,6 +151,38 @@ export interface CreateAppointmentPayload {
   rewardRedemptionId?: string;
 }
 
+export interface BookingAvailabilitySlot {
+  startAt: string;
+  available: boolean;
+  reason: string | null;
+}
+
+export interface BookingAvailability {
+  date: string;
+  bookingWindowDays: number;
+  slots: BookingAvailabilitySlot[];
+}
+
+export interface BookingAvailabilityParams {
+  date: string;
+  vehicleId?: string;
+  serviceId?: string;
+  rewardRedemptionId?: string;
+}
+
+export interface BookingCandidateAvailability {
+  startAt: string;
+  endAt: string;
+  available: boolean;
+  reason: string | null;
+}
+
+export interface BookingCandidateAvailabilityParams {
+  scheduledAt: string;
+  vehicleId: string;
+  serviceId: string;
+  rewardRedemptionId?: string;
+}
 export interface CancelAppointmentPayload {
   appointmentId: string;
   cancelReason?: string;
@@ -174,6 +207,7 @@ export interface AppointmentStatusSummary {
   total: number;
   pending: number;
   confirmed: number;
+  inQueue: number;
   inProgress: number;
   completed: number;
   cancelled: number;
@@ -189,7 +223,8 @@ export interface UpdateAppointmentPaymentStatusPayload {
 }
 
 export interface AssignStaffPayload {
-  staffId: string;
+  staffId?: string;
+  staffIds?: string[];
 }
 
 export interface RescheduleAppointmentPayload {

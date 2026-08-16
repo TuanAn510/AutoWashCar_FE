@@ -2,11 +2,42 @@
 import type { PropsWithChildren, ReactNode } from 'react';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { CarFront } from 'lucide-react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { Button } from '@/components/ui/button';
 import { CreateAppointmentModal } from '@/features/customers/appointments/components/CreateAppointmentModal';
 import { CustomerEmptyState } from '@/features/customers/components/CustomerEmptyState';
+
+const slots = ['08:00', '08:15', '08:30', '08:45', '09:00'].map((time) => ({
+  startAt: `2099-08-13T${time}:00`,
+  available: true,
+  reason: null,
+}));
+
+let candidateAvailability = {
+  startAt: '2099-08-13T09:17:00',
+  endAt: '2099-08-13T10:02:00',
+  available: true,
+  reason: null as string | null,
+};
+let candidateAvailabilityLoading = false;
+
+vi.mock('@tanstack/react-query', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@tanstack/react-query')>();
+  return {
+    ...actual,
+    useQuery: (options: { queryKey: unknown[] }) => {
+      if (options.queryKey[0] === 'booking-availability-check') {
+        return {
+          data: candidateAvailability,
+          isLoading: candidateAvailabilityLoading,
+          isError: false,
+        };
+      }
+      return { data: { slots }, isLoading: false, isError: false };
+    },
+  };
+});
 
 vi.mock('@/features/customers/components/CustomerModalShell', () => ({
   CustomerModalShell: ({
@@ -93,6 +124,17 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
+beforeEach(() => {
+  vi.spyOn(Date, 'now').mockReturnValue(new Date('2099-08-12T08:00:00').getTime());
+  candidateAvailability = {
+    startAt: '2099-08-13T09:17:00',
+    endAt: '2099-08-13T10:02:00',
+    available: true,
+    reason: null,
+  };
+  candidateAvailabilityLoading = false;
+});
+
 describe('customer journey UI', () => {
   it('renders the shared empty state and invokes its primary action', () => {
     const onCreate = vi.fn();
@@ -169,5 +211,50 @@ describe('customer journey UI', () => {
       );
     });
     expect(await screen.findByText('Lịch hẹn đã được tạo')).toBeTruthy();
+  });
+
+  it('keeps manual 09:17, shows an available precheck, and retains quick suggestions', async () => {
+    const { container } = render(
+      <CreateAppointmentModal isOpen isSubmitting={false} onOpenChange={vi.fn()} onSubmit={vi.fn()} />
+    );
+
+    fireEvent.change(container.querySelector('select[name="vehicleId"]')!, {
+      target: { value: 'vehicle-1' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));
+    fireEvent.click(container.querySelector('input[type="radio"]')!);
+    fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));
+
+    const timeInput = await waitFor(() => container.querySelector('input[type="time"]') as HTMLInputElement);
+    fireEvent.change(timeInput, { target: { value: '09:17' } });
+
+    expect(timeInput.value).toBe('09:17');
+    expect(await screen.findByText('Khung giờ có thể đặt.')).toBeTruthy();
+    expect(screen.getByLabelText('Chọn nhanh khung giờ')).toBeTruthy();
+  });
+
+  it.each([
+    [true, false, null, 'Đang kiểm tra khung giờ...'],
+    [false, false, 'VEHICLE_OVERLAP', 'Xe của bạn đã có lịch trong khoảng thời gian này.'],
+    [false, false, 'CAPACITY_FULL', 'Khung giờ này hiện đã đủ vị trí rửa.'],
+  ])('blocks Continue for manual candidate precheck state', async (loading, available, reason, message) => {
+    candidateAvailabilityLoading = loading;
+    candidateAvailability = { ...candidateAvailability, available, reason };
+    const { container } = render(
+      <CreateAppointmentModal isOpen isSubmitting={false} onOpenChange={vi.fn()} onSubmit={vi.fn()} />
+    );
+
+    fireEvent.change(container.querySelector('select[name="vehicleId"]')!, {
+      target: { value: 'vehicle-1' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));
+    fireEvent.click(container.querySelector('input[type="radio"]')!);
+    fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));
+    fireEvent.change(await waitFor(() => container.querySelector('input[type="time"]')!), {
+      target: { value: '09:17' },
+    });
+
+    expect(await screen.findByText(message)).toBeTruthy();
+    expect((screen.getByRole('button', { name: 'Tiếp tục' }) as HTMLButtonElement).disabled).toBe(true);
   });
 });

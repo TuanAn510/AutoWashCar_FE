@@ -11,14 +11,15 @@ import {
   Loader2,
   Wrench,
 } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { useEffect, useMemo, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { z } from 'zod';
 
+import { getApiErrorMessage } from '@/api/errors';
 import { Button } from '@/components/ui/button';
 import { DatePicker } from '@/components/ui/date-picker';
 import { Field, FieldError, FieldLabel } from '@/components/ui/field';
-import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   useMyLoyaltyAccount,
@@ -33,8 +34,9 @@ import {
   getPromotionReferenceId,
 } from '@/features/customers/appointments/utils/appointment-pricing';
 import { useMyVehicles } from '@/features/customers/vehicles/hooks/useMyVehicles';
+import { appointmentApi } from '@/services/appointmentService';
 import type { Promotion } from '@/services/promotionService';
-import type { CreateAppointmentPayload } from '@/types/appointment';
+import type { BookingAvailabilitySlot, CreateAppointmentPayload } from '@/types/appointment';
 import { CustomerModalShell } from '@/features/customers/components/CustomerModalShell';
 import { cn, formatTime } from '@/lib/utils';
 
@@ -46,6 +48,18 @@ const BOOKING_WINDOW_DAYS: Record<string, number> = {
 };
 
 const DEFAULT_BOOKING_WINDOW = 7;
+const OPENING_HOUR = 8;
+const CLOSING_HOUR = 17;
+const MINIMUM_LEAD_TIME_MINUTES = 30;
+
+const schedulingErrorMessages = new Set([
+  'Booking start time must be between 08:00 and 17:00 with minute precision',
+  'Booking must be scheduled at least 30 minutes in advance',
+  'Booking duration must end by 17:00',
+  'This vehicle already has an appointment in that time range',
+  'No active staff is available for booking',
+  'Booking capacity is full for this time range',
+]);
 
 const createAppointmentSchema = z
   .object({
@@ -122,6 +136,37 @@ const createDefaultValues = (): CreateAppointmentFormValues => {
 
 const formatCurrency = (value: number) => `${Math.round(value / 1000)}K`;
 
+const toSlotTime = (startAt: string) => {
+  const date = new Date(startAt);
+  if (Number.isNaN(date.getTime())) return startAt.slice(11, 16);
+  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+};
+
+const availabilityReasonLabels: Record<string, string> = {
+  PAST: 'Đã qua',
+  OUT_OF_TIER_WINDOW: 'Ngoài hạn đặt',
+  OUT_OF_BUSINESS_HOURS: 'Ngoài giờ làm',
+  NO_STAFF: 'Chưa có staff',
+  VEHICLE_BOOKING_LIMIT: 'Xe đã có 2 lịch',
+  VEHICLE_OVERLAP: 'Trùng lịch xe',
+  CAPACITY_FULL: 'Hết slot',
+};
+
+const candidateAvailabilityReasonMessages: Record<string, string> = {
+  LEAD_TIME: 'Lịch hẹn phải được đặt trước ít nhất 30 phút.',
+  OUTSIDE_HOURS: 'Giờ bắt đầu phải trong khoảng từ 08:00 đến trước 17:00.',
+  END_AFTER_CLOSE: 'Thời lượng dịch vụ phải kết thúc không muộn hơn 17:00.',
+  VEHICLE_OVERLAP: 'Xe của bạn đã có lịch trong khoảng thời gian này.',
+  CAPACITY_FULL: 'Khung giờ này hiện đã đủ vị trí rửa.',
+  NO_STAFF: 'Hiện chưa có nhân viên hoạt động để phục vụ khung giờ này.',
+  OUT_OF_TIER_WINDOW: 'Khung giờ này nằm ngoài hạn đặt lịch của hạng thành viên.',
+};
+
+const getSlotLabel = (slot: BookingAvailabilitySlot) => {
+  const time = toSlotTime(slot.startAt);
+  if (slot.available || !slot.reason) return time;
+  return `${time} - ${availabilityReasonLabels[slot.reason] ?? 'Không khả dụng'}`;
+};
 const getRedemptionReward = (redemption: RewardRedemption) =>
   typeof redemption.rewardId === 'object' && redemption.rewardId ? redemption.rewardId : null;
 
@@ -150,13 +195,41 @@ const getRewardLabel = (reward: Reward) => {
   return `${reward.name} - ${discountLabel}`;
 };
 
+const validateLocalScheduledTime = (
+  scheduledDate: string,
+  scheduledTime: string,
+  primaryDurationMinutes: number
+) => {
+  if (!/^\d{2}:\d{2}$/.test(scheduledTime)) {
+    return 'Giờ hẹn phải có độ chính xác đến phút.';
+  }
+
+  const scheduledAt = new Date(`${scheduledDate}T${scheduledTime}:00`);
+  if (Number.isNaN(scheduledAt.getTime())) return 'Vui lòng chọn giờ hẹn hợp lệ.';
+
+  const startMinutes = scheduledAt.getHours() * 60 + scheduledAt.getMinutes();
+  if (startMinutes < OPENING_HOUR * 60 || startMinutes >= CLOSING_HOUR * 60) {
+    return 'Giờ bắt đầu phải trong khoảng từ 08:00 đến trước 17:00.';
+  }
+
+  if (scheduledAt < new Date(Date.now() + MINIMUM_LEAD_TIME_MINUTES * 60 * 1000)) {
+    return 'Lịch hẹn phải được đặt trước ít nhất 30 phút.';
+  }
+
+  const scheduledEndAt = new Date(scheduledAt.getTime() + primaryDurationMinutes * 60 * 1000);
+  if (scheduledEndAt > new Date(`${scheduledDate}T${String(CLOSING_HOUR).padStart(2, '0')}:00:00`)) {
+    return 'Thời lượng dịch vụ phải kết thúc không muộn hơn 17:00.';
+  }
+
+  return null;
+};
+
 interface CreateAppointmentModalProps {
   isOpen: boolean;
   isSubmitting: boolean;
   onOpenChange: (open: boolean) => void;
   onSubmit: (payload: CreateAppointmentPayload) => Promise<void> | void;
 }
-
 export function CreateAppointmentModal({
   isOpen,
   isSubmitting,
@@ -170,6 +243,8 @@ export function CreateAppointmentModal({
   const {
     register,
     setValue,
+    setError,
+    clearErrors,
     reset,
     trigger,
     handleSubmit,
@@ -202,6 +277,7 @@ export function CreateAppointmentModal({
     () => allServices.filter((service) => values.serviceIds.includes(service._id)),
     [allServices, values.serviceIds]
   );
+  const selectedServiceId = values.serviceIds[0] ?? '';
   const subtotalPrice = selectedServices.reduce((sum, service) => sum + service.price, 0);
   const totalDuration = selectedServices.reduce(
     (sum, service) => sum + service.estimatedDuration,
@@ -267,6 +343,107 @@ export function CreateAppointmentModal({
     : 0;
   const estimatedDiscount = membershipDiscount + promotionDiscount + rewardDiscount;
   const estimatedTotal = Math.max(0, subtotalPrice - estimatedDiscount);
+  const availabilityEnabled = Boolean(
+    isOpen && values.scheduledDate && values.vehicleId && selectedServiceId
+  );
+  const availabilityQuery = useQuery({
+    queryKey: [
+      'booking-availability',
+      values.scheduledDate,
+      values.vehicleId,
+      selectedServiceId,
+      values.rewardRedemptionId,
+    ],
+    queryFn: ({ signal }) =>
+      appointmentApi.getBookingAvailability(
+        {
+          date: values.scheduledDate,
+          vehicleId: values.vehicleId,
+          serviceId: selectedServiceId,
+          rewardRedemptionId: values.rewardRedemptionId || undefined,
+        },
+        signal
+      ),
+    enabled: availabilityEnabled,
+    staleTime: 15_000,
+  });
+  const availabilitySlots = useMemo(
+    () => availabilityQuery.data?.slots ?? [],
+    [availabilityQuery.data?.slots]
+  );
+  const availableSlots = useMemo(
+    () => availabilitySlots.filter((slot) => slot.available),
+    [availabilitySlots]
+  );
+  const selectedSlot = availabilitySlots.find(
+    (slot) => toSlotTime(slot.startAt) === values.scheduledTime
+  );
+  const shouldBlockSelectedSlot =
+    availabilityEnabled &&
+    !availabilityQuery.isLoading &&
+    selectedSlot != null &&
+    !selectedSlot.available;
+  const isManualTime = Boolean(values.scheduledTime) && selectedSlot == null;
+  const candidateAvailabilityEnabled = Boolean(availabilityEnabled && isManualTime);
+  const candidateAvailabilityQuery = useQuery({
+    queryKey: [
+      'booking-availability-check',
+      values.scheduledDate,
+      values.scheduledTime,
+      values.vehicleId,
+      selectedServiceId,
+      values.rewardRedemptionId,
+    ],
+    queryFn: ({ signal }) =>
+      appointmentApi.checkBookingAvailability(
+        {
+          scheduledAt: `${values.scheduledDate}T${values.scheduledTime}:00`,
+          vehicleId: values.vehicleId,
+          serviceId: selectedServiceId,
+          rewardRedemptionId: values.rewardRedemptionId || undefined,
+        },
+        signal
+      ),
+    enabled: candidateAvailabilityEnabled,
+    staleTime: 15_000,
+  });
+  const candidateAvailabilityReason = candidateAvailabilityQuery.data?.reason;
+  const candidateAvailabilityMessage = candidateAvailabilityReason
+    ? candidateAvailabilityReasonMessages[candidateAvailabilityReason] ?? 'Khung giờ này không khả dụng.'
+    : null;
+  const shouldBlockManualTime =
+    isManualTime &&
+    (candidateAvailabilityQuery.isLoading ||
+      candidateAvailabilityQuery.isError ||
+      candidateAvailabilityQuery.data?.available !== true);
+  const shouldBlockScheduleStep =
+    currentStep === 2 &&
+    (availabilityQuery.isLoading ||
+      availabilityQuery.isError ||
+      (isManualTime
+        ? shouldBlockManualTime
+        : shouldBlockSelectedSlot || availableSlots.length === 0));
+
+  useEffect(() => {
+    if (!availabilityEnabled || availabilityQuery.isLoading || availabilityQuery.isError) return;
+    if (!availabilitySlots.length) return;
+    if (isManualTime) return;
+    if (selectedSlot?.available) return;
+
+    setValue('scheduledTime', availableSlots[0] ? toSlotTime(availableSlots[0].startAt) : '', {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+  }, [
+    availabilityEnabled,
+    availabilityQuery.isError,
+    availabilityQuery.isLoading,
+    availabilitySlots,
+    availableSlots,
+    isManualTime,
+    selectedSlot?.available,
+    setValue,
+  ]);
 
   const resetWizard = () => {
     reset(createDefaultValues());
@@ -296,9 +473,26 @@ export function CreateAppointmentModal({
 
   const handleNext = async () => {
     const isStepValid = await trigger(steps[currentStep].fields, { shouldFocus: true });
-    if (isStepValid) {
-      setCurrentStep((step) => Math.min(step + 1, steps.length - 1));
+    if (!isStepValid) return;
+
+    if (currentStep === 2) {
+      const scheduleError = validateLocalScheduledTime(
+        values.scheduledDate,
+        values.scheduledTime,
+        totalDuration
+      );
+      if (scheduleError) {
+        setError('scheduledTime', { type: 'validate', message: scheduleError }, { shouldFocus: true });
+        return;
+      }
+      if (isManualTime && candidateAvailabilityMessage) {
+        setError('scheduledTime', { type: 'validate', message: candidateAvailabilityMessage }, { shouldFocus: true });
+        return;
+      }
+      clearErrors('scheduledTime');
     }
+
+    setCurrentStep((step) => Math.min(step + 1, steps.length - 1));
   };
 
   const hasFormOptionsError =
@@ -307,15 +501,25 @@ export function CreateAppointmentModal({
     vehiclesQuery.isLoading || categoriesQuery.isLoading || servicesQuery.isLoading;
 
   const submitAppointment = handleSubmit(async (formValues) => {
-    await onSubmit({
-      vehicleId: formValues.vehicleId,
-      services: formValues.serviceIds.map((serviceId) => ({ serviceId })),
-      scheduledAt: `${formValues.scheduledDate}T${formValues.scheduledTime}:00`,
-      note: formValues.note?.trim() || undefined,
-      promotionId: formValues.promotionId || undefined,
-      rewardRedemptionId: formValues.rewardRedemptionId || undefined,
-    });
-    setComplete(true);
+    try {
+      await onSubmit({
+        vehicleId: formValues.vehicleId,
+        services: formValues.serviceIds.map((serviceId) => ({ serviceId })),
+        scheduledAt: `${formValues.scheduledDate}T${formValues.scheduledTime}:00`,
+        note: formValues.note?.trim() || undefined,
+        promotionId: formValues.promotionId || undefined,
+        rewardRedemptionId: formValues.rewardRedemptionId || undefined,
+      });
+      setComplete(true);
+    } catch (error) {
+      const message = getApiErrorMessage(error, 'Không thể đặt lịch. Vui lòng thử lại.');
+      if (schedulingErrorMessages.has(message)) {
+        setError('scheduledTime', { type: 'server', message }, { shouldFocus: true });
+        setCurrentStep(2);
+        return;
+      }
+      throw error;
+    }
   });
 
   const footer = isComplete ? (
@@ -343,7 +547,7 @@ export function CreateAppointmentModal({
         <Button
           type="button"
           className="w-full sm:w-40"
-          disabled={isInitialOptionsLoading || hasFormOptionsError}
+          disabled={isInitialOptionsLoading || hasFormOptionsError || shouldBlockScheduleStep}
           onClick={handleNext}
         >
           Tiếp tục
@@ -483,13 +687,80 @@ export function CreateAppointmentModal({
                     />
                     <FieldError>{errors.scheduledDate?.message}</FieldError>
                   </Field>
-                  <FormInput
-                    type="time"
-                    label="Giờ hẹn"
-                    error={errors.scheduledTime?.message}
-                    disabled={isSubmitting}
-                    {...register('scheduledTime')}
-                  />
+                  <Field>
+                    <FieldLabel>Giờ hẹn</FieldLabel>
+                    <input
+                      type="time"
+                      className="h-11 rounded-xl border border-[#d8e2ef] bg-white px-3 text-sm font-semibold text-[#64748b] outline-none focus:border-[#0b67c2]"
+                      disabled={isSubmitting || !availabilityEnabled || availabilityQuery.isLoading}
+                      min="08:00"
+                      max="16:59"
+                      step="60"
+                      {...register('scheduledTime')}
+                    />
+                    <select
+                      aria-label="Chọn nhanh khung giờ"
+                      className="mt-2 h-10 w-full rounded-xl border border-[#d8e2ef] bg-white px-3 text-sm font-semibold text-[#64748b] outline-none focus:border-[#0b67c2]"
+                      defaultValue=""
+                      disabled={isSubmitting || !availabilityEnabled || availabilityQuery.isLoading}
+                      onChange={(event) => {
+                        if (!event.target.value) return;
+                        setValue('scheduledTime', event.target.value, {
+                          shouldDirty: true,
+                          shouldValidate: true,
+                        });
+                      }}
+                    >
+                      <option value="">
+                        {availabilityQuery.isLoading ? 'Đang kiểm tra gợi ý...' : 'Chọn nhanh khung giờ'}
+                      </option>
+                      {availabilitySlots.map((slot) => {
+                        const time = toSlotTime(slot.startAt);
+
+                        return (
+                          <option key={slot.startAt} value={time} disabled={!slot.available}>
+                            {getSlotLabel(slot)}
+                          </option>
+                        );
+                      })}
+                    </select>
+                    <p className="mt-2 text-xs text-slate-500">
+                      Bạn có thể nhập giờ bất kỳ theo phút hoặc chọn nhanh từ gợi ý.
+                    </p>
+                    {availabilityQuery.isError ? (
+                      <FieldError>Không thể kiểm tra slot. Vui lòng thử lại.</FieldError>
+                    ) : null}
+                    {!availabilityQuery.isError &&
+                    availabilityEnabled &&
+                    !availabilityQuery.isLoading &&
+                    availableSlots.length === 0 ? (
+                      <FieldError>Ngày này không còn slot phù hợp.</FieldError>
+                    ) : null}
+                    {!availabilityQuery.isError &&
+                    shouldBlockSelectedSlot &&
+                    availableSlots.length > 0 ? (
+                      <FieldError>Khung giờ đã chọn không còn khả dụng.</FieldError>
+                    ) : null}
+                    {isManualTime && candidateAvailabilityQuery.isLoading ? (
+                      <p className="mt-2 text-xs text-slate-500">Đang kiểm tra khung giờ...</p>
+                    ) : null}
+                    {isManualTime &&
+                    !candidateAvailabilityQuery.isLoading &&
+                    !candidateAvailabilityQuery.isError &&
+                    candidateAvailabilityQuery.data?.available ? (
+                      <p className="mt-2 text-xs font-medium text-emerald-600">Khung giờ có thể đặt.</p>
+                    ) : null}
+                    {isManualTime && candidateAvailabilityQuery.isError ? (
+                      <FieldError>Không thể kiểm tra khung giờ. Vui lòng thử lại.</FieldError>
+                    ) : null}
+                    {isManualTime &&
+                    !candidateAvailabilityQuery.isLoading &&
+                    !candidateAvailabilityQuery.isError &&
+                    candidateAvailabilityMessage ? (
+                      <FieldError>{candidateAvailabilityMessage}</FieldError>
+                    ) : null}
+                    <FieldError>{errors.scheduledTime?.message}</FieldError>
+                  </Field>
                 </div>
                 <p className="mt-2 text-xs text-slate-500">
                   Hạng {tierName}: bạn có thể đặt lịch trước tối đa {bookingWindowDays} ngày.
@@ -796,19 +1067,5 @@ function ReviewItem({ label, value }: { label: string; value: string }) {
       <p className="text-xs font-black uppercase tracking-[0.12em] text-[#64748b]">{label}</p>
       <p className="mt-1 break-words text-sm font-black text-[#15243a]">{value}</p>
     </div>
-  );
-}
-
-function FormInput({
-  label,
-  error,
-  ...props
-}: React.ComponentProps<typeof Input> & { label: string; error?: string }) {
-  return (
-    <Field>
-      <FieldLabel>{label}</FieldLabel>
-      <Input className="h-11 rounded-xl bg-white" {...props} />
-      <FieldError>{error}</FieldError>
-    </Field>
   );
 }
