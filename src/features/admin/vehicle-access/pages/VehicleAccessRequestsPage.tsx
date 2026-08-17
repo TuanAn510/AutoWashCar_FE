@@ -1,6 +1,6 @@
 import { PageSection } from '@/components/common/PageSection';
 import { PageLayout } from '@/components/layout/PageLayout';
-import { useMemo, useEffect, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -23,6 +23,7 @@ import type { VehicleAccessRequest, VehicleAccessRequestStatus } from '@/types/v
 
 const queryKey = ['vehicle-access-requests', 'admin'];
 const EMPTY_REQUESTS: VehicleAccessRequest[] = [];
+type RequestType = 'brand_model_verification' | 'access_request' | 'combined';
 const statusMeta = {
   pending: { label: 'Chờ duyệt', className: 'bg-amber-50 text-amber-700' },
   approved: { label: 'Đã duyệt', className: 'bg-emerald-50 text-emerald-700' },
@@ -51,6 +52,25 @@ function isImage(mime?: string, name?: string) {
 function suggestedVehicleText(request: VehicleAccessRequest) {
   return [request.suggestedBrandName, request.suggestedModelName].filter(Boolean).join(' · ');
 }
+function isCombined(item: VehicleAccessRequest) {
+  return (
+    (item.requestType ?? 'access_request') === 'access_request' &&
+    Boolean(item.suggestedBrandName || item.suggestedModelName)
+  );
+}
+function requestTypeForItem(item: VehicleAccessRequest): RequestType {
+  if ((item.requestType ?? 'access_request') === 'brand_model_verification') {
+    return 'brand_model_verification';
+  }
+  return isCombined(item) ? 'combined' : 'access_request';
+}
+function matchesRequestType(item: VehicleAccessRequest, requestType: RequestType) {
+  if (requestType === 'brand_model_verification') {
+    return (item.requestType ?? 'access_request') === 'brand_model_verification';
+  }
+  if (requestType === 'combined') return isCombined(item);
+  return (item.requestType ?? 'access_request') === 'access_request' && !isCombined(item);
+}
 
 export default function VehicleAccessRequestsPage() {
   // Cho phép lọc sẵn theo biển số khi chuyển từ "Quản lý xe" sang (nút Xác minh).
@@ -59,9 +79,7 @@ export default function VehicleAccessRequestsPage() {
   const [status, setStatus] = useState<VehicleAccessRequestStatus | 'all'>(
     initialKeyword ? 'all' : 'pending'
   );
-  const [requestType, setRequestType] = useState<
-    'brand_model_verification' | 'access_request' | 'combined'
-  >('brand_model_verification');
+  const [selectedRequestType, setRequestType] = useState<RequestType | null>(null);
   const [keyword, setKeyword] = useState(initialKeyword);
   const [notes, setNotes] = useState<Record<string, string>>({});
   const client = useQueryClient();
@@ -86,15 +104,21 @@ export default function VehicleAccessRequestsPage() {
     onError: () => toast.error('Không thể cập nhật yêu cầu. Vui lòng thử lại.'),
   });
   const requests = query.data ?? EMPTY_REQUESTS;
-  const isCombined = (item: VehicleAccessRequest) =>
-    (item.requestType ?? 'access_request') === 'access_request' &&
-    Boolean(item.suggestedBrandName || item.suggestedModelName);
-  const matchesType = (item: VehicleAccessRequest) => {
-    if (requestType === 'brand_model_verification')
-      return (item.requestType ?? 'access_request') === 'brand_model_verification';
-    if (requestType === 'combined') return isCombined(item);
-    return (item.requestType ?? 'access_request') === 'access_request' && !isCombined(item);
-  };
+
+  // Khi chuyển từ "Quản lý xe" (có ?keyword=biển số): tự chọn đúng tab chứa
+  // request của xe đó (ưu tiên request đang chờ) cho đến khi người dùng tự chọn tab.
+  const inferredRequestType = useMemo<RequestType>(() => {
+    if (!initialKeyword) return 'brand_model_verification';
+    const word = initialKeyword.toLocaleLowerCase('vi');
+    const priority = { pending: 0, rejected: 1, approved: 2 } as const;
+    const target = requests
+      .filter((item) => item.licensePlate.toLocaleLowerCase('vi').includes(word))
+      .sort((a, b) => (priority[a.status] ?? 3) - (priority[b.status] ?? 3))[0];
+
+    return target ? requestTypeForItem(target) : 'brand_model_verification';
+  }, [initialKeyword, requests]);
+  const requestType = selectedRequestType ?? inferredRequestType;
+
   const filtered = useMemo(() => {
     const word = keyword.trim().toLocaleLowerCase('vi');
     return requests.filter((item) => {
@@ -108,37 +132,13 @@ export default function VehicleAccessRequestsPage() {
       ]
         .join(' ')
         .toLocaleLowerCase('vi');
-      return matchesType(item)
-        && (status === 'all' || item.status === status)
-        && (!word || text.includes(word));
+      return (
+        matchesRequestType(item, requestType) &&
+        (status === 'all' || item.status === status) &&
+        (!word || text.includes(word))
+      );
     });
   }, [keyword, requestType, requests, status]);
-
-  // Khi chuyển từ "Quản lý xe" (có ?keyword=biển số): tự chọn đúng tab chứa
-  // request của xe đó (ưu tiên request đang chờ) thay vì mặc định tab hãng/dòng.
-  useEffect(() => {
-    if (!initialKeyword) return;
-    const word = initialKeyword.toLocaleLowerCase('vi');
-    const priority = { pending: 0, rejected: 1, approved: 2 } as const;
-    const matched =
-      requests
-        .filter((item) => item.licensePlate.toLocaleLowerCase('vi').includes(word))
-        .sort(
-          (a, b) =>
-            (priority[a.status] ?? 3) - (priority[b.status] ?? 3)
-        );
-    const target = matched[0];
-    if (!target) return;
-    if ((target.requestType ?? 'access_request') === 'brand_model_verification') {
-      setRequestType('brand_model_verification');
-    } else if (isCombined(target)) {
-      setRequestType('combined');
-    } else {
-      setRequestType('access_request');
-    }
-    // Chỉ chạy khi dữ liệu tải về; không cần phụ thuộc keyword (lọc theo request).
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [requests]);
 
   const count = (value: VehicleAccessRequestStatus) =>
     requests.filter((item) => item.status === value).length;
@@ -382,9 +382,7 @@ function Evidence({ documents }: { documents?: VehicleAccessRequest['documents']
     return <span className="text-xs italic text-slate-400">Chưa có minh chứng</span>;
 
   const brandModelDocs = documents.filter((d) => d.documentType === 'BRAND_MODEL');
-  const plateDocs = documents.filter(
-    (d) => d.documentType === 'PLATE' || d.documentType == null
-  );
+  const plateDocs = documents.filter((d) => d.documentType === 'PLATE' || d.documentType == null);
   // Hiện 2 nhóm tách biệt (hãng/dòng + biển số) nếu cả hai đều có tài liệu;
   // ngược lại hiện 1 nhóm không nhãn như trước để khỏi rối.
   const groups: { label?: string; docs: (typeof documents)[number][] }[] = [];

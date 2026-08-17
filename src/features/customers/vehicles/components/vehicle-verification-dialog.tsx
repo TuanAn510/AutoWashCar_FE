@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
@@ -14,21 +14,7 @@ export type VehicleVerificationSubmitValue = {
   brandModelDocuments?: File[];
 };
 
-export function VehicleVerificationDialog({
-  plate,
-  open,
-  pending,
-  title = 'Yêu cầu xác minh quyền sử dụng xe',
-  description = 'Xe này đã tồn tại trong hệ thống. Nếu bạn là chủ sở hữu hoặc người dùng được ủy quyền, vui lòng gửi yêu cầu xác minh.',
-  initialRelationship = '',
-  initialNote = '',
-  initialBrand,
-  initialModel,
-  reviewNote,
-  needsBrandModelVerification = false,
-  onOpenChange,
-  onSubmit,
-}: {
+type VehicleVerificationDialogProps = {
   plate: string;
   open: boolean;
   pending: boolean;
@@ -44,20 +30,40 @@ export function VehicleVerificationDialog({
   needsBrandModelVerification?: boolean;
   onOpenChange: (open: boolean) => void;
   onSubmit: (value: VehicleVerificationSubmitValue) => Promise<void>;
-}) {
-  const [relationship, setRelationship] = useState('');
-  const [note, setNote] = useState('');
+};
+
+export function VehicleVerificationDialog(props: VehicleVerificationDialogProps) {
+  const formKey = [
+    props.open,
+    props.plate,
+    props.initialRelationship,
+    props.initialNote,
+    props.needsBrandModelVerification,
+  ].join('|');
+
+  return <VehicleVerificationDialogContent key={formKey} {...props} />;
+}
+
+function VehicleVerificationDialogContent({
+  plate,
+  open,
+  pending,
+  title = 'Yêu cầu xác minh quyền sử dụng xe',
+  description = 'Xe này đã tồn tại trong hệ thống. Nếu bạn là chủ sở hữu hoặc người dùng được ủy quyền, vui lòng gửi yêu cầu xác minh.',
+  initialRelationship = '',
+  initialNote = '',
+  initialBrand,
+  initialModel,
+  reviewNote,
+  needsBrandModelVerification = false,
+  onOpenChange,
+  onSubmit,
+}: VehicleVerificationDialogProps) {
+  const [relationship, setRelationship] = useState(initialRelationship);
+  const [note, setNote] = useState(initialNote);
   const [documents, setDocuments] = useState<File[]>([]);
   const [brandModelDocuments, setBrandModelDocuments] = useState<File[]>([]);
   const formId = 'vehicle-verification-form';
-
-  useEffect(() => {
-    if (!open) return;
-    setRelationship(initialRelationship);
-    setNote(initialNote);
-    setDocuments([]);
-    setBrandModelDocuments([]);
-  }, [open, initialRelationship, initialNote]);
 
   const submitDisabled =
     pending ||
@@ -118,9 +124,7 @@ export function VehicleVerificationDialog({
                     </span>
                     Xác minh hãng / dòng xe
                   </p>
-                  <p className="mt-1.5 text-sm font-semibold text-amber-900">
-                    {modelName || '—'}
-                  </p>
+                  <p className="mt-1.5 text-sm font-semibold text-amber-900">{modelName || '—'}</p>
                   <p className="mt-0.5 text-xs leading-5 text-amber-700">
                     Cần minh chứng tên hãng/dòng này (giấy đăng ký xe, hóa đơn, cataloge).
                   </p>
@@ -137,7 +141,10 @@ export function VehicleVerificationDialog({
                 </span>
               </div>
               <div className="mt-3">
-                <EvidenceUpload files={brandModelDocuments} onFilesChange={setBrandModelDocuments} />
+                <EvidenceUpload
+                  files={brandModelDocuments}
+                  onFilesChange={setBrandModelDocuments}
+                />
               </div>
             </div>
 
@@ -161,9 +168,7 @@ export function VehicleVerificationDialog({
                 <span
                   className={cn(
                     'shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold',
-                    documents.length
-                      ? 'bg-emerald-100 text-emerald-700'
-                      : 'bg-sky-100 text-sky-700'
+                    documents.length ? 'bg-emerald-100 text-emerald-700' : 'bg-sky-100 text-sky-700'
                   )}
                 >
                   {documents.length ? 'Xong' : 'Thiếu tài liệu'}
@@ -208,7 +213,12 @@ export function VehicleVerificationDialog({
           </div>
           <div>
             <label className="text-sm font-medium text-slate-700">Ghi chú</label>
-            <Input value={note} onChange={(e) => setNote(e.target.value)} maxLength={1000} placeholder="Thông tin thêm (nếu có)" />
+            <Input
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              maxLength={1000}
+              placeholder="Thông tin thêm (nếu có)"
+            />
           </div>
         </div>
       </form>

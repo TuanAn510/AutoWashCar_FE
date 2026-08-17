@@ -384,9 +384,9 @@ export default function PaymentPage() {
             <div className="mt-4 flex gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
               <AlertTriangle className="mt-0.5 size-4 shrink-0" />
               <p>
-                Lưu ý: Với phương thức thanh toán trực tuyến, lịch hẹn sau khi thanh toán
-                thành công sẽ không thể hủy trực tiếp trên hệ thống. Vui lòng kiểm tra kỹ
-                thông tin trước khi tiếp tục.
+                Lưu ý: Với phương thức thanh toán trực tuyến, lịch hẹn sau khi thanh toán thành công
+                sẽ không thể hủy trực tiếp trên hệ thống. Vui lòng kiểm tra kỹ thông tin trước khi
+                tiếp tục.
               </p>
             </div>
 
@@ -421,10 +421,7 @@ export default function PaymentPage() {
 
             <div className="mt-4 flex items-center justify-center gap-2 text-xs text-[#64748b]">
               <ShieldCheck className="size-4 text-emerald-600" />
-              Thanh toán được bảo mật bởi{' '}
-              {selectedMethod === 'vnpay'
-                ? 'VNPay'
-                : 'AutoWash Pro'}
+              Thanh toán được bảo mật bởi {selectedMethod === 'vnpay' ? 'VNPay' : 'AutoWash Pro'}
             </div>
           </section>
         </div>

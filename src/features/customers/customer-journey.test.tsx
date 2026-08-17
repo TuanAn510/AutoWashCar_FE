@@ -9,7 +9,13 @@ import { Button } from '@/components/ui/button';
 import { CreateAppointmentModal } from '@/features/customers/appointments/components/CreateAppointmentModal';
 import { CustomerEmptyState } from '@/features/customers/components/CustomerEmptyState';
 
-const defaultSlots: Array<{ startAt: string; available: boolean; reason: string | null }> = ['08:00', '08:05', '08:10', '08:15', '08:20'].map((time) => ({
+const defaultSlots: Array<{ startAt: string; available: boolean; reason: string | null }> = [
+  '08:00',
+  '08:05',
+  '08:10',
+  '08:15',
+  '08:20',
+].map((time) => ({
   startAt: `2099-08-13T${time}:00`,
   available: true,
   reason: null,
@@ -225,7 +231,12 @@ describe('customer journey UI', () => {
 
   it('uses a dropdown-only five-minute appointment-time selector', async () => {
     const { container } = render(
-      <CreateAppointmentModal isOpen isSubmitting={false} onOpenChange={vi.fn()} onSubmit={vi.fn()} />
+      <CreateAppointmentModal
+        isOpen
+        isSubmitting={false}
+        onOpenChange={vi.fn()}
+        onSubmit={vi.fn()}
+      />
     );
 
     fireEvent.change(container.querySelector('select[name="vehicleId"]')!, {
@@ -251,7 +262,12 @@ describe('customer journey UI', () => {
       vehicleAvailabilityReason: null,
     };
     const { container } = render(
-      <CreateAppointmentModal isOpen isSubmitting={false} onOpenChange={vi.fn()} onSubmit={vi.fn()} />
+      <CreateAppointmentModal
+        isOpen
+        isSubmitting={false}
+        onOpenChange={vi.fn()}
+        onSubmit={vi.fn()}
+      />
     );
 
     fireEvent.change(container.querySelector('select[name="vehicleId"]')!, {
@@ -271,7 +287,12 @@ describe('customer journey UI', () => {
       vehicleAvailabilityReason: null,
     };
     const { container } = render(
-      <CreateAppointmentModal isOpen isSubmitting={false} onOpenChange={vi.fn()} onSubmit={vi.fn()} />
+      <CreateAppointmentModal
+        isOpen
+        isSubmitting={false}
+        onOpenChange={vi.fn()}
+        onSubmit={vi.fn()}
+      />
     );
 
     fireEvent.change(container.querySelector('select[name="vehicleId"]')!, {
@@ -289,7 +310,12 @@ describe('customer journey UI', () => {
   it('shows one unfinished-vehicle message and disables time selection', async () => {
     availability = { slots: [], vehicleAvailabilityReason: 'VEHICLE_UNFINISHED_BOOKING' };
     const { container } = render(
-      <CreateAppointmentModal isOpen isSubmitting={false} onOpenChange={vi.fn()} onSubmit={vi.fn()} />
+      <CreateAppointmentModal
+        isOpen
+        isSubmitting={false}
+        onOpenChange={vi.fn()}
+        onSubmit={vi.fn()}
+      />
     );
 
     fireEvent.change(container.querySelector('select[name="vehicleId"]')!, {

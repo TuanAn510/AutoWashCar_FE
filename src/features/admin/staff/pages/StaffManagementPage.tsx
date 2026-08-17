@@ -1,4 +1,7 @@
 import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
   Ellipsis,
   Loader2,
   Lock,
@@ -40,6 +43,7 @@ import { cn, formatDate } from '@/lib/utils';
 import type { User } from '@/types/user';
 
 type StaffStatusFilter = 'all' | 'active' | 'inactive';
+type StaffSortKey = 'name' | 'phone' | 'status' | 'todayCount' | 'activeCount' | 'weekCount';
 
 interface StaffRow extends User {
   todayCount: number;
@@ -89,6 +93,35 @@ function StaffStatusBadge({ active }: { active: boolean }) {
     >
       {active ? 'Hoạt động' : 'Đã khóa'}
     </span>
+  );
+}
+
+function SortHeader({
+  activeKey,
+  children,
+  currentKey,
+  direction,
+  onSort,
+}: {
+  activeKey: StaffSortKey;
+  children: React.ReactNode;
+  currentKey: StaffSortKey;
+  direction: 'asc' | 'desc';
+  onSort: (key: StaffSortKey) => void;
+}) {
+  const active = activeKey === currentKey;
+  const Icon = active ? (direction === 'asc' ? ArrowUp : ArrowDown) : ArrowUpDown;
+
+  return (
+    <button
+      type="button"
+      onClick={() => onSort(activeKey)}
+      className="inline-flex items-center justify-center gap-1 rounded hover:text-slate-950"
+      title="Sắp xếp bảng"
+    >
+      {children}
+      <Icon className="size-3.5" />
+    </button>
   );
 }
 
@@ -157,6 +190,8 @@ function StaffActionsMenu({
 export default function StaffManagementPage() {
   const [keyword, setKeyword] = useState('');
   const [status, setStatus] = useState<StaffStatusFilter>('all');
+  const [sortKey, setSortKey] = useState<StaffSortKey>('activeCount');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [formTarget, setFormTarget] = useState<User | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [statusTarget, setStatusTarget] = useState<User | null>(null);
@@ -213,21 +248,44 @@ export default function StaffManagementPage() {
   const filteredStaffs = useMemo(() => {
     const normalized = keyword.trim().toLowerCase();
 
-    return staffs.filter((staff) => {
-      const active = staff.isActive !== false;
-      const statusMatched =
-        status === 'all' || (status === 'active' && active) || (status === 'inactive' && !active);
-      const keywordMatched =
-        !normalized ||
-        [getStaffName(staff), staff.phone, staff.role]
-          .filter(Boolean)
-          .join(' ')
-          .toLowerCase()
-          .includes(normalized);
+    return staffs
+      .filter((staff) => {
+        const active = staff.isActive !== false;
+        const statusMatched =
+          status === 'all' || (status === 'active' && active) || (status === 'inactive' && !active);
+        const keywordMatched =
+          !normalized ||
+          [getStaffName(staff), staff.phone, staff.role]
+            .filter(Boolean)
+            .join(' ')
+            .toLowerCase()
+            .includes(normalized);
 
-      return statusMatched && keywordMatched;
-    });
-  }, [keyword, staffs, status]);
+        return statusMatched && keywordMatched;
+      })
+      .sort((a, b) => {
+        const direction = sortOrder === 'asc' ? 1 : -1;
+        if (sortKey === 'name') {
+          return getStaffName(a).localeCompare(getStaffName(b), 'vi') * direction;
+        }
+        if (sortKey === 'phone') {
+          return a.phone.localeCompare(b.phone, 'vi') * direction;
+        }
+        if (sortKey === 'status') {
+          return (Number(a.isActive !== false) - Number(b.isActive !== false)) * direction;
+        }
+        return (a[sortKey] - b[sortKey]) * direction;
+      });
+  }, [keyword, sortKey, sortOrder, staffs, status]);
+
+  const handleSort = (key: StaffSortKey) => {
+    if (key === sortKey) {
+      setSortOrder((current) => (current === 'asc' ? 'desc' : 'asc'));
+      return;
+    }
+    setSortKey(key);
+    setSortOrder(key === 'name' || key === 'phone' ? 'asc' : 'desc');
+  };
 
   const isEditing = Boolean(formTarget);
   const canSubmit = Boolean(
@@ -357,12 +415,66 @@ export default function StaffManagementPage() {
               </colgroup>
               <thead>
                 <tr className="border-b border-border text-slate-900">
-                  <th className="px-3 py-3 font-semibold">Nhân viên</th>
-                  <th className="px-3 py-3 font-semibold">Số điện thoại</th>
-                  <th className="px-3 py-3 text-center font-semibold">Trạng thái</th>
-                  <th className="px-3 py-3 text-center font-semibold">Hôm nay</th>
-                  <th className="px-3 py-3 text-center font-semibold">Đang xử lý</th>
-                  <th className="px-3 py-3 text-center font-semibold">Tuần này</th>
+                  <th className="px-3 py-3 font-semibold">
+                    <SortHeader
+                      activeKey="name"
+                      currentKey={sortKey}
+                      direction={sortOrder}
+                      onSort={handleSort}
+                    >
+                      Nhân viên
+                    </SortHeader>
+                  </th>
+                  <th className="px-3 py-3 font-semibold">
+                    <SortHeader
+                      activeKey="phone"
+                      currentKey={sortKey}
+                      direction={sortOrder}
+                      onSort={handleSort}
+                    >
+                      Số điện thoại
+                    </SortHeader>
+                  </th>
+                  <th className="px-3 py-3 text-center font-semibold">
+                    <SortHeader
+                      activeKey="status"
+                      currentKey={sortKey}
+                      direction={sortOrder}
+                      onSort={handleSort}
+                    >
+                      Trạng thái
+                    </SortHeader>
+                  </th>
+                  <th className="px-3 py-3 text-center font-semibold">
+                    <SortHeader
+                      activeKey="todayCount"
+                      currentKey={sortKey}
+                      direction={sortOrder}
+                      onSort={handleSort}
+                    >
+                      Hôm nay
+                    </SortHeader>
+                  </th>
+                  <th className="px-3 py-3 text-center font-semibold">
+                    <SortHeader
+                      activeKey="activeCount"
+                      currentKey={sortKey}
+                      direction={sortOrder}
+                      onSort={handleSort}
+                    >
+                      Đang xử lý
+                    </SortHeader>
+                  </th>
+                  <th className="px-3 py-3 text-center font-semibold">
+                    <SortHeader
+                      activeKey="weekCount"
+                      currentKey={sortKey}
+                      direction={sortOrder}
+                      onSort={handleSort}
+                    >
+                      Tuần này
+                    </SortHeader>
+                  </th>
                   <th className="px-3 py-3 text-right font-semibold">Thao tác</th>
                 </tr>
               </thead>

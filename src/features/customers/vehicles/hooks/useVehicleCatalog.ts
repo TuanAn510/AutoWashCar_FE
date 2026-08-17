@@ -2,10 +2,7 @@ import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
 import { queryKeys } from '@/constants/queryKeys';
-import {
-  carBrands,
-  carModelsByBrand,
-} from '@/features/customers/vehicles/data/car-catalog';
+import { carBrands, carModelsByBrand } from '@/features/customers/vehicles/data/car-catalog';
 import { vehiclesApi } from '@/services/vehicleService';
 import type { VehicleBrand, VehicleModel } from '@/types/vehicle';
 
@@ -88,7 +85,8 @@ export function useVehicleModels(brandId?: string) {
   });
 
   const models = useMemo<CatalogModel[]>(
-    () => (modelsQuery.data ?? []).map((model: VehicleModel) => ({ id: model._id, name: model.name })),
+    () =>
+      (modelsQuery.data ?? []).map((model: VehicleModel) => ({ id: model._id, name: model.name })),
     [modelsQuery.data]
   );
 
@@ -102,10 +100,11 @@ export function useVehicleModels(brandId?: string) {
 export const fallbackModelsForBrand = fallbackModels;
 
 export const fallbackAllModels = (): CatalogModel[] =>
-  uniqueByName(Object.values(carModelsByBrand).flat().map((name) => ({ name })));
+  uniqueByName(
+    Object.values(carModelsByBrand)
+      .flat()
+      .map((name) => ({ name }))
+  );
 
 export const allModelsFromBrands = (brands: CatalogBrand[]): CatalogModel[] =>
-  uniqueByName([
-    ...brands.flatMap((brand) => brand.models ?? []),
-    ...fallbackAllModels(),
-  ]);
+  uniqueByName([...brands.flatMap((brand) => brand.models ?? []), ...fallbackAllModels()]);

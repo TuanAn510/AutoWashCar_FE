@@ -53,7 +53,8 @@ export default function MyVehiclesPage() {
     needsBrandModelVerification?: boolean;
   } | null>(null);
   const [resubmitRequest, setResubmitRequest] = useState<VehicleAccessRequest | null>(null);
-  const [resubmitBrandModelRequest, setResubmitBrandModelRequest] = useState<VehicleAccessRequest | null>(null);
+  const [resubmitBrandModelRequest, setResubmitBrandModelRequest] =
+    useState<VehicleAccessRequest | null>(null);
   // Bộ lọc trên trang "Xe của tôi": nhóm xe (đã/đang/khóa) + nhóm "Yêu cầu xác minh".
   const [vehicleFilter, setVehicleFilter] = useState<
     'approved' | 'pending' | 'locked' | 'requests'
@@ -80,7 +81,9 @@ export default function MyVehiclesPage() {
   const verifyingVehicles = vehicles
     .filter((vehicle) => vehicle.deletedAt == null && vehicle.verificationStatus !== 'approved')
     .sort(byNewestFirst);
-  const lockedVehicles = vehicles.filter((vehicle) => vehicle.deletedAt != null).sort(byNewestFirst);
+  const lockedVehicles = vehicles
+    .filter((vehicle) => vehicle.deletedAt != null)
+    .sort(byNewestFirst);
   const shownVehicles =
     vehicleFilter === 'approved'
       ? verifiedVehicles
@@ -105,11 +108,14 @@ export default function MyVehiclesPage() {
   // Bỏ hết mọi yêu cầu pending/rejected còn sót cho cùng biển đó khỏi khối "Yêu cầu xác minh xe",
   // tránh hiện lặp/yêu cầu cũ của cùng một chiếc xe.
   const approvedPlates = new Set(
-    approvedRequests.filter((request) => request.licensePlate).map((request) => request.licensePlate)
+    approvedRequests
+      .filter((request) => request.licensePlate)
+      .map((request) => request.licensePlate)
   );
   const hasPendingRequestForPlate = (licensePlate: string) =>
     pendingRequests.some(
-      (request) => normalizeLicensePlate(request.licensePlate) === normalizeLicensePlate(licensePlate)
+      (request) =>
+        normalizeLicensePlate(request.licensePlate) === normalizeLicensePlate(licensePlate)
     );
   // Khối đang xử lý: gộp pending (trước) + rejected (sau), bỏ biển đã duyệt.
   const activeRequests = [...pendingRequests, ...rejectedRequests].filter(
@@ -260,7 +266,8 @@ export default function MyVehiclesPage() {
               <div>
                 <h2 className="text-xl font-semibold text-slate-950">Danh sách ô tô</h2>
                 <p className="mt-1 text-sm text-slate-500">
-                  Bạn hiện có {verifiedVehicles.length + verifyingVehicles.length} xe trong tài khoản
+                  Bạn hiện có {verifiedVehicles.length + verifyingVehicles.length} xe trong tài
+                  khoản
                   {lockedVehicles.length > 0 ? ` (${lockedVehicles.length} xe đã khóa)` : ''}.
                 </p>
               </div>
@@ -332,11 +339,13 @@ export default function MyVehiclesPage() {
                       <section className="rounded-2xl bg-emerald-50/50 p-5 shadow-sm ring-1 ring-emerald-100">
                         <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                           <h2 className="text-lg font-semibold">Yêu cầu đã xác minh</h2>
-                          <span className="text-sm text-slate-500">({approvedRequests.length})</span>
+                          <span className="text-sm text-slate-500">
+                            ({approvedRequests.length})
+                          </span>
                         </div>
                         <p className="mt-1 text-sm text-slate-500">
-                          Các yêu cầu dưới đây đã được admin xác minh; xe đã được thêm vào
-                          "Xe của tôi".
+                          Các yêu cầu dưới đây đã được admin xác minh; xe đã được thêm vào "Xe của
+                          tôi".
                         </p>
                         <div className="mt-3 grid gap-2">
                           {(showAllApproved
@@ -502,7 +511,10 @@ export default function MyVehiclesPage() {
 
       <BrandModelVerificationDialog
         vehicleName={
-          [resubmitBrandModelRequest?.suggestedBrandName, resubmitBrandModelRequest?.suggestedModelName]
+          [
+            resubmitBrandModelRequest?.suggestedBrandName,
+            resubmitBrandModelRequest?.suggestedModelName,
+          ]
             .filter(Boolean)
             .join(' ') || ''
         }
@@ -557,8 +569,7 @@ function RequestCard({
 }) {
   const isPending = request.status === 'pending';
   const isRejected = request.status === 'rejected';
-  const isBrandModel =
-    (request.requestType ?? 'access_request') === 'brand_model_verification';
+  const isBrandModel = (request.requestType ?? 'access_request') === 'brand_model_verification';
   const supplementText = isBrandModel ? 'Bổ sung minh chứng hãng/dòng' : 'Bổ sung minh chứng';
 
   const borderClass = isRejected
@@ -583,21 +594,22 @@ function RequestCard({
         <div className="min-w-0">
           <p className="font-semibold">
             {isBrandModel ? 'Xác minh hãng / dòng xe' : 'Yêu cầu quyền sử dụng xe'}
-            <span className="ml-2 text-slate-500">{formatLicensePlateDisplay(request.licensePlate)}</span>
+            <span className="ml-2 text-slate-500">
+              {formatLicensePlateDisplay(request.licensePlate)}
+            </span>
           </p>
           {isBrandModel ? (
             <p className="mt-0.5 text-xs text-slate-500">
               Hãng/Dòng đề xuất:{' '}
-              {[request.suggestedBrandName, request.suggestedModelName].filter(Boolean).join(' · ') ||
-                '—'}
+              {[request.suggestedBrandName, request.suggestedModelName]
+                .filter(Boolean)
+                .join(' · ') || '—'}
             </p>
           ) : (
             <p className="mt-0.5 text-slate-500">{request.relationship}</p>
           )}
         </div>
-        <span
-          className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold ${badgeClass}`}
-        >
+        <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold ${badgeClass}`}>
           {badgeLabel}
         </span>
       </div>

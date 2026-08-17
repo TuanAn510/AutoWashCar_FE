@@ -54,10 +54,7 @@ const vehicleSchema = z
       .string()
       .trim()
       .min(1, 'Vui lòng nhập biển số xe.')
-      .regex(
-        vietnamLicensePlatePattern,
-        'Biển số xe không đúng định dạng. Ví dụ: 70A99999.'
-      ),
+      .regex(vietnamLicensePlatePattern, 'Biển số xe không đúng định dạng. Ví dụ: 70A99999.'),
     year: z
       .number({ message: 'Vui lòng nhập năm sản xuất.' })
       .int('Năm sản xuất phải là số nguyên.')
@@ -74,7 +71,6 @@ const vehicleSchema = z
           message: 'Vui lòng nhập hãng xe.',
         });
       }
-
     }
 
     if (values.model === OTHER_VEHICLE_VALUE && !values.customModel?.trim()) {
@@ -106,7 +102,9 @@ const createDefaultValues = (
   const isKnownBrand = brands.some((option) => option.name === brand);
   const brandValue = brand && !isKnownBrand ? OTHER_VEHICLE_VALUE : brand;
   const brandOption = brands.find((option) => option.name === brand);
-  const knownModels = brandOption?.models?.length ? brandOption.models : fallbackModelsForBrand(brand);
+  const knownModels = brandOption?.models?.length
+    ? brandOption.models
+    : fallbackModelsForBrand(brand);
   const model = vehicle?.model ?? '';
   const isKnownModel = knownModels.some((option) => option.name === model);
 
@@ -224,11 +222,7 @@ export function VehicleForm({
   };
 
   return (
-    <form
-      id={formId}
-      className="grid gap-6"
-      onSubmit={handleSubmit(submitForm)}
-    >
+    <form id={formId} className="grid gap-6" onSubmit={handleSubmit(submitForm)}>
       <section className="rounded-[24px] border border-slate-200 bg-slate-50 p-4 sm:p-5">
         <div className="grid gap-4 lg:grid-cols-2 xl:gap-5">
           <Field>

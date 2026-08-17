@@ -20,7 +20,10 @@ export function useCreateVehicle() {
     },
     onError: (error) => {
       const code = toApiError(error).code;
-      if (code === 'VEHICLE_VERIFICATION_REQUIRED' || code === 'BRAND_MODEL_VERIFICATION_REQUIRED') {
+      if (
+        code === 'VEHICLE_VERIFICATION_REQUIRED' ||
+        code === 'BRAND_MODEL_VERIFICATION_REQUIRED'
+      ) {
         return; // handled by the page (popup / wait-for-approval toast)
       }
       toast.error(getErrorMessage(error, 'Không thể thêm xe. Vui lòng thử lại.'));

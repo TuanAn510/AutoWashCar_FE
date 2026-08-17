@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import { FileText, UploadCloud, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -19,7 +20,7 @@ export function EvidenceUpload({
   onFilesChange: (files: File[]) => void;
   hint?: string;
 }) {
-  const inputId = `evidence-${Math.random().toString(36).slice(2, 8)}`;
+  const inputId = `evidence-${useId()}`;
   const removeFile = (index: number) =>
     onFilesChange(files.filter((_, fileIndex) => fileIndex !== index));
 
@@ -34,7 +35,9 @@ export function EvidenceUpload({
             : 'border-slate-200 bg-slate-50 hover:border-sky-300 hover:bg-sky-50/50'
         )}
       >
-        <UploadCloud className={cn('size-5', files.length ? 'text-emerald-500' : 'text-slate-400')} />
+        <UploadCloud
+          className={cn('size-5', files.length ? 'text-emerald-500' : 'text-slate-400')}
+        />
         <span className="text-sm font-semibold text-slate-700">
           {files.length ? `Đã chọn ${files.length} tài liệu` : 'Bấm để chọn tài liệu'}
         </span>

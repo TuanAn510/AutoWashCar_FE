@@ -14,8 +14,14 @@ const carTypeLabels: Record<string, string> = {
 };
 
 const verificationMeta = {
-  approved: { label: 'Đã xác minh', className: 'border-emerald-200 bg-emerald-50 text-emerald-700' },
-  pending: { label: 'Chờ admin xác minh', className: 'border-amber-200 bg-amber-50 text-amber-700' },
+  approved: {
+    label: 'Đã xác minh',
+    className: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+  },
+  pending: {
+    label: 'Chờ admin xác minh',
+    className: 'border-amber-200 bg-amber-50 text-amber-700',
+  },
   rejected: { label: 'Bị từ chối', className: 'border-rose-200 bg-rose-50 text-rose-700' },
 } as const;
 
@@ -45,7 +51,11 @@ export function VehicleCard({ vehicle, onView, onEdit, onDelete }: VehicleCardPr
     >
       <div className="relative aspect-video overflow-hidden bg-gradient-to-br from-slate-100 via-white to-slate-200">
         {coverImage ? (
-          <img src={resolveImageUrl(coverImage)} alt={vehicleName} className="h-full w-full object-cover" />
+          <img
+            src={resolveImageUrl(coverImage)}
+            alt={vehicleName}
+            className="h-full w-full object-cover"
+          />
         ) : (
           <div className="flex h-full items-center justify-center text-slate-400">
             <CarFront className="size-12" />
@@ -72,7 +82,10 @@ export function VehicleCard({ vehicle, onView, onEdit, onDelete }: VehicleCardPr
             <Badge variant="outline" className="mt-1.5 rounded-full text-xs">
               {carTypeLabels[vehicle.carType] ?? vehicle.carType}
             </Badge>
-            <Badge variant="outline" className={`mt-1.5 rounded-full text-xs ${verification.className}`}>
+            <Badge
+              variant="outline"
+              className={`mt-1.5 rounded-full text-xs ${verification.className}`}
+            >
               {verification.label}
             </Badge>
           </div>

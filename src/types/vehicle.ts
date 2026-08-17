@@ -97,7 +97,13 @@ export interface VehicleAccessRequest {
   reviewedAt?: string;
   requesterId?: string | { _id: string; displayName?: string; phone?: string; email?: string };
   vehicleId?: ApiVehicle;
-  documents?: Array<{ url: string; id: string; mimeType: string; name?: string; documentType?: 'BRAND_MODEL' | 'PLATE' }>;
+  documents?: Array<{
+    url: string;
+    id: string;
+    mimeType: string;
+    name?: string;
+    documentType?: 'BRAND_MODEL' | 'PLATE';
+  }>;
   /** Vehicle draft carried by a BRAND_MODEL_VERIFICATION request that is waiting
    *  on admin approval before the vehicle is actually created. */
   carType?: CarType;

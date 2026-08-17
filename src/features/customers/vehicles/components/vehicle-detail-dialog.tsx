@@ -52,7 +52,11 @@ export function VehicleDetailDialog({ open, vehicle, onOpenChange }: VehicleDeta
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           <DetailTile icon={CarFront} label="Hãng xe" value={vehicle.brand} />
           <DetailTile icon={CarFront} label="Dòng xe" value={vehicle.model} />
-          <DetailTile icon={Tag} label="Biển số xe" value={formatLicensePlateDisplay(vehicle.licensePlate)} />
+          <DetailTile
+            icon={Tag}
+            label="Biển số xe"
+            value={formatLicensePlateDisplay(vehicle.licensePlate)}
+          />
           <DetailTile icon={Calendar} label="Năm sản xuất" value={String(vehicle.year)} />
           <DetailTile
             icon={CarFront}

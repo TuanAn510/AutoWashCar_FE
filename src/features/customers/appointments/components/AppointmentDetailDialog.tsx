@@ -2,6 +2,7 @@ import { CarFront, Clock3, CreditCard, NotebookPen, UserRound } from 'lucide-rea
 import { useNavigate } from 'react-router';
 
 import { Button } from '@/components/ui/button';
+import { AppointmentEvidenceImages } from '@/features/customers/appointments/components/AppointmentEvidenceImages';
 import { AppointmentStatusBadge } from '@/features/customers/appointments/components/AppointmentStatusBadge';
 import { AppointmentTimeMilestones } from '@/features/customers/appointments/components/AppointmentTimeMilestones';
 import { PaymentStatusBadge } from '@/components/shared/PaymentStatusBadge';
@@ -100,6 +101,8 @@ export function AppointmentDetailDialog({
       </section>
 
       <AppointmentTimeMilestones appointment={appointment} />
+
+      <AppointmentEvidenceImages appointment={appointment} />
 
       <section className="rounded-xl border border-[#e5edf6] bg-slate-50 p-4 sm:p-5">
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">

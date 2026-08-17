@@ -37,11 +37,7 @@ export function BrandModelVerificationDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Hủy
           </Button>
-          <Button
-            type="submit"
-            form={formId}
-            disabled={pending || documents.length === 0}
-          >
+          <Button type="submit" form={formId} disabled={pending || documents.length === 0}>
             Gửi lại yêu cầu
           </Button>
         </>
@@ -73,9 +69,7 @@ export function BrandModelVerificationDialog({
                 </span>
                 Xác minh hãng / dòng xe
               </p>
-              <p className="mt-1.5 text-sm font-semibold text-amber-900">
-                {vehicleName || '—'}
-              </p>
+              <p className="mt-1.5 text-sm font-semibold text-amber-900">{vehicleName || '—'}</p>
               <p className="mt-0.5 text-xs leading-5 text-amber-700">
                 Cần minh chứng tên hãng/dòng này (giấy đăng ký xe, hóa đơn, cataloge).
               </p>

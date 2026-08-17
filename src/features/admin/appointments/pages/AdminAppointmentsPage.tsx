@@ -20,7 +20,10 @@ import type {
 } from '@/types/appointment';
 import { AdminAppointmentSummaryCards } from '@/features/admin/appointments/components/AdminAppointmentSummaryCards';
 import { AdminAppointmentFilters } from '@/features/admin/appointments/components/AdminAppointmentFilters';
-import { AdminAppointmentsTable, type DateSort } from '@/features/admin/appointments/components/AdminAppointmentsTable';
+import {
+  AdminAppointmentsTable,
+  type DateSort,
+} from '@/features/admin/appointments/components/AdminAppointmentsTable';
 import { AdminAppointmentDetailDialog } from '@/features/admin/appointments/components/AppointmentDetailDialog';
 import { AssignStaffDialog } from '@/features/admin/appointments/components/AssignStaffDialog';
 import { CancelAppointmentDialog } from '@/features/admin/appointments/components/CancelAppointmentDialog';
@@ -255,7 +258,7 @@ export default function AdminAppointmentsPage() {
     setAssignAppointment(null);
   };
 
-  const handleConfirmUpdateStatus = async () => {
+  const handleConfirmUpdateStatus = async (evidenceImage?: File | null) => {
     if (!statusAppointment || !nextStatus) {
       return;
     }
@@ -265,7 +268,7 @@ export default function AdminAppointmentsPage() {
 
     await updateStatusMutation.mutateAsync({
       appointmentId: appointmentBeingUpdated._id,
-      payload: { status: statusBeingApplied },
+      payload: { status: statusBeingApplied, evidenceImage },
     });
     setStatusAppointment(null);
   };
@@ -286,6 +289,13 @@ export default function AdminAppointmentsPage() {
     if (!timelineStatusChange) return;
 
     const { appointment, status } = timelineStatusChange;
+    if (status === 'in_queue' || status === 'completed') {
+      setTimelineStatusChange(null);
+      setNextStatus(status);
+      setStatusAppointment(appointment);
+      return;
+    }
+
     await updateStatusMutation.mutateAsync({
       appointmentId: appointment._id,
       payload: { status },
@@ -548,8 +558,8 @@ export default function AdminAppointmentsPage() {
                     Đã hoàn thành {appointmentTab === 'today' ? '' : '(hôm nay trở đi)'}
                   </h3>
                   <p className="mt-1 text-sm text-slate-500">
-                    {completedAppointments.length} lịch hẹn hoàn thành hoặc đã hủy được hiển thị
-                    tại đây.
+                    {completedAppointments.length} lịch hẹn hoàn thành hoặc đã hủy được hiển thị tại
+                    đây.
                   </p>
                 </div>
                 <AdminAppointmentsTable
@@ -625,6 +635,7 @@ export default function AdminAppointmentsPage() {
       />
 
       <UpdateAppointmentStatusDialog
+        key={statusAppointment?._id ?? 'status-dialog'}
         appointment={statusAppointment}
         open={!!statusAppointment}
         nextStatus={nextStatus}

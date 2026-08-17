@@ -17,14 +17,25 @@ vi.mock('@/features/customers/components/CustomerModalShell', () => ({
 
 vi.mock('@/components/ui/date-picker', () => ({
   DatePicker: ({ value, onChange }: { value: string; onChange: (value: string) => void }) => (
-    <input aria-label="Ngày hẹn mới" type="date" value={value} onChange={(event) => onChange(event.target.value)} />
+    <input
+      aria-label="Ngày hẹn mới"
+      type="date"
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+    />
   ),
 }));
 
 const appointment: AppointmentItem = {
   _id: 'appointment-1',
   customerId: { _id: 'customer-1', displayName: 'Customer', phone: '0900000000' },
-  vehicleId: { _id: 'vehicle-1', brand: 'Toyota', model: 'Camry', licensePlate: '30A-12345', year: 2024 },
+  vehicleId: {
+    _id: 'vehicle-1',
+    brand: 'Toyota',
+    model: 'Camry',
+    licensePlate: '30A-12345',
+    year: 2024,
+  },
   assignedStaffId: null,
   cancelledBy: null,
   services: [],
@@ -57,7 +68,9 @@ describe('RescheduleAppointmentDialog', () => {
       />
     );
 
-    fireEvent.change(container.querySelector('input[type="time"]')!, { target: { value: '14:30' } });
+    fireEvent.change(container.querySelector('input[type="time"]')!, {
+      target: { value: '14:30' },
+    });
     fireEvent.click(screen.getByRole('button', { name: 'Cập nhật lịch' }));
 
     expect(onConfirm).toHaveBeenCalledWith('2099-08-13T14:30:00');
@@ -77,9 +90,13 @@ describe('RescheduleAppointmentDialog', () => {
       />
     );
 
-    fireEvent.change(container.querySelector('input[type="time"]')!, { target: { value: '08:29' } });
+    fireEvent.change(container.querySelector('input[type="time"]')!, {
+      target: { value: '08:29' },
+    });
 
-    expect((screen.getByRole('button', { name: 'Cập nhật lịch' }) as HTMLButtonElement).disabled).toBe(true);
+    expect(
+      (screen.getByRole('button', { name: 'Cập nhật lịch' }) as HTMLButtonElement).disabled
+    ).toBe(true);
     expect(screen.getByText('Thời gian hẹn mới phải cách hiện tại ít nhất 30 phút.')).toBeTruthy();
   });
 });

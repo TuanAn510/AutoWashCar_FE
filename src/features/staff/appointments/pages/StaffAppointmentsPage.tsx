@@ -111,7 +111,11 @@ export default function StaffAppointmentsPage() {
       else older.push(a);
     }
 
-    return { processingAppointments: processing, completedAppointments: completed, olderAppointments: older };
+    return {
+      processingAppointments: processing,
+      completedAppointments: completed,
+      olderAppointments: older,
+    };
   }, [appointments]);
 
   const summary = staffAppointmentsQuery.data?.summary ?? {
@@ -134,6 +138,12 @@ export default function StaffAppointmentsPage() {
     appointment: AppointmentItem,
     targetStatus: 'in_queue' | 'in_progress' | 'completed'
   ) => {
+    if (targetStatus === 'in_queue' || targetStatus === 'completed') {
+      setNextStatus(targetStatus);
+      setStatusAppointment(appointment);
+      return;
+    }
+
     await updateStatusMutation.mutateAsync({
       appointmentId: appointment._id,
       payload: { status: targetStatus },
@@ -142,7 +152,7 @@ export default function StaffAppointmentsPage() {
 
   const toggleDateSort = () => setDateSort((prev) => (prev === 'desc' ? 'asc' : 'desc'));
 
-  const handleConfirmStatusUpdate = async () => {
+  const handleConfirmStatusUpdate = async (evidenceImage?: File | null) => {
     if (!statusAppointment || !nextStatus) {
       return;
     }
@@ -152,7 +162,7 @@ export default function StaffAppointmentsPage() {
 
     await updateStatusMutation.mutateAsync({
       appointmentId: appointmentBeingUpdated._id,
-      payload: { status: statusBeingApplied },
+      payload: { status: statusBeingApplied, evidenceImage },
     });
     setNextStatus('');
     setStatusAppointment(null);
@@ -336,6 +346,7 @@ export default function StaffAppointmentsPage() {
       />
 
       <UpdateAppointmentStatusDialog
+        key={statusAppointment?._id ?? 'status-dialog'}
         appointment={statusAppointment}
         open={!!statusAppointment}
         nextStatus={nextStatus}

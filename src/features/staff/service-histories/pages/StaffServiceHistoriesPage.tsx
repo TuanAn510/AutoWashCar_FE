@@ -5,7 +5,10 @@ import { Button } from '@/components/ui/button';
 import { EmptyStaffServiceHistoriesState } from '@/features/staff/service-histories/components/EmptyStaffServiceHistoriesState';
 import { StaffServiceHistoryDetailDialog } from '@/features/staff/service-histories/components/StaffServiceHistoryDetailDialog';
 import { StaffServiceHistoryFilters } from '@/features/staff/service-histories/components/StaffServiceHistoryFilters';
-import { StaffServiceHistoryList, type DateSort } from '@/features/staff/service-histories/components/StaffServiceHistoryList';
+import {
+  StaffServiceHistoryList,
+  type DateSort,
+} from '@/features/staff/service-histories/components/StaffServiceHistoryList';
 import { useMyStaffServiceHistories } from '@/features/staff/service-histories/hooks/useMyStaffServiceHistories';
 import type { ServiceHistoryItem } from '@/types/serviceHistory';
 import { formatServiceHistoryPrice } from '@/lib/utils';
@@ -27,9 +30,7 @@ export default function StaffServiceHistoriesPage() {
     // Only show completed service histories, sorted by completion time (newest first)
     return items
       .filter((serviceHistory) => serviceHistory.appointmentId.status === 'completed')
-      .sort(
-        (a, b) => new Date(b.servicedAt).getTime() - new Date(a.servicedAt).getTime()
-      );
+      .sort((a, b) => new Date(b.servicedAt).getTime() - new Date(a.servicedAt).getTime());
   }, [serviceHistoriesQuery.data?.items]);
 
   const filteredServiceHistories = useMemo(() => {
@@ -66,7 +67,10 @@ export default function StaffServiceHistoriesPage() {
   const summary = useMemo(
     () => ({
       completed: filteredServiceHistories.length,
-      revenue: filteredServiceHistories.reduce((sum, serviceHistory) => sum + serviceHistory.totalPrice, 0),
+      revenue: filteredServiceHistories.reduce(
+        (sum, serviceHistory) => sum + serviceHistory.totalPrice,
+        0
+      ),
     }),
     [filteredServiceHistories]
   );

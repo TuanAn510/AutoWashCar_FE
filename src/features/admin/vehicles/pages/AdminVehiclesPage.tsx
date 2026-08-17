@@ -1,4 +1,16 @@
-import { Car, CarFront, Eye, Loader2, Pencil, Search, ShieldAlert, ShieldCheck, Trash2, User, X } from 'lucide-react';
+import {
+  Car,
+  CarFront,
+  Eye,
+  Loader2,
+  Pencil,
+  Search,
+  ShieldAlert,
+  ShieldCheck,
+  Trash2,
+  User,
+  X,
+} from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -139,8 +151,7 @@ export default function AdminVehiclesPage() {
   const verifiedVehicles = useMemo(
     () =>
       allVehicles.filter(
-        (vehicle) =>
-          !vehicle.verificationStatus || vehicle.verificationStatus === 'approved'
+        (vehicle) => !vehicle.verificationStatus || vehicle.verificationStatus === 'approved'
       ),
     [allVehicles]
   );
@@ -282,8 +293,8 @@ export default function AdminVehiclesPage() {
                 </span>
               </h2>
               <p className="mt-1 text-sm text-slate-500">
-                Các xe chưa được xác minh, kể cả những yêu cầu chưa có xe trong danh sách. Bấm
-                "Xác minh" để xử lý tại mục Xác minh xe.
+                Các xe chưa được xác minh, kể cả những yêu cầu chưa có xe trong danh sách. Bấm "Xác
+                minh" để xử lý tại mục Xác minh xe.
               </p>
             </div>
             <Button
@@ -441,25 +452,24 @@ export default function AdminVehiclesPage() {
                           <Eye className="size-4" />
                         )}
                       </Button>
-                      {vehicle.verificationStatus &&
-                        vehicle.verificationStatus !== 'approved' && (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="size-8 text-amber-600 hover:bg-amber-50 hover:text-amber-700"
-                            title="Xác minh xe (chuyển sang mục Xác minh xe)"
-                            onClick={() =>
-                              navigate(
-                                `/admin/vehicle-access-requests?keyword=${encodeURIComponent(
-                                  vehicle.licensePlate
-                                )}`
-                              )
-                            }
-                          >
-                            <ShieldCheck className="size-4" />
-                          </Button>
-                        )}
+                      {vehicle.verificationStatus && vehicle.verificationStatus !== 'approved' && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="size-8 text-amber-600 hover:bg-amber-50 hover:text-amber-700"
+                          title="Xác minh xe (chuyển sang mục Xác minh xe)"
+                          onClick={() =>
+                            navigate(
+                              `/admin/vehicle-access-requests?keyword=${encodeURIComponent(
+                                vehicle.licensePlate
+                              )}`
+                            )
+                          }
+                        >
+                          <ShieldCheck className="size-4" />
+                        </Button>
+                      )}
                       <Button
                         type="button"
                         variant="ghost"
@@ -522,7 +532,10 @@ export default function AdminVehiclesPage() {
           if (!open) setDeleteVehicle(null);
         }}
       >
-        <DialogContent className="max-w-[420px] gap-0 rounded-xl border border-[#e5edf6] p-0 shadow-[0_18px_44px_rgba(15,23,42,0.12)]" showCloseButton={false}>
+        <DialogContent
+          className="max-w-[420px] gap-0 rounded-xl border border-[#e5edf6] p-0 shadow-[0_18px_44px_rgba(15,23,42,0.12)]"
+          showCloseButton={false}
+        >
           <DialogHeader className="border-b border-[#e5edf6] px-6 py-4">
             <DialogTitle className="text-lg font-black text-[#15243a]">Xóa xe</DialogTitle>
             <DialogDescription className="mt-0.5 text-sm text-[#64748b]">
@@ -594,7 +607,10 @@ function VehicleDetailDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[560px] gap-0 rounded-xl border border-[#e5edf6] p-0 shadow-[0_18px_44px_rgba(15,23,42,0.12)]" showCloseButton={false}>
+      <DialogContent
+        className="max-w-[560px] gap-0 rounded-xl border border-[#e5edf6] p-0 shadow-[0_18px_44px_rgba(15,23,42,0.12)]"
+        showCloseButton={false}
+      >
         <DialogHeader className="flex flex-row items-start justify-between border-b border-[#e5edf6] px-6 py-4">
           <div>
             <DialogTitle className="text-lg font-black text-[#15243a]">Chi tiết xe</DialogTitle>
@@ -764,7 +780,10 @@ function EditVehicleDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[480px] gap-0 rounded-xl border border-[#e5edf6] p-0 shadow-[0_18px_44px_rgba(15,23,42,0.12)]" showCloseButton={false}>
+      <DialogContent
+        className="max-w-[480px] gap-0 rounded-xl border border-[#e5edf6] p-0 shadow-[0_18px_44px_rgba(15,23,42,0.12)]"
+        showCloseButton={false}
+      >
         <DialogHeader className="flex flex-row items-start justify-between border-b border-[#e5edf6] px-6 py-4">
           <div>
             <DialogTitle className="text-lg font-black text-[#15243a]">

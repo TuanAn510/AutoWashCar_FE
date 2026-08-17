@@ -59,13 +59,13 @@ function RescheduleAppointmentDialogContent({
   const currentDate = new Date(appointment.scheduledAt);
   const [scheduledDate, setScheduledDate] = useState(() => toDateInputValue(currentDate));
   const [scheduledTime, setScheduledTime] = useState(() => toTimeInputValue(currentDate));
+  const [minimumScheduledAt] = useState(() => new Date(Date.now() + 30 * 60 * 1000));
+  const [minimumDate] = useState(() => new Date());
 
   const nextDateTime =
     scheduledDate && scheduledTime ? new Date(`${scheduledDate}T${scheduledTime}`) : null;
   const isInvalidDateTime =
-    !nextDateTime ||
-    Number.isNaN(nextDateTime.getTime()) ||
-    nextDateTime < new Date(Date.now() + 30 * 60 * 1000);
+    !nextDateTime || Number.isNaN(nextDateTime.getTime()) || nextDateTime < minimumScheduledAt;
 
   return (
     <CustomerModalShell
@@ -106,7 +106,7 @@ function RescheduleAppointmentDialogContent({
             value={scheduledDate}
             onChange={setScheduledDate}
             disabled={isSubmitting}
-            disabledDates={{ before: new Date() }}
+            disabledDates={{ before: minimumDate }}
             placeholder="Chọn ngày hẹn mới"
           />
         </label>
@@ -124,7 +124,9 @@ function RescheduleAppointmentDialogContent({
       </div>
 
       {isInvalidDateTime ? (
-        <p className="text-sm text-rose-600">Thời gian hẹn mới phải cách hiện tại ít nhất 30 phút.</p>
+        <p className="text-sm text-rose-600">
+          Thời gian hẹn mới phải cách hiện tại ít nhất 30 phút.
+        </p>
       ) : null}
     </CustomerModalShell>
   );
