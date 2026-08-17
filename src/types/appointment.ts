@@ -167,6 +167,7 @@ export interface BookingAvailability {
   date: string;
   bookingWindowDays: number;
   slots: BookingAvailabilitySlot[];
+  vehicleAvailabilityReason?: string | null;
 }
 
 export interface BookingAvailabilityParams {
@@ -176,6 +177,20 @@ export interface BookingAvailabilityParams {
   rewardRedemptionId?: string;
 }
 
+export interface BookingCandidateAvailability {
+  startAt: string;
+  endAt: string;
+  available: boolean;
+  reason: string | null;
+  nearestAvailableStartAt: string | null;
+}
+
+export interface BookingCandidateAvailabilityParams {
+  scheduledAt: string;
+  vehicleId: string;
+  serviceId: string;
+  rewardRedemptionId?: string;
+}
 export interface CancelAppointmentPayload {
   appointmentId: string;
   cancelReason?: string;
@@ -217,7 +232,7 @@ export interface UpdateAppointmentPaymentStatusPayload {
 
 export interface AssignStaffPayload {
   staffId?: string;
-  staffIds: string[];
+  staffIds?: string[];
 }
 
 export interface RescheduleAppointmentPayload {

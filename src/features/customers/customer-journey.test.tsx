@@ -3,11 +3,27 @@ import type { PropsWithChildren, ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { CarFront } from 'lucide-react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { Button } from '@/components/ui/button';
 import { CreateAppointmentModal } from '@/features/customers/appointments/components/CreateAppointmentModal';
 import { CustomerEmptyState } from '@/features/customers/components/CustomerEmptyState';
+
+const defaultSlots: Array<{ startAt: string; available: boolean; reason: string | null }> = ['08:00', '08:05', '08:10', '08:15', '08:20'].map((time) => ({
+  startAt: `2099-08-13T${time}:00`,
+  available: true,
+  reason: null,
+}));
+
+let availability = { slots: defaultSlots, vehicleAvailabilityReason: null as string | null };
+
+vi.mock('@tanstack/react-query', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@tanstack/react-query')>();
+  return {
+    ...actual,
+    useQuery: () => ({ data: availability, isLoading: false, isError: false }),
+  };
+});
 
 vi.mock('@/features/customers/components/CustomerModalShell', () => ({
   CustomerModalShell: ({
@@ -124,6 +140,11 @@ function renderWithQueryClient(ui: ReactNode) {
   return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
 }
 
+beforeEach(() => {
+  vi.spyOn(Date, 'now').mockReturnValue(new Date('2099-08-12T08:00:00').getTime());
+  availability = { slots: defaultSlots, vehicleAvailabilityReason: null };
+});
+
 describe('customer journey UI', () => {
   it('renders the shared empty state and invokes its primary action', () => {
     const onCreate = vi.fn();
@@ -200,5 +221,85 @@ describe('customer journey UI', () => {
       );
     });
     expect(await screen.findByText('Lịch hẹn đã được tạo')).toBeTruthy();
+  });
+
+  it('uses a dropdown-only five-minute appointment-time selector', async () => {
+    const { container } = render(
+      <CreateAppointmentModal isOpen isSubmitting={false} onOpenChange={vi.fn()} onSubmit={vi.fn()} />
+    );
+
+    fireEvent.change(container.querySelector('select[name="vehicleId"]')!, {
+      target: { value: 'vehicle-1' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));
+    fireEvent.click(container.querySelector('input[type="radio"]')!);
+    fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));
+
+    expect(container.querySelector('input[type="time"]')).toBeNull();
+    const select = await screen.findByLabelText('Chọn khung giờ');
+    expect(screen.getByText('08:05')).toBeTruthy();
+    fireEvent.change(select, { target: { value: '08:05' } });
+    expect((select as HTMLSelectElement).value).toBe('08:05');
+  });
+
+  it('keeps capacity-full suggestions visible but disabled with the customer-facing label', async () => {
+    availability = {
+      slots: [
+        ...defaultSlots,
+        { startAt: '2099-08-13T08:25:00', available: false, reason: 'CAPACITY_FULL' },
+      ],
+      vehicleAvailabilityReason: null,
+    };
+    const { container } = render(
+      <CreateAppointmentModal isOpen isSubmitting={false} onOpenChange={vi.fn()} onSubmit={vi.fn()} />
+    );
+
+    fireEvent.change(container.querySelector('select[name="vehicleId"]')!, {
+      target: { value: 'vehicle-1' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));
+    fireEvent.click(container.querySelector('input[type="radio"]')!);
+    fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));
+
+    const option = await screen.findByRole('option', { name: '08:25 - Hết vị trí rửa' });
+    expect((option as HTMLOptionElement).disabled).toBe(true);
+  });
+
+  it('does not render structurally impossible end-of-day options', async () => {
+    availability = {
+      slots: [{ startAt: '2099-08-13T16:15:00', available: true, reason: null }],
+      vehicleAvailabilityReason: null,
+    };
+    const { container } = render(
+      <CreateAppointmentModal isOpen isSubmitting={false} onOpenChange={vi.fn()} onSubmit={vi.fn()} />
+    );
+
+    fireEvent.change(container.querySelector('select[name="vehicleId"]')!, {
+      target: { value: 'vehicle-1' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));
+    fireEvent.click(container.querySelector('input[type="radio"]')!);
+    fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));
+
+    expect(await screen.findByRole('option', { name: '16:15' })).toBeTruthy();
+    expect(screen.queryByRole('option', { name: '16:20' })).toBeNull();
+    expect(screen.queryByText(/Khung giờ gần nhất có thể đặt/)).toBeNull();
+  });
+
+  it('shows one unfinished-vehicle message and disables time selection', async () => {
+    availability = { slots: [], vehicleAvailabilityReason: 'VEHICLE_UNFINISHED_BOOKING' };
+    const { container } = render(
+      <CreateAppointmentModal isOpen isSubmitting={false} onOpenChange={vi.fn()} onSubmit={vi.fn()} />
+    );
+
+    fireEvent.change(container.querySelector('select[name="vehicleId"]')!, {
+      target: { value: 'vehicle-1' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));
+    fireEvent.click(container.querySelector('input[type="radio"]')!);
+    fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));
+
+    expect(await screen.findByText('Xe này đã có lịch hẹn chưa hoàn thành.')).toBeTruthy();
+    expect((screen.getByLabelText('Chọn khung giờ') as HTMLSelectElement).disabled).toBe(true);
   });
 });

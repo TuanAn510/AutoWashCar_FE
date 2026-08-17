@@ -5,6 +5,8 @@ import type {
   AppointmentItem,
   AppointmentStatusSummary,
   AssignStaffPayload,
+  BookingCandidateAvailability,
+  BookingCandidateAvailabilityParams,
   BookingAvailability,
   BookingAvailabilityParams,
   CancelAppointmentByAdminPayload,
@@ -62,6 +64,17 @@ export const appointmentApi = {
       params,
       signal,
     });
+    return response.data.data;
+  },
+
+  async checkBookingAvailability(
+    params: BookingCandidateAvailabilityParams,
+    signal?: AbortSignal
+  ) {
+    const response = await api.get<ApiEnvelope<BookingCandidateAvailability>>(
+      '/bookings/availability/check',
+      { params, signal }
+    );
     return response.data.data;
   },
 };
