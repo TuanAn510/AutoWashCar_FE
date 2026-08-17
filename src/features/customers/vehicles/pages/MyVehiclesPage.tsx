@@ -51,10 +51,15 @@ export default function MyVehiclesPage() {
   } | null>(null);
   const [resubmitRequest, setResubmitRequest] = useState<VehicleAccessRequest | null>(null);
   const [resubmitBrandModelRequest, setResubmitBrandModelRequest] = useState<VehicleAccessRequest | null>(null);
-  // "Yêu cầu đã xác minh" chỉ hiện 3 mới nhất; bấm "Xem thêm" để hiện hết.
+  // Bộ lọc trên trang "Xe của tôi": nhóm xe (đã/đang/khóa) + nhóm "Yêu cầu xác minh".
+  const [vehicleFilter, setVehicleFilter] = useState<
+    'approved' | 'pending' | 'locked' | 'requests'
+  >('approved');
+  // Trong tab "Yêu cầu xác minh", mỗi bảng chỉ hiện tối đa 6 mục; bật "Xem thêm" để mở rộng.
+  const [showAllPending, setShowAllPending] = useState(false);
   const [showAllApproved, setShowAllApproved] = useState(false);
 
-  const myVehiclesQuery = useMyVehicles();
+  const myVehiclesQuery = useMyVehicles(true);
   const createVehicleMutation = useCreateVehicle();
   const updateVehicleMutation = useUpdateVehicle();
   const deleteVehicleMutation = useDeleteVehicle();
@@ -64,21 +69,51 @@ export default function MyVehiclesPage() {
   const queryClient = useQueryClient();
 
   const vehicles = myVehiclesQuery.data?.vehicles ?? [];
+  // includeInactive=true nên danh sách kèm cả xe đã bị KHÓA (biển chuyển quyền qua
+  // xác minh). Phân loại theo 3 nhóm filter; mỗi nhóm sort cái mới nhất lên đầu.
+  const verifiedVehicles = vehicles
+    .filter((vehicle) => vehicle.deletedAt == null && vehicle.verificationStatus === 'approved')
+    .sort(byNewestFirst);
+  const verifyingVehicles = vehicles
+    .filter((vehicle) => vehicle.deletedAt == null && vehicle.verificationStatus !== 'approved')
+    .sort(byNewestFirst);
+  const lockedVehicles = vehicles.filter((vehicle) => vehicle.deletedAt != null).sort(byNewestFirst);
+  const shownVehicles =
+    vehicleFilter === 'approved'
+      ? verifiedVehicles
+      : vehicleFilter === 'pending'
+        ? verifyingVehicles
+        : lockedVehicles;
   const accessRequests = accessRequestsQuery.data ?? [];
-  const pendingAccessRequests = accessRequests.filter((request) => request.status === 'pending');
-  const approvedAccessRequests = accessRequests.filter((request) => request.status === 'approved');
-  // Ẩn thẻ "Chưa đủ minh chứng" chỉ khi biến số đó còn một yêu cầu khác (pending hoặc approved)
-  // MỚI HƠN — tức là khách đã gửi lại / đã được duyệt xong. Các approved cũ không làm ẩn.
-  const rejectedAccessRequests = accessRequests.filter((request) =>
-    request.status === 'rejected'
-      ? !accessRequests.some(
-          (other) =>
-            other.licensePlate === request.licensePlate &&
-            other.status !== 'rejected' &&
-            other.createdAt > request.createdAt
-        )
-      : false
+  // Tab "Yêu cầu xác minh" giữ đúng 2 khối như thời điểm chưa chia filter:
+  // - Khối "Yêu cầu xác minh xe": đang chờ (pending) + bị từ chối (rejected).
+  //   Bị từ chối phải còn hiện để khách bổ sung lại giấy tờ; chờ hiện trước, từ chối sau.
+  // - Khối "Yêu cầu đã xác minh": đã được admin duyệt (approved).
+  const pendingRequests = accessRequests
+    .filter((request) => request.status === 'pending')
+    .sort(byRequestNewestFirst);
+  const rejectedRequests = accessRequests
+    .filter((request) => request.status === 'rejected')
+    .sort(byRequestNewestFirst);
+  const approvedRequests = accessRequests
+    .filter((request) => request.status === 'approved')
+    .sort(byRequestNewestFirst);
+  // Biển đã được duyệt (có trong khối "Yêu cầu đã xác minh") coi như đã xử lý xong.
+  // Bỏ hết mọi yêu cầu pending/rejected còn sót cho cùng biển đó khỏi khối "Yêu cầu xác minh xe",
+  // tránh hiện lặp/yêu cầu cũ của cùng một chiếc xe.
+  const approvedPlates = new Set(
+    approvedRequests.filter((request) => request.licensePlate).map((request) => request.licensePlate)
   );
+  // Khối đang xử lý: gộp pending (trước) + rejected (sau), bỏ biển đã duyệt.
+  const activeRequests = [...pendingRequests, ...rejectedRequests].filter(
+    (request) => !approvedPlates.has(request.licensePlate)
+  );
+  const vehicleFilterOptions = [
+    { key: 'approved' as const, label: 'Đã xác minh', count: verifiedVehicles.length },
+    { key: 'pending' as const, label: 'Đang xác minh', count: verifyingVehicles.length },
+    { key: 'locked' as const, label: 'Đã khóa', count: lockedVehicles.length },
+    { key: 'requests' as const, label: 'Yêu cầu xác minh', count: accessRequests.length },
+  ];
   const isCreateRequested = searchParams.get('create') === '1';
   const isCreateDialogOpen = isCreateOpen || isCreateRequested;
 
@@ -208,74 +243,126 @@ export default function MyVehiclesPage() {
               <div>
                 <h2 className="text-xl font-semibold text-slate-950">Danh sách ô tô</h2>
                 <p className="mt-1 text-sm text-slate-500">
-                  Bạn hiện có {myVehiclesQuery.data?.total ?? vehicles.length} xe trong tài khoản.
+                  Bạn hiện có {verifiedVehicles.length + verifyingVehicles.length} xe trong tài khoản
+                  {lockedVehicles.length > 0 ? ` (${lockedVehicles.length} xe đã khóa)` : ''}.
                 </p>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {vehicles.map((vehicle) => (
-                <VehicleCard
-                  key={vehicle._id}
-                  vehicle={vehicle}
-                  onView={setDetailVehicle}
-                  onEdit={setEditingVehicle}
-                  onDelete={setDeletingVehicle}
-                />
+            {/* Bộ lọc 4 nhóm: đã xác minh / đang xác minh / đã khóa / yêu cầu xác minh */}
+            <div className="inline-flex flex-wrap gap-1 rounded-xl bg-slate-100 p-1">
+              {vehicleFilterOptions.map((option) => (
+                <button
+                  key={option.key}
+                  type="button"
+                  onClick={() => setVehicleFilter(option.key)}
+                  className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
+                    vehicleFilter === option.key
+                      ? 'bg-white text-slate-950 shadow-sm'
+                      : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  {option.label} ({option.count})
+                </button>
               ))}
             </div>
-          </section>
-        )}
-        {approvedAccessRequests.length > 0 && (
-          <section className="rounded-2xl bg-emerald-50/50 p-5 shadow-sm ring-1 ring-emerald-100">
-            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-              <h2 className="text-lg font-semibold">Yêu cầu đã xác minh</h2>
-              <span className="text-sm text-slate-500">({approvedAccessRequests.length})</span>
-            </div>
-            <p className="mt-1 text-sm text-slate-500">
-              Các yêu cầu dưới đây đã được admin xác minh; xe đã được thêm vào "Xe của tôi".
-            </p>
-            <div className="mt-3 grid gap-2">
-              {(showAllApproved
-                ? approvedAccessRequests
-                : approvedAccessRequests.slice(0, 3)
-              ).map((request) => (
-                <RequestCard key={request._id} request={request} />
-              ))}
-            </div>
-            {approvedAccessRequests.length > 3 ? (
-              <Button
-                variant="outline"
-                size="sm"
-                className="mt-3 w-full rounded-xl"
-                onClick={() => setShowAllApproved((open) => !open)}
-              >
-                {showAllApproved
-                  ? 'Thu gọn'
-                  : `Xem thêm ${approvedAccessRequests.length - 3} yêu cầu`}
-              </Button>
-            ) : null}
-          </section>
-        )}
-        {(!!pendingAccessRequests.length || !!rejectedAccessRequests.length) && (
-          <section className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
-            <h2 className="text-lg font-semibold">Yêu cầu xác minh xe</h2>
-            <div className="mt-3 grid gap-2">
-              {pendingAccessRequests.map((request) => (
-                <RequestCard key={request._id} request={request} />
-              ))}
-              {rejectedAccessRequests.map((request) => (
-                <RequestCard
-                  key={request._id}
-                  request={request}
-                  onSupplement={
-                    request.requestType === 'brand_model_verification'
-                      ? () => setResubmitBrandModelRequest(request)
-                      : () => setResubmitRequest(request)
-                  }
-                />
-              ))}
-            </div>
+
+            {vehicleFilter === 'requests' ? (
+              <div className="grid gap-4">
+                {activeRequests.length + approvedRequests.length === 0 ? (
+                  <p className="rounded-xl bg-slate-50 px-4 py-6 text-center text-sm text-slate-500">
+                    Chưa có yêu cầu xác minh nào.
+                  </p>
+                ) : (
+                  <>
+                    {activeRequests.length > 0 ? (
+                      <section className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+                        <div className="flex items-center justify-between gap-3">
+                          <h2 className="text-lg font-semibold">Yêu cầu xác minh xe</h2>
+                          <span className="text-sm text-slate-500">({activeRequests.length})</span>
+                        </div>
+                        <div className="mt-3 grid gap-2">
+                          {(showAllPending
+                            ? activeRequests
+                            : activeRequests.slice(0, MAX_REQUEST_ROWS)
+                          ).map((request) => (
+                            <RequestCard
+                              key={request._id}
+                              request={request}
+                              onSupplement={
+                                request.requestType === 'brand_model_verification'
+                                  ? () => setResubmitBrandModelRequest(request)
+                                  : () => setResubmitRequest(request)
+                              }
+                            />
+                          ))}
+                        </div>
+                        {activeRequests.length > MAX_REQUEST_ROWS ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="mt-3 w-full rounded-xl"
+                            onClick={() => setShowAllPending(!showAllPending)}
+                          >
+                            {showAllPending
+                              ? 'Thu gọn'
+                              : `Xem thêm ${activeRequests.length - MAX_REQUEST_ROWS} yêu cầu`}
+                          </Button>
+                        ) : null}
+                      </section>
+                    ) : null}
+                    {approvedRequests.length > 0 ? (
+                      <section className="rounded-2xl bg-emerald-50/50 p-5 shadow-sm ring-1 ring-emerald-100">
+                        <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                          <h2 className="text-lg font-semibold">Yêu cầu đã xác minh</h2>
+                          <span className="text-sm text-slate-500">({approvedRequests.length})</span>
+                        </div>
+                        <p className="mt-1 text-sm text-slate-500">
+                          Các yêu cầu dưới đây đã được admin xác minh; xe đã được thêm vào
+                          "Xe của tôi".
+                        </p>
+                        <div className="mt-3 grid gap-2">
+                          {(showAllApproved
+                            ? approvedRequests
+                            : approvedRequests.slice(0, MAX_REQUEST_ROWS)
+                          ).map((request) => (
+                            <RequestCard key={request._id} request={request} />
+                          ))}
+                        </div>
+                        {approvedRequests.length > MAX_REQUEST_ROWS ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="mt-3 w-full rounded-xl"
+                            onClick={() => setShowAllApproved(!showAllApproved)}
+                          >
+                            {showAllApproved
+                              ? 'Thu gọn'
+                              : `Xem thêm ${approvedRequests.length - MAX_REQUEST_ROWS} yêu cầu`}
+                          </Button>
+                        ) : null}
+                      </section>
+                    ) : null}
+                  </>
+                )}
+              </div>
+            ) : shownVehicles.length === 0 ? (
+              <p className="rounded-xl bg-slate-50 px-4 py-6 text-center text-sm text-slate-500">
+                Không có xe nào trong mục này.
+              </p>
+            ) : (
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                {shownVehicles.map((vehicle) => (
+                  <VehicleCard
+                    key={vehicle._id}
+                    vehicle={vehicle}
+                    onView={setDetailVehicle}
+                    onEdit={setEditingVehicle}
+                    onDelete={setDeletingVehicle}
+                  />
+                ))}
+              </div>
+            )}
           </section>
         )}
       </div>
@@ -436,6 +523,17 @@ export default function MyVehiclesPage() {
     </main>
   );
 }
+
+// Sắp xe mới tạo lên đầu (dùng chung cho các nhóm filter).
+const byNewestFirst = (a: ApiVehicle, b: ApiVehicle) =>
+  new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime();
+
+// Sắp yêu cầu xác minh mới nhất lên đầu (dùng chung cho các nhóm trong tab "Yêu cầu xác minh").
+const byRequestNewestFirst = (a: VehicleAccessRequest, b: VehicleAccessRequest) =>
+  new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime();
+
+// Số mục tối đa hiển thị mặc định trong mỗi khối yêu cầu trước khi cần "Xem thêm".
+const MAX_REQUEST_ROWS = 6;
 
 function RequestCard({
   request,
