@@ -143,6 +143,7 @@ const toSlotTime = (startAt: string) => {
 };
 
 const availabilityReasonLabels: Record<string, string> = {
+  PAST: 'Đã qua',
   LEAD_TIME: 'Cần đặt trước 30 phút',
   OUT_OF_TIER_WINDOW: 'Ngoài hạn đặt',
   NO_STAFF: 'Chưa có staff',

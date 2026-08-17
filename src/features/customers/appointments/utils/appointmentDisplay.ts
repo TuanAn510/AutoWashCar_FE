@@ -1,11 +1,14 @@
 import type {
   AppointmentItem,
+  AppointmentPaymentStatus,
   AppointmentServiceSnapshot,
   AppointmentStatus,
 } from '@/types/appointment';
 
-export const canCustomerCancelAppointment = (status: AppointmentStatus | string) =>
-  status === 'pending';
+export const canCustomerCancelAppointment = (
+  status: AppointmentStatus | string,
+  paymentStatus: AppointmentPaymentStatus | string
+) => status === 'pending' && paymentStatus !== 'paid';
 
 export const getAppointmentNote = (note?: string | null) =>
   note?.trim() ? note.trim() : 'Không có ghi chú';
