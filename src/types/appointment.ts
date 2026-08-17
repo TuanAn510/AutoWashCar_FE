@@ -181,6 +181,7 @@ export interface BookingCandidateAvailability {
   endAt: string;
   available: boolean;
   reason: string | null;
+  nearestAvailableStartAt: string | null;
 }
 
 export interface BookingCandidateAvailabilityParams {
