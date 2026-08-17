@@ -411,6 +411,7 @@ export function CreateAppointmentModal({
   const candidateAvailabilityMessage = candidateAvailabilityReason
     ? candidateAvailabilityReasonMessages[candidateAvailabilityReason] ?? 'Khung giờ này không khả dụng.'
     : null;
+  const nearestAvailableTime = candidateAvailabilityQuery.data?.nearestAvailableStartAt?.slice(11, 16);
   const shouldBlockManualTime =
     isManualTime &&
     (candidateAvailabilityQuery.isLoading ||
@@ -748,7 +749,7 @@ export function CreateAppointmentModal({
                     !candidateAvailabilityQuery.isLoading &&
                     !candidateAvailabilityQuery.isError &&
                     candidateAvailabilityQuery.data?.available ? (
-                      <p className="mt-2 text-xs font-medium text-emerald-600">Khung giờ có thể đặt.</p>
+                      <p className="mt-2 text-xs font-medium text-emerald-600">Khung giờ này còn chỗ.</p>
                     ) : null}
                     {isManualTime && candidateAvailabilityQuery.isError ? (
                       <FieldError>Không thể kiểm tra khung giờ. Vui lòng thử lại.</FieldError>
@@ -758,6 +759,29 @@ export function CreateAppointmentModal({
                     !candidateAvailabilityQuery.isError &&
                     candidateAvailabilityMessage ? (
                       <FieldError>{candidateAvailabilityMessage}</FieldError>
+                    ) : null}
+                    {isManualTime &&
+                    !candidateAvailabilityQuery.isLoading &&
+                    !candidateAvailabilityQuery.isError &&
+                    !candidateAvailabilityQuery.data?.available &&
+                    nearestAvailableTime ? (
+                      <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-600">
+                        <span>Khung giờ gần nhất có thể đặt: {nearestAvailableTime}</span>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          disabled={isSubmitting}
+                          onClick={() =>
+                            setValue('scheduledTime', nearestAvailableTime, {
+                              shouldDirty: true,
+                              shouldValidate: true,
+                            })
+                          }
+                        >
+                          Chọn {nearestAvailableTime}
+                        </Button>
+                      </div>
                     ) : null}
                     <FieldError>{errors.scheduledTime?.message}</FieldError>
                   </Field>

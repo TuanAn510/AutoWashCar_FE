@@ -19,6 +19,7 @@ let candidateAvailability = {
   endAt: '2099-08-13T10:02:00',
   available: true,
   reason: null as string | null,
+  nearestAvailableStartAt: null as string | null,
 };
 let candidateAvailabilityLoading = false;
 
@@ -131,6 +132,7 @@ beforeEach(() => {
     endAt: '2099-08-13T10:02:00',
     available: true,
     reason: null,
+    nearestAvailableStartAt: null,
   };
   candidateAvailabilityLoading = false;
 });
@@ -229,7 +231,7 @@ describe('customer journey UI', () => {
     fireEvent.change(timeInput, { target: { value: '09:17' } });
 
     expect(timeInput.value).toBe('09:17');
-    expect(await screen.findByText('Khung giờ có thể đặt.')).toBeTruthy();
+    expect(await screen.findByText('Khung giờ này còn chỗ.')).toBeTruthy();
     expect(screen.getByLabelText('Chọn nhanh khung giờ')).toBeTruthy();
   });
 
@@ -256,5 +258,31 @@ describe('customer journey UI', () => {
 
     expect(await screen.findByText(message)).toBeTruthy();
     expect((screen.getByRole('button', { name: 'Tiếp tục' }) as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('keeps the manual time and applies an arbitrary nearest available time without snapping', async () => {
+    candidateAvailability = {
+      ...candidateAvailability,
+      available: false,
+      reason: 'VEHICLE_OVERLAP',
+      nearestAvailableStartAt: '2099-08-13T09:23:00',
+    };
+    const { container } = render(
+      <CreateAppointmentModal isOpen isSubmitting={false} onOpenChange={vi.fn()} onSubmit={vi.fn()} />
+    );
+
+    fireEvent.change(container.querySelector('select[name="vehicleId"]')!, {
+      target: { value: 'vehicle-1' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));
+    fireEvent.click(container.querySelector('input[type="radio"]')!);
+    fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));
+
+    const timeInput = await waitFor(() => container.querySelector('input[type="time"]') as HTMLInputElement);
+    fireEvent.change(timeInput, { target: { value: '09:17' } });
+
+    expect(await screen.findByText('Khung giờ gần nhất có thể đặt: 09:23')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Chọn 09:23' }));
+    expect(timeInput.value).toBe('09:23');
   });
 });
