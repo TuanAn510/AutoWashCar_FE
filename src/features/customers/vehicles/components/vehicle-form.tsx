@@ -20,6 +20,7 @@ import {
   useVehicleBrands,
   useVehicleModels,
 } from '@/features/customers/vehicles/hooks/useVehicleCatalog';
+import { formatLicensePlateDisplay } from '@/features/customers/vehicles/utils/license-plate';
 
 const currentYear = new Date().getFullYear();
 const productionYears = Array.from(
@@ -55,7 +56,7 @@ const vehicleSchema = z
       .min(1, 'Vui lòng nhập biển số xe.')
       .regex(
         vietnamLicensePlatePattern,
-        'Biển số xe không đúng định dạng. Ví dụ: 70A-99999 hoặc 30A-123.45.'
+        'Biển số xe không đúng định dạng. Ví dụ: 70A99999.'
       ),
     year: z
       .number({ message: 'Vui lòng nhập năm sản xuất.' })
@@ -114,7 +115,7 @@ const createDefaultValues = (
     customBrand: brandValue === OTHER_VEHICLE_VALUE ? brand : '',
     model: model && !isKnownModel ? OTHER_VEHICLE_VALUE : model,
     customModel: model && !isKnownModel ? model : '',
-    licensePlate: vehicle?.licensePlate ?? '',
+    licensePlate: vehicle?.licensePlate ? formatLicensePlateDisplay(vehicle.licensePlate) : '',
     year: vehicle?.year ?? ('' as unknown as number),
     carType: vehicle?.carType ?? 'sedan',
   };
@@ -215,7 +216,7 @@ export function VehicleForm({
       ...(values.model === OTHER_VEHICLE_VALUE && values.customModel?.trim()
         ? { suggestedModelName: values.customModel.trim() }
         : {}),
-      licensePlate: values.licensePlate.replace(/\s+/g, '').toUpperCase(),
+      licensePlate: formatLicensePlateDisplay(values.licensePlate),
       year: values.year,
       carType: values.carType,
       files: selectedFiles,
@@ -293,7 +294,14 @@ export function VehicleForm({
             placeholder="VD: 70A-99999"
             error={errors.licensePlate?.message}
             disabled={isSubmitting}
-            {...register('licensePlate')}
+            {...register('licensePlate', {
+              onChange: (event) => {
+                setValue('licensePlate', formatLicensePlateDisplay(event.target.value), {
+                  shouldDirty: true,
+                  shouldValidate: true,
+                });
+              },
+            })}
           />
           <Field>
             <FieldLabel>Năm sản xuất</FieldLabel>
