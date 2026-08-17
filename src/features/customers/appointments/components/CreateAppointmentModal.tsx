@@ -336,6 +336,15 @@ export function CreateAppointmentModal({
     : 0;
   const estimatedDiscount = membershipDiscount + promotionDiscount + rewardDiscount;
   const estimatedTotal = Math.max(0, subtotalPrice - estimatedDiscount);
+  const membershipDiscountStep = 2;
+  const promotionDiscountStep = 2 + (membershipDiscount > 0 ? 1 : 0);
+  const rewardDiscountStep =
+    2 + (membershipDiscount > 0 ? 1 : 0) + (promotionDiscount > 0 ? 1 : 0);
+  const estimatedTotalStep =
+    2 +
+    (membershipDiscount > 0 ? 1 : 0) +
+    (promotionDiscount > 0 ? 1 : 0) +
+    (rewardDiscount > 0 ? 1 : 0);
   const availabilityEnabled = Boolean(
     isOpen && values.scheduledDate && values.vehicleId && selectedServiceId
   );
@@ -941,13 +950,13 @@ export function CreateAppointmentModal({
             {values.serviceIds.length && (currentStep === 3 || currentStep === 4) ? (
               <section className="rounded-xl border border-[#e5edf6] bg-slate-50 p-4 text-sm sm:p-5">
                 <div className="flex justify-between gap-4 text-[#64748b]">
-                  <span>Tạm tính</span>
+                  <span>1. Tạm tính</span>
                   <span className="font-semibold">{formatCurrency(subtotalPrice)}</span>
                 </div>
                 {membershipDiscount > 0 ? (
                   <>
                     <div className="mt-2 flex justify-between gap-4 text-emerald-700">
-                      <span>Giảm giá thành viên ({membershipTier?.name})</span>
+                      <span>{membershipDiscountStep}. Giảm giá thành viên ({membershipTier?.name})</span>
                       <span>-{formatCurrency(membershipDiscount)}</span>
                     </div>
                     <div className="mt-1 flex justify-between gap-4 border-t border-dashed border-[#e5edf6] pt-1.5 text-[#15243a]">
@@ -959,7 +968,7 @@ export function CreateAppointmentModal({
                 {promotionDiscount > 0 ? (
                   <>
                     <div className="mt-2 flex justify-between gap-4 text-emerald-700">
-                      <span>Khuyến mãi ({selectedPromotion?.code})</span>
+                      <span>{promotionDiscountStep}. Khuyến mãi ({selectedPromotion?.code})</span>
                       <span>-{formatCurrency(promotionDiscount)}</span>
                     </div>
                     <div className="mt-1 flex justify-between gap-4 border-t border-dashed border-[#e5edf6] pt-1.5 text-[#15243a]">
@@ -970,12 +979,12 @@ export function CreateAppointmentModal({
                 ) : null}
                 {rewardDiscount > 0 ? (
                   <div className="mt-2 flex justify-between gap-4 text-emerald-700">
-                    <span>Phần thưởng ({selectedReward?.name})</span>
+                    <span>{rewardDiscountStep}. Phần thưởng ({selectedReward?.name})</span>
                     <span>-{formatCurrency(rewardDiscount)}</span>
                   </div>
                 ) : null}
                 <div className="mt-3 flex justify-between gap-4 border-t border-[#e5edf6] pt-3 font-black text-[#15243a]">
-                  <span>Tổng thanh toán dự kiến</span>
+                  <span>{estimatedTotalStep}. Tổng thanh toán dự kiến</span>
                   <span className="text-base">{formatCurrency(estimatedTotal)}</span>
                 </div>
                 <p className="mt-2 text-xs text-[#64748b]">

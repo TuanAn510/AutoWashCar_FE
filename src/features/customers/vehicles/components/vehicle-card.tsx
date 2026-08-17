@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { resolveImageUrl } from '@/lib/image-url';
 import { type ApiVehicle } from '@/types/vehicle';
+import { formatLicensePlateDisplay } from '@/features/customers/vehicles/utils/license-plate';
 
 const carTypeLabels: Record<string, string> = {
   sedan: 'Sedan',
@@ -76,7 +77,7 @@ export function VehicleCard({ vehicle, onView, onEdit, onDelete }: VehicleCardPr
             </Badge>
           </div>
           <Badge variant="neutral" className="rounded-full px-2.5 py-1 font-semibold">
-            {vehicle.licensePlate}
+            {formatLicensePlateDisplay(vehicle.licensePlate)}
           </Badge>
         </div>
       </CardHeader>
