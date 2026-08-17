@@ -5,8 +5,11 @@ import { CarFront } from 'lucide-react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { Button } from '@/components/ui/button';
+import { AppointmentCard } from '@/features/customers/appointments/components/AppointmentCard';
 import { CreateAppointmentModal } from '@/features/customers/appointments/components/CreateAppointmentModal';
+import CustomerAppointmentsPage from '@/features/customers/appointments/pages/CustomerAppointmentsPage';
 import { CustomerEmptyState } from '@/features/customers/components/CustomerEmptyState';
+import type { AppointmentItem } from '@/types/appointment';
 
 const defaultSlots: Array<{ startAt: string; available: boolean; reason: string | null }> = ['08:00', '08:05', '08:10', '08:15', '08:20'].map((time) => ({
   startAt: `2099-08-13T${time}:00`,
@@ -15,6 +18,23 @@ const defaultSlots: Array<{ startAt: string; available: boolean; reason: string 
 }));
 
 let availability = { slots: defaultSlots, vehicleAvailabilityReason: null as string | null };
+let pageAppointments: AppointmentItem[] = [];
+
+const appointmentCardItem = (paymentStatus: AppointmentItem['paymentStatus']): AppointmentItem => ({
+  _id: 'appointment-1',
+  customerId: { _id: 'customer-1', displayName: 'Khách hàng', phone: '0900000000' },
+  vehicleId: { _id: 'vehicle-1', brand: 'Toyota', model: 'Camry', licensePlate: '30A12345', year: 2024 },
+  assignedStaffId: null,
+  cancelledBy: null,
+  services: [{ serviceId: 'service-1', nameSnapshot: 'Rửa xe', priceSnapshot: 150000, estimatedDurationSnapshot: 45 }],
+  scheduledAt: '2099-08-13T09:00:00',
+  status: 'pending',
+  totalEstimatedDuration: 45,
+  totalPrice: 150000,
+  paymentMethod: 'cash',
+  paymentStatus,
+  createdAt: '2099-08-12T18:24:00',
+});
 
 vi.mock('@tanstack/react-query', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@tanstack/react-query')>();
@@ -104,6 +124,68 @@ vi.mock('@/features/shared/loyalty/hooks/use-loyalty', () => ({
   }),
 }));
 
+vi.mock('@/services/appointmentService', () => ({
+  appointmentApi: {
+    getBookingAvailability: vi.fn(({ date }: { date: string }) =>
+      Promise.resolve({
+        date,
+        bookingWindowDays: 7,
+        slots: [
+          {
+            startAt: `${date}T09:00:00`,
+            available: true,
+            reason: null,
+          },
+        ],
+      })
+    ),
+  },
+}));
+
+vi.mock('react-router', () => ({
+  useNavigate: () => vi.fn(),
+}));
+
+vi.mock('@/features/customers/appointments/hooks/useMyAppointments', () => ({
+  useMyAppointments: () => ({ data: { appointments: pageAppointments }, isLoading: false, isError: false }),
+}));
+
+vi.mock('@/features/customers/appointments/hooks/useCreateAppointment', () => ({
+  useCreateAppointment: () => ({ isPending: false, mutateAsync: vi.fn() }),
+}));
+
+vi.mock('@/features/customers/appointments/hooks/useCancelAppointment', () => ({
+  useCancelAppointment: () => ({ isPending: false, mutateAsync: vi.fn() }),
+}));
+
+vi.mock('@/features/customers/appointments/store/useCustomerAppointmentsStore', () => ({
+  useCustomerAppointmentsStore: (selector: (state: Record<string, unknown>) => unknown) =>
+    selector({
+      isCreateModalOpen: false,
+      openCreateModal: vi.fn(),
+      closeCreateModal: vi.fn(),
+      detailAppointment: null,
+      openDetailDialog: vi.fn(),
+      closeDetailDialog: vi.fn(),
+      cancelAppointment: null,
+      openCancelDialog: vi.fn(),
+      closeCancelDialog: vi.fn(),
+    }),
+}));
+
+vi.mock('@/features/customers/appointments/components/AppointmentList', () => ({
+  AppointmentList: ({ appointments }: { appointments: AppointmentItem[] }) => (
+    <div data-testid="appointment-list">{appointments.map((appointment) => `${appointment._id},`)}</div>
+  ),
+}));
+
+vi.mock('@/features/customers/appointments/components/AppointmentDetailDialog', () => ({
+  AppointmentDetailDialog: () => null,
+}));
+
+vi.mock('@/features/customers/appointments/components/CancelAppointmentDialog', () => ({
+  CancelAppointmentDialog: () => null,
+}));
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
@@ -112,6 +194,7 @@ afterEach(() => {
 beforeEach(() => {
   vi.spyOn(Date, 'now').mockReturnValue(new Date('2099-08-12T08:00:00').getTime());
   availability = { slots: defaultSlots, vehicleAvailabilityReason: null };
+  pageAppointments = [];
 });
 
 describe('customer journey UI', () => {
@@ -232,6 +315,66 @@ describe('customer journey UI', () => {
 
     const option = await screen.findByRole('option', { name: '08:25 - Hết vị trí rửa' });
     expect((option as HTMLOptionElement).disabled).toBe(true);
+  });
+
+  it('shows different labels for past and lead-time availability reasons', async () => {
+    availability = {
+      slots: [
+        { startAt: '2099-08-13T08:00:00', available: false, reason: 'PAST' },
+        { startAt: '2099-08-13T08:05:00', available: false, reason: 'LEAD_TIME' },
+      ],
+      vehicleAvailabilityReason: null,
+    };
+    const { container } = render(
+      <CreateAppointmentModal isOpen isSubmitting={false} onOpenChange={vi.fn()} onSubmit={vi.fn()} />
+    );
+
+    fireEvent.change(container.querySelector('select[name="vehicleId"]')!, {
+      target: { value: 'vehicle-1' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));
+    fireEvent.click(container.querySelector('input[type="radio"]')!);
+    fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));
+
+    expect(await screen.findByRole('option', { name: '08:00 - Đã qua' })).toHaveProperty('disabled', true);
+    expect(screen.getByRole('option', { name: '08:05 - Cần đặt trước 30 phút' })).toHaveProperty('disabled', true);
+  });
+
+  it('hides cancellation for paid pending appointments and shows the explicit creation time', () => {
+    const { rerender } = render(
+      <AppointmentCard appointment={appointmentCardItem('paid')} onViewDetail={vi.fn()} onCancel={vi.fn()} />
+    );
+
+    expect(screen.queryByRole('button', { name: 'Hủy lịch' })).toBeNull();
+    expect(screen.getByText(/Đặt lúc:/)).toBeTruthy();
+    expect(screen.getByText('Thời gian hẹn')).toBeTruthy();
+
+    rerender(<AppointmentCard appointment={appointmentCardItem('unpaid')} onViewDetail={vi.fn()} onCancel={vi.fn()} />);
+    expect(screen.getByRole('button', { name: 'Hủy lịch' })).toBeTruthy();
+  });
+
+  it('shows six nearest upcoming appointments first and reveals the full current list on demand', () => {
+    pageAppointments = [
+      ...Array.from({ length: 7 }, (_, index) => ({
+        ...appointmentCardItem('unpaid'),
+        _id: `upcoming-${index + 1}`,
+        scheduledAt: `2099-08-${String(19 - index).padStart(2, '0')}T09:00:00`,
+      })),
+      { ...appointmentCardItem('unpaid'), _id: 'completed-history', status: 'completed', scheduledAt: '2099-08-11T09:00:00' },
+    ];
+
+    render(<CustomerAppointmentsPage />);
+
+    const initialList = screen.getByTestId('appointment-list').textContent ?? '';
+    expect(initialList).toContain('upcoming-7');
+    expect(initialList).toContain('upcoming-2');
+    expect(initialList).not.toContain('upcoming-1');
+    expect(initialList).not.toContain('completed-history');
+    expect(screen.getByRole('button', { name: 'Xem tất cả lịch hẹn' })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Xem tất cả lịch hẹn' }));
+    expect(screen.getByTestId('appointment-list').textContent).toContain('upcoming-1');
+    expect(screen.getByTestId('appointment-list').textContent).toContain('completed-history');
   });
 
   it('does not render structurally impossible end-of-day options', async () => {

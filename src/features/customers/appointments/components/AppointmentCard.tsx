@@ -9,7 +9,7 @@ import {
   formatAppointmentVehicleLine,
 } from '@/features/customers/appointments/utils/appointmentDisplay';
 import { PaymentStatusBadge } from '@/components/shared/PaymentStatusBadge';
-import { formatDateTime, formatPrice, formatRelativeCreatedTime, formatTime } from '@/lib/utils';
+import { formatDateTime, formatPrice, formatTime } from '@/lib/utils';
 import type { AppointmentItem } from '@/types/appointment';
 
 const getAppointmentPriceDisplay = (appointment: AppointmentItem) => {
@@ -34,10 +34,10 @@ export function AppointmentCard({
   onViewDetail: (appointment: AppointmentItem) => void;
   onCancel: (appointment: AppointmentItem) => void;
 }) {
-  const canCancel = canCustomerCancelAppointment(appointment.status);
+  const canCancel = canCustomerCancelAppointment(appointment.status, appointment.paymentStatus);
   const note = appointment.note?.trim();
   const { discountedPrice, hasDiscount, originalPrice } = getAppointmentPriceDisplay(appointment);
-  const relativeTime = formatRelativeCreatedTime(appointment.createdAt);
+  const createdAt = appointment.createdAt ? `Đặt lúc: ${formatDateTime(appointment.createdAt)}` : null;
 
   return (
     <Card
@@ -53,9 +53,9 @@ export function AppointmentCard({
             <p className="mt-1 truncate text-sm text-[#64748b]">
               {formatAppointmentVehicleLine(appointment)}
             </p>
-            {relativeTime ? (
+            {createdAt ? (
               <span className="mt-1 inline-block rounded-full bg-[#fff3e6] px-2 py-0.5 text-xs font-semibold text-[#ff7a1a]">
-                {relativeTime}
+                {createdAt}
               </span>
             ) : null}
           </div>

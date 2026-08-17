@@ -46,6 +46,7 @@ export default function CustomerAppointmentsPage() {
   const [keyword, setKeyword] = useState('');
   const [isFilterOpen, setFilterOpen] = useState(false);
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [showAllAppointments, setShowAllAppointments] = useState(false);
 
   const appointmentsQuery = useMyAppointments({ sortBy: 'createdAt', sortOrder });
   const vehiclesQuery = useMyVehicles();
@@ -98,9 +99,27 @@ export default function CustomerAppointmentsPage() {
   }, [activeFilter, appointments, keyword]);
 
   const hasFilters = activeFilter !== 'all' || keyword.trim().length > 0;
+  const isDefaultPrimaryView = !hasFilters;
+  const upcomingAppointments = useMemo(
+    () =>
+      appointments
+        .filter(isUpcomingAppointment)
+        .slice()
+        .sort((left, right) =>
+          new Date(left.scheduledAt).getTime() - new Date(right.scheduledAt).getTime()
+        ),
+    [appointments]
+  );
+  const displayedAppointments =
+    isDefaultPrimaryView && !showAllAppointments
+      ? upcomingAppointments.slice(0, 6)
+      : filteredAppointments;
+  const canShowAllAppointments =
+    isDefaultPrimaryView && !showAllAppointments && filteredAppointments.length > displayedAppointments.length;
   const clearFilters = () => {
     setActiveFilter('all');
     setKeyword('');
+    setShowAllAppointments(false);
   };
 
   const handleOpenCreateModal = () => {
@@ -152,7 +171,10 @@ export default function CustomerAppointmentsPage() {
                 className="h-[46px] rounded-md border-[#d8e2ef] bg-white pl-10 text-sm shadow-none focus-visible:border-[#0b67c2] focus-visible:ring-0"
                 placeholder="Tìm theo dịch vụ, biển số xe hoặc ghi chú..."
                 value={keyword}
-                onChange={(event) => setKeyword(event.target.value)}
+                onChange={(event) => {
+                  setKeyword(event.target.value);
+                  setShowAllAppointments(false);
+                }}
               />
             </div>
 
@@ -200,7 +222,10 @@ export default function CustomerAppointmentsPage() {
                       ? 'bg-[#0b67c2] text-white shadow-[0_12px_26px_rgba(11,103,194,0.24)]'
                       : 'bg-slate-100 text-[#64748b] hover:bg-slate-200'
                   )}
-                  onClick={() => setActiveFilter(filter.value)}
+                  onClick={() => {
+                    setActiveFilter(filter.value);
+                    setShowAllAppointments(false);
+                  }}
                 >
                   {filter.label}
                 </button>
@@ -268,19 +293,25 @@ export default function CustomerAppointmentsPage() {
 
         {!appointmentsQuery.isLoading &&
           !appointmentsQuery.isError &&
-          filteredAppointments.length > 0 && (
+          displayedAppointments.length > 0 && (
             <section className="space-y-4">
               <div className="flex items-center justify-between gap-4">
                 <div>
                   <h2 className="text-lg font-black text-[#15243a]">Danh sách lịch hẹn của bạn</h2>
                   <p className="mt-1 text-sm text-[#64748b]">
-                    {filteredAppointments.length} lịch hẹn đang hiển thị
+                    {displayedAppointments.length} lịch hẹn đang hiển thị
                   </p>
                 </div>
               </div>
 
+              {canShowAllAppointments ? (
+                <Button type="button" variant="outline" onClick={() => setShowAllAppointments(true)}>
+                  Xem tất cả lịch hẹn
+                </Button>
+              ) : null}
+
               <AppointmentList
-                appointments={filteredAppointments}
+                appointments={displayedAppointments}
                 onViewDetail={openDetailDialog}
                 onCancel={openCancelDialog}
               />
