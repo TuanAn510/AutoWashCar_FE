@@ -614,7 +614,18 @@ export default function CustomerManagementPage() {
     Boolean(detailTarget && detailTab === 'payments')
   );
 
-  const customers = useMemo(() => data?.customers.map(mapUserToCustomer) ?? [], [data]);
+  // Backend /api/users trả về sắp theo id tăng dần và bỏ qua sortBy/sortOrder.
+  // Sort lại client-side theo createdAt đúng lựa chọn trên dropdown để user mới
+  // đăng ký luôn nằm đúng vị trí "Mới tạo trước / Cũ tạo trước".
+  const sortDir = sortOrder === 'desc' ? -1 : 1;
+  const customers = useMemo(() => {
+    const list = data?.customers.map(mapUserToCustomer) ?? [];
+    return [...list].sort((a, b) => {
+      const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return (timeB - timeA) * sortDir;
+    });
+  }, [data, sortDir]);
 
   const openEditDialog = (customer: CustomerRow) => {
     setEditTarget(customer);

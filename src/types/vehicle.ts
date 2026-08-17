@@ -36,6 +36,9 @@ export interface ApiVehicle {
   carType: CarType;
   images?: VehicleImage[];
   deletedAt?: string | null;
+  /** Xe mới này thay thế (khóa) xe có biển số nào — null nếu xe không phải kết quả
+   *  của việc chuyển quyền biển số. Giúp hiện trạng thái "xe cũ đã bị khóa" / lịch sử. */
+  replacedByVehicleId?: number | null;
   createdAt?: string;
   updatedAt?: string;
   verificationStatus?: VehicleVerificationStatus;

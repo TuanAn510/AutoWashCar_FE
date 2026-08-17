@@ -167,6 +167,7 @@ export interface BookingAvailability {
   date: string;
   bookingWindowDays: number;
   slots: BookingAvailabilitySlot[];
+  vehicleAvailabilityReason?: string | null;
 }
 
 export interface BookingAvailabilityParams {
@@ -181,6 +182,7 @@ export interface BookingCandidateAvailability {
   endAt: string;
   available: boolean;
   reason: string | null;
+  nearestAvailableStartAt: string | null;
 }
 
 export interface BookingCandidateAvailabilityParams {

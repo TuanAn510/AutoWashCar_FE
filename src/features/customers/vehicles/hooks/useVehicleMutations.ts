@@ -13,13 +13,9 @@ export function useCreateVehicle() {
 
   return useMutation({
     mutationFn: (payload: CreateVehiclePayload) => vehiclesApi.createVehicle(payload),
-    onSuccess: (vehicle) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.vehicles.all });
       queryClient.invalidateQueries({ queryKey: ['vehicle-access-requests'] });
-      if (vehicle.verificationStatus === 'pending') {
-        toast.success('Đã gửi yêu cầu xác minh xe cho admin.');
-        return;
-      }
       toast.success('Thêm xe thành công.');
     },
     onError: (error) => {
@@ -43,6 +39,12 @@ export function useUpdateVehicle() {
       toast.success('Cập nhật xe thành công.');
     },
     onError: (error) => {
+      if (toApiError(error).code === 'VEHICLE_VERIFICATION_REQUIRED') {
+        toast.error(
+          'Biển số này đã thuộc về một chiếc xe khác. Không thể đổi sang biển số đã tồn tại.'
+        );
+        return;
+      }
       toast.error(getErrorMessage(error, 'Không thể cập nhật xe. Vui lòng thử lại.'));
     },
   });

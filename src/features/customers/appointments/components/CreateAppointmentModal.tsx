@@ -143,23 +143,10 @@ const toSlotTime = (startAt: string) => {
 };
 
 const availabilityReasonLabels: Record<string, string> = {
-  PAST: 'Đã qua',
+  LEAD_TIME: 'Cần đặt trước 30 phút',
   OUT_OF_TIER_WINDOW: 'Ngoài hạn đặt',
-  OUT_OF_BUSINESS_HOURS: 'Ngoài giờ làm',
   NO_STAFF: 'Chưa có staff',
-  VEHICLE_BOOKING_LIMIT: 'Xe đã có 2 lịch',
-  VEHICLE_OVERLAP: 'Trùng lịch xe',
-  CAPACITY_FULL: 'Hết slot',
-};
-
-const candidateAvailabilityReasonMessages: Record<string, string> = {
-  LEAD_TIME: 'Lịch hẹn phải được đặt trước ít nhất 30 phút.',
-  OUTSIDE_HOURS: 'Giờ bắt đầu phải trong khoảng từ 08:00 đến trước 17:00.',
-  END_AFTER_CLOSE: 'Thời lượng dịch vụ phải kết thúc không muộn hơn 17:00.',
-  VEHICLE_OVERLAP: 'Xe của bạn đã có lịch trong khoảng thời gian này.',
-  CAPACITY_FULL: 'Khung giờ này hiện đã đủ vị trí rửa.',
-  NO_STAFF: 'Hiện chưa có nhân viên hoạt động để phục vụ khung giờ này.',
-  OUT_OF_TIER_WINDOW: 'Khung giờ này nằm ngoài hạn đặt lịch của hạng thành viên.',
+  CAPACITY_FULL: 'Hết vị trí rửa',
 };
 const getSlotLabel = (slot: BookingAvailabilitySlot) => {
   const time = toSlotTime(slot.startAt);
@@ -393,56 +380,24 @@ export function CreateAppointmentModal({
   const selectedSlot = availabilitySlots.find(
     (slot) => toSlotTime(slot.startAt) === values.scheduledTime
   );
+  const vehicleAvailabilityReason = availabilityQuery.data?.vehicleAvailabilityReason;
+  const hasUnfinishedVehicleBooking = vehicleAvailabilityReason === 'VEHICLE_UNFINISHED_BOOKING';
   const shouldBlockSelectedSlot =
     availabilityEnabled &&
     !availabilityQuery.isLoading &&
     selectedSlot != null &&
     !selectedSlot.available;
-  const isManualTime = Boolean(values.scheduledTime) && selectedSlot == null;
-  const candidateAvailabilityEnabled = Boolean(availabilityEnabled && isManualTime);
-  const candidateAvailabilityQuery = useQuery({
-    queryKey: [
-      'booking-availability-check',
-      values.scheduledDate,
-      values.scheduledTime,
-      values.vehicleId,
-      selectedServiceId,
-      values.rewardRedemptionId,
-    ],
-    queryFn: ({ signal }) =>
-      appointmentApi.checkBookingAvailability(
-        {
-          scheduledAt: `${values.scheduledDate}T${values.scheduledTime}:00`,
-          vehicleId: values.vehicleId,
-          serviceId: selectedServiceId,
-          rewardRedemptionId: values.rewardRedemptionId || undefined,
-        },
-        signal
-      ),
-    enabled: candidateAvailabilityEnabled,
-    staleTime: 15_000,
-  });
-  const candidateAvailabilityReason = candidateAvailabilityQuery.data?.reason;
-  const candidateAvailabilityMessage = candidateAvailabilityReason
-    ? candidateAvailabilityReasonMessages[candidateAvailabilityReason] ?? 'Khung giờ này không khả dụng.'
-    : null;
-  const shouldBlockManualTime =
-    isManualTime &&
-    (candidateAvailabilityQuery.isLoading ||
-      candidateAvailabilityQuery.isError ||
-      candidateAvailabilityQuery.data?.available !== true);
   const shouldBlockScheduleStep =
     currentStep === 2 &&
     (availabilityQuery.isLoading ||
       availabilityQuery.isError ||
-      (isManualTime
-        ? shouldBlockManualTime
-        : shouldBlockSelectedSlot || availableSlots.length === 0));
+      hasUnfinishedVehicleBooking ||
+      shouldBlockSelectedSlot ||
+      availableSlots.length === 0);
 
   useEffect(() => {
     if (!availabilityEnabled || availabilityQuery.isLoading || availabilityQuery.isError) return;
     if (!availabilitySlots.length) return;
-    if (isManualTime) return;
     if (selectedSlot?.available) return;
 
     setValue('scheduledTime', availableSlots[0] ? toSlotTime(availableSlots[0].startAt) : '', {
@@ -455,7 +410,6 @@ export function CreateAppointmentModal({
     availabilityQuery.isLoading,
     availabilitySlots,
     availableSlots,
-    isManualTime,
     selectedSlot?.available,
     setValue,
   ]);
@@ -500,8 +454,11 @@ export function CreateAppointmentModal({
         setError('scheduledTime', { type: 'validate', message: scheduleError }, { shouldFocus: true });
         return;
       }
-      if (isManualTime && candidateAvailabilityMessage) {
-        setError('scheduledTime', { type: 'validate', message: candidateAvailabilityMessage }, { shouldFocus: true });
+      if (hasUnfinishedVehicleBooking) {
+        setError('scheduledTime', {
+          type: 'validate',
+          message: 'Xe này đã có lịch hẹn chưa hoàn thành.',
+        }, { shouldFocus: true });
         return;
       }
       clearErrors('scheduledTime');
@@ -713,20 +670,11 @@ export function CreateAppointmentModal({
                   </Field>
                   <Field>
                     <FieldLabel>Giờ hẹn</FieldLabel>
-                    <input
-                      type="time"
-                      className="h-11 rounded-xl border border-[#d8e2ef] bg-white px-3 text-sm font-semibold text-[#64748b] outline-none focus:border-[#0b67c2]"
-                      disabled={isSubmitting || !availabilityEnabled || availabilityQuery.isLoading}
-                      min="08:00"
-                      max="16:59"
-                      step="60"
-                      {...register('scheduledTime')}
-                    />
                     <select
-                      aria-label="Chọn nhanh khung giờ"
-                      className="mt-2 h-10 w-full rounded-xl border border-[#d8e2ef] bg-white px-3 text-sm font-semibold text-[#64748b] outline-none focus:border-[#0b67c2]"
+                      aria-label="Chọn khung giờ"
+                      className="h-11 w-full rounded-xl border border-[#d8e2ef] bg-white px-3 text-sm font-semibold text-[#64748b] outline-none focus:border-[#0b67c2]"
                       defaultValue=""
-                      disabled={isSubmitting || !availabilityEnabled || availabilityQuery.isLoading}
+                      disabled={isSubmitting || !availabilityEnabled || availabilityQuery.isLoading || hasUnfinishedVehicleBooking}
                       onChange={(event) => {
                         if (!event.target.value) return;
                         setValue('scheduledTime', event.target.value, {
@@ -736,7 +684,7 @@ export function CreateAppointmentModal({
                       }}
                     >
                       <option value="">
-                        {availabilityQuery.isLoading ? 'Đang kiểm tra gợi ý...' : 'Chọn nhanh khung giờ'}
+                        {availabilityQuery.isLoading ? 'Đang kiểm tra khung giờ...' : 'Chọn khung giờ'}
                       </option>
                       {availabilitySlots.map((slot) => {
                         const time = toSlotTime(slot.startAt);
@@ -748,40 +696,24 @@ export function CreateAppointmentModal({
                         );
                       })}
                     </select>
-                    <p className="mt-2 text-xs text-slate-500">
-                      Bạn có thể nhập giờ bất kỳ theo phút hoặc chọn nhanh từ gợi ý.
-                    </p>
                     {availabilityQuery.isError ? (
                       <FieldError>Không thể kiểm tra slot. Vui lòng thử lại.</FieldError>
                     ) : null}
+                    {hasUnfinishedVehicleBooking ? (
+                      <FieldError>Xe này đã có lịch hẹn chưa hoàn thành.</FieldError>
+                    ) : null}
                     {!availabilityQuery.isError &&
+                    !hasUnfinishedVehicleBooking &&
                     availabilityEnabled &&
                     !availabilityQuery.isLoading &&
                     availableSlots.length === 0 ? (
                       <FieldError>Ngày này không còn slot phù hợp.</FieldError>
                     ) : null}
                     {!availabilityQuery.isError &&
+                    !hasUnfinishedVehicleBooking &&
                     shouldBlockSelectedSlot &&
                     availableSlots.length > 0 ? (
                       <FieldError>Khung giờ đã chọn không còn khả dụng.</FieldError>
-                    ) : null}
-                    {isManualTime && candidateAvailabilityQuery.isLoading ? (
-                      <p className="mt-2 text-xs text-slate-500">Đang kiểm tra khung giờ...</p>
-                    ) : null}
-                    {isManualTime &&
-                    !candidateAvailabilityQuery.isLoading &&
-                    !candidateAvailabilityQuery.isError &&
-                    candidateAvailabilityQuery.data?.available ? (
-                      <p className="mt-2 text-xs font-medium text-emerald-600">Khung giờ có thể đặt.</p>
-                    ) : null}
-                    {isManualTime && candidateAvailabilityQuery.isError ? (
-                      <FieldError>Không thể kiểm tra khung giờ. Vui lòng thử lại.</FieldError>
-                    ) : null}
-                    {isManualTime &&
-                    !candidateAvailabilityQuery.isLoading &&
-                    !candidateAvailabilityQuery.isError &&
-                    candidateAvailabilityMessage ? (
-                      <FieldError>{candidateAvailabilityMessage}</FieldError>
                     ) : null}
                     <FieldError>{errors.scheduledTime?.message}</FieldError>
                   </Field>

@@ -32,18 +32,30 @@ export function VehicleCard({ vehicle, onView, onEdit, onDelete }: VehicleCardPr
   const verification = vehicle.verificationStatus
     ? verificationMeta[vehicle.verificationStatus]
     : verificationMeta.approved;
+  // Xe bị KHÓA (biển số đã chuyển quyền qua admin): chủ cũ vẫn thấy nó trên
+  // trang "Xe của tôi" nhưng được đánh dấu "Đã khóa" và không chỉnh sửa/xóa được.
+  const isLocked = vehicle.deletedAt != null;
 
   return (
     <Card
       size="sm"
-      className="h-full min-w-0 gap-0 overflow-hidden rounded-2xl border border-slate-200 bg-white py-0 shadow-sm ring-0 transition-shadow hover:shadow-md"
+      className={`h-full min-w-0 gap-0 overflow-hidden rounded-2xl border py-0 shadow-sm ring-0 transition-shadow ${
+        isLocked ? 'border-slate-300 bg-slate-50' : 'border-slate-200 bg-white hover:shadow-md'
+      }`}
     >
-      <div className="aspect-video overflow-hidden bg-gradient-to-br from-slate-100 via-white to-slate-200">
+      <div className="relative aspect-video overflow-hidden bg-gradient-to-br from-slate-100 via-white to-slate-200">
         {coverImage ? (
           <img src={resolveImageUrl(coverImage)} alt={vehicleName} className="h-full w-full object-cover" />
         ) : (
           <div className="flex h-full items-center justify-center text-slate-400">
             <CarFront className="size-12" />
+          </div>
+        )}
+        {isLocked && (
+          <div className="absolute inset-0 flex items-center justify-center bg-slate-900/50">
+            <Badge className="rounded-full bg-slate-900/90 px-3 py-1 text-sm font-semibold text-white">
+              Đã khóa
+            </Badge>
           </div>
         )}
       </div>
@@ -52,7 +64,7 @@ export function VehicleCard({ vehicle, onView, onEdit, onDelete }: VehicleCardPr
         <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
           <div className="min-w-0">
             <CardTitle
-              className="truncate text-base font-semibold text-slate-950"
+              className={`truncate text-base font-semibold ${isLocked ? 'text-slate-500' : 'text-slate-950'}`}
               title={vehicleName}
             >
               {vehicleName}
@@ -79,6 +91,11 @@ export function VehicleCard({ vehicle, onView, onEdit, onDelete }: VehicleCardPr
             icon={ImageIcon}
           />
         </div>
+        {isLocked && (
+          <p className="text-xs leading-5 text-slate-500">
+            Biển số này đã được cấp lại qua xác minh. Lịch sử dùng xe vẫn được lưu giữ.
+          </p>
+        )}
       </CardContent>
 
       <CardFooter className="grid grid-cols-3 gap-2 border-t border-slate-100 bg-slate-50/70 px-4 py-3">
@@ -86,11 +103,23 @@ export function VehicleCard({ vehicle, onView, onEdit, onDelete }: VehicleCardPr
           <Eye className="size-4" />
           Xem
         </Button>
-        <Button variant="outline" className="rounded-xl" onClick={() => onEdit(vehicle)}>
+        <Button
+          variant="outline"
+          className="rounded-xl"
+          onClick={() => onEdit(vehicle)}
+          disabled={isLocked}
+          title={isLocked ? 'Xe đã khóa, không thể chỉnh sửa' : undefined}
+        >
           <Pencil className="size-4" />
           Sửa
         </Button>
-        <Button variant="destructive" className="rounded-xl" onClick={() => onDelete(vehicle)}>
+        <Button
+          variant="destructive"
+          className="rounded-xl"
+          onClick={() => onDelete(vehicle)}
+          disabled={isLocked}
+          title={isLocked ? 'Xe đã khóa, không thể xóa' : undefined}
+        >
           <Trash2 className="size-4" />
           Xóa
         </Button>

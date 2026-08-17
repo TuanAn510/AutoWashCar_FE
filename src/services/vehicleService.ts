@@ -73,9 +73,16 @@ export const vehiclesApi = {
     return unwrapList<VehicleModel>(response.data);
   },
 
-  getMyVehicles: async (params?: PaginationParams, signal?: AbortSignal) => {
+  getMyVehicles: async (
+    params?: PaginationParams,
+    signal?: AbortSignal,
+    includeInactive = false
+  ) => {
     const response = await api.get<VehicleListEnvelope>('/vehicles/me', {
-      params,
+      // includeInactive=1 để trang "Xe của tôi" kèm các xe đã bị KHÓA (biển chuyển
+      // quyền) nhằm hiển thị "đã khóa" cho chủ cũ; các nơi khác (đặt lịch, filter)
+      // bỏ qua → vẫn chỉ nhận xe active như cũ.
+      params: includeInactive ? { ...params, includeInactive: true } : params,
       signal,
     });
 
@@ -91,7 +98,7 @@ export const vehiclesApi = {
     return vehiclesApi.getMyVehicles(params, signal);
   },
 
-  createVehicle: async (payload: CreateVehiclePayload) => {
+  createVehicle: async (payload: CreateVehiclePayload): Promise<ApiVehicle> => {
     const response = await api.post<ApiEnvelope<ApiVehicle>>(
       '/vehicles',
       buildVehicleFormData(payload),
