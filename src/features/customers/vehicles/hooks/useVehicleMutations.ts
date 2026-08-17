@@ -15,10 +15,17 @@ export function useCreateVehicle() {
     mutationFn: (payload: CreateVehiclePayload) => vehiclesApi.createVehicle(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.vehicles.all });
+      queryClient.invalidateQueries({ queryKey: ['vehicle-access-requests'] });
       toast.success('Thêm xe thành công.');
     },
     onError: (error) => {
-      if (toApiError(error).code === 'VEHICLE_VERIFICATION_REQUIRED') return;
+      const code = toApiError(error).code;
+      if (
+        code === 'VEHICLE_VERIFICATION_REQUIRED' ||
+        code === 'BRAND_MODEL_VERIFICATION_REQUIRED'
+      ) {
+        return; // handled by the page (popup / wait-for-approval toast)
+      }
       toast.error(getErrorMessage(error, 'Không thể thêm xe. Vui lòng thử lại.'));
     },
   });
@@ -35,6 +42,12 @@ export function useUpdateVehicle() {
       toast.success('Cập nhật xe thành công.');
     },
     onError: (error) => {
+      if (toApiError(error).code === 'VEHICLE_VERIFICATION_REQUIRED') {
+        toast.error(
+          'Biển số này đã thuộc về một chiếc xe khác. Không thể đổi sang biển số đã tồn tại.'
+        );
+        return;
+      }
       toast.error(getErrorMessage(error, 'Không thể cập nhật xe. Vui lòng thử lại.'));
     },
   });

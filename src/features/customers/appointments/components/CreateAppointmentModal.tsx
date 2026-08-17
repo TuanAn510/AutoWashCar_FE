@@ -149,7 +149,6 @@ const availabilityReasonLabels: Record<string, string> = {
   NO_STAFF: 'Chưa có staff',
   CAPACITY_FULL: 'Hết vị trí rửa',
 };
-
 const getSlotLabel = (slot: BookingAvailabilitySlot) => {
   const time = toSlotTime(slot.startAt);
   if (slot.available || !slot.reason) return time;
@@ -205,7 +204,9 @@ const validateLocalScheduledTime = (
   }
 
   const scheduledEndAt = new Date(scheduledAt.getTime() + primaryDurationMinutes * 60 * 1000);
-  if (scheduledEndAt > new Date(`${scheduledDate}T${String(CLOSING_HOUR).padStart(2, '0')}:00:00`)) {
+  if (
+    scheduledEndAt > new Date(`${scheduledDate}T${String(CLOSING_HOUR).padStart(2, '0')}:00:00`)
+  ) {
     return 'Thời lượng dịch vụ phải kết thúc không muộn hơn 17:00.';
   }
 
@@ -251,6 +252,12 @@ export function CreateAppointmentModal({
   const loyaltyQuery = useMyLoyaltyAccount();
 
   const vehicles = vehiclesQuery.data?.vehicles ?? [];
+  // Chỉ cho phép chọn xe ĐÃ xác minh (approve) để đặt lịch. Xe đang chờ xác
+  // minh/admin chưa duyệt hoặc bị từ chối sẽ bị ẩn khỏi dropdown và không thể
+  // chọn — backend cũng chặn ở BookingServiceLayer khi submit.
+  const bookableVehicles = vehicles.filter(
+    (vehicle) => !vehicle.verificationStatus || vehicle.verificationStatus === 'approved'
+  );
   const categories = categoriesQuery.data ?? [];
   const allServices = useMemo(() => servicesQuery.data ?? [], [servicesQuery.data]);
   const services = useMemo(
@@ -331,6 +338,14 @@ export function CreateAppointmentModal({
     : 0;
   const estimatedDiscount = membershipDiscount + promotionDiscount + rewardDiscount;
   const estimatedTotal = Math.max(0, subtotalPrice - estimatedDiscount);
+  const membershipDiscountStep = 2;
+  const promotionDiscountStep = 2 + (membershipDiscount > 0 ? 1 : 0);
+  const rewardDiscountStep = 2 + (membershipDiscount > 0 ? 1 : 0) + (promotionDiscount > 0 ? 1 : 0);
+  const estimatedTotalStep =
+    2 +
+    (membershipDiscount > 0 ? 1 : 0) +
+    (promotionDiscount > 0 ? 1 : 0) +
+    (rewardDiscount > 0 ? 1 : 0);
   const availabilityEnabled = Boolean(
     isOpen && values.scheduledDate && values.vehicleId && selectedServiceId
   );
@@ -437,14 +452,22 @@ export function CreateAppointmentModal({
         totalDuration
       );
       if (scheduleError) {
-        setError('scheduledTime', { type: 'validate', message: scheduleError }, { shouldFocus: true });
+        setError(
+          'scheduledTime',
+          { type: 'validate', message: scheduleError },
+          { shouldFocus: true }
+        );
         return;
       }
       if (hasUnfinishedVehicleBooking) {
-        setError('scheduledTime', {
-          type: 'validate',
-          message: 'Xe này đã có lịch hẹn chưa hoàn thành.',
-        }, { shouldFocus: true });
+        setError(
+          'scheduledTime',
+          {
+            type: 'validate',
+            message: 'Xe này đã có lịch hẹn chưa hoàn thành.',
+          },
+          { shouldFocus: true }
+        );
         return;
       }
       clearErrors('scheduledTime');
@@ -515,7 +538,7 @@ export function CreateAppointmentModal({
         <Button
           type="button"
           className="w-full sm:w-48"
-          disabled={isSubmitting || hasFormOptionsError}
+          disabled={isSubmitting || hasFormOptionsError || shouldBlockSelectedSlot}
           onClick={() => void submitAppointment()}
         >
           {isSubmitting ? (
@@ -612,17 +635,23 @@ export function CreateAppointmentModal({
                   <FieldLabel>Chọn xe</FieldLabel>
                   <select
                     className="h-[46px] rounded-md border border-[#d8e2ef] bg-white px-3 text-sm font-semibold text-[#64748b] outline-none focus:border-[#0b67c2]"
-                    disabled={isSubmitting || vehiclesQuery.isLoading || !vehicles.length}
+                    disabled={isSubmitting || vehiclesQuery.isLoading || !bookableVehicles.length}
                     {...register('vehicleId')}
                   >
                     <option value="">Chọn xe của bạn</option>
-                    {vehicles.map((vehicle) => (
+                    {bookableVehicles.map((vehicle) => (
                       <option key={vehicle._id} value={vehicle._id}>
                         {vehicle.brand} {vehicle.model} - {vehicle.licensePlate}
                       </option>
                     ))}
                   </select>
                   <FieldError>{errors.vehicleId?.message}</FieldError>
+                  {!vehiclesQuery.isLoading && vehicles.length && !bookableVehicles.length ? (
+                    <p className="mt-1 text-sm text-amber-700">
+                      Chưa có xe nào được xác minh xong để đặt lịch. Hãy chờ admin duyệt xe hoặc
+                      liên hệ hỗ trợ.
+                    </p>
+                  ) : null}
                 </Field>
 
                 <div
@@ -651,7 +680,12 @@ export function CreateAppointmentModal({
                       aria-label="Chọn khung giờ"
                       className="h-11 w-full rounded-xl border border-[#d8e2ef] bg-white px-3 text-sm font-semibold text-[#64748b] outline-none focus:border-[#0b67c2]"
                       defaultValue=""
-                      disabled={isSubmitting || !availabilityEnabled || availabilityQuery.isLoading || hasUnfinishedVehicleBooking}
+                      disabled={
+                        isSubmitting ||
+                        !availabilityEnabled ||
+                        availabilityQuery.isLoading ||
+                        hasUnfinishedVehicleBooking
+                      }
                       onChange={(event) => {
                         if (!event.target.value) return;
                         setValue('scheduledTime', event.target.value, {
@@ -661,7 +695,9 @@ export function CreateAppointmentModal({
                       }}
                     >
                       <option value="">
-                        {availabilityQuery.isLoading ? 'Đang kiểm tra khung giờ...' : 'Chọn khung giờ'}
+                        {availabilityQuery.isLoading
+                          ? 'Đang kiểm tra khung giờ...'
+                          : 'Chọn khung giờ'}
                       </option>
                       {availabilitySlots.map((slot) => {
                         const time = toSlotTime(slot.startAt);
@@ -927,13 +963,15 @@ export function CreateAppointmentModal({
             {values.serviceIds.length && (currentStep === 3 || currentStep === 4) ? (
               <section className="rounded-xl border border-[#e5edf6] bg-slate-50 p-4 text-sm sm:p-5">
                 <div className="flex justify-between gap-4 text-[#64748b]">
-                  <span>Tạm tính</span>
+                  <span>1. Tạm tính</span>
                   <span className="font-semibold">{formatCurrency(subtotalPrice)}</span>
                 </div>
                 {membershipDiscount > 0 ? (
                   <>
                     <div className="mt-2 flex justify-between gap-4 text-emerald-700">
-                      <span>Giảm giá thành viên ({membershipTier?.name})</span>
+                      <span>
+                        {membershipDiscountStep}. Giảm giá thành viên ({membershipTier?.name})
+                      </span>
                       <span>-{formatCurrency(membershipDiscount)}</span>
                     </div>
                     <div className="mt-1 flex justify-between gap-4 border-t border-dashed border-[#e5edf6] pt-1.5 text-[#15243a]">
@@ -945,7 +983,9 @@ export function CreateAppointmentModal({
                 {promotionDiscount > 0 ? (
                   <>
                     <div className="mt-2 flex justify-between gap-4 text-emerald-700">
-                      <span>Khuyến mãi ({selectedPromotion?.code})</span>
+                      <span>
+                        {promotionDiscountStep}. Khuyến mãi ({selectedPromotion?.code})
+                      </span>
                       <span>-{formatCurrency(promotionDiscount)}</span>
                     </div>
                     <div className="mt-1 flex justify-between gap-4 border-t border-dashed border-[#e5edf6] pt-1.5 text-[#15243a]">
@@ -956,12 +996,14 @@ export function CreateAppointmentModal({
                 ) : null}
                 {rewardDiscount > 0 ? (
                   <div className="mt-2 flex justify-between gap-4 text-emerald-700">
-                    <span>Phần thưởng ({selectedReward?.name})</span>
+                    <span>
+                      {rewardDiscountStep}. Phần thưởng ({selectedReward?.name})
+                    </span>
                     <span>-{formatCurrency(rewardDiscount)}</span>
                   </div>
                 ) : null}
                 <div className="mt-3 flex justify-between gap-4 border-t border-[#e5edf6] pt-3 font-black text-[#15243a]">
-                  <span>Tổng thanh toán dự kiến</span>
+                  <span>{estimatedTotalStep}. Tổng thanh toán dự kiến</span>
                   <span className="text-base">{formatCurrency(estimatedTotal)}</span>
                 </div>
                 <p className="mt-2 text-xs text-[#64748b]">

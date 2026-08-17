@@ -1,19 +1,17 @@
 import {
   ArrowLeft,
+  AlertTriangle,
   Banknote,
   CalendarClock,
   CarFront,
   CheckCircle2,
-  Clock3,
-  Copy,
   CreditCard,
   Loader2,
-  QrCode,
   ShieldCheck,
   Wrench,
   XCircle,
 } from 'lucide-react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router';
 
 import { Button } from '@/components/ui/button';
@@ -29,16 +27,6 @@ function VnPayLogo() {
     <img
       src="/images/logobanking/1.png"
       alt="VNPay"
-      className="size-14 shrink-0 rounded-lg object-cover"
-    />
-  );
-}
-
-function MomoLogo() {
-  return (
-    <img
-      src="/images/logobanking/2..png"
-      alt="Momo"
       className="size-14 shrink-0 rounded-lg object-cover"
     />
   );
@@ -69,13 +57,6 @@ const paymentMethods: Array<{
     enabled: true,
   },
   {
-    id: 'momo',
-    label: 'Momo',
-    description: 'Thanh toán qua ví điện tử Momo',
-    logo: MomoLogo,
-    enabled: true,
-  },
-  {
     id: 'cash',
     label: 'Tiền mặt',
     description: 'Thanh toán trực tiếp tại gara sau khi hoàn thành dịch vụ',
@@ -83,179 +64,6 @@ const paymentMethods: Array<{
     enabled: true,
   },
 ];
-
-const QR_EXPIRY_SECONDS = 900; // 15 minutes
-
-function formatCountdown(seconds: number) {
-  const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
-  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-}
-
-function PaymentQrPopup({
-  open,
-  onOpenChange,
-  method,
-  amount,
-  onConfirmPaid,
-  isProcessing,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  method: 'vnpay' | 'momo' | null;
-  amount: number;
-  onConfirmPaid: () => void;
-  isProcessing: boolean;
-}) {
-  const [countdown, setCountdown] = useState(QR_EXPIRY_SECONDS);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  const startCountdown = useCallback(() => {
-    setCountdown(QR_EXPIRY_SECONDS);
-    if (intervalRef.current) clearInterval(intervalRef.current);
-    intervalRef.current = setInterval(() => {
-      setCountdown((prev) => {
-        if (prev <= 1) {
-          if (intervalRef.current) clearInterval(intervalRef.current);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-  }, []);
-
-  useEffect(() => {
-    if (open) {
-      const timeoutId = setTimeout(startCountdown, 0);
-      return () => {
-        clearTimeout(timeoutId);
-        if (intervalRef.current) clearInterval(intervalRef.current);
-      };
-    }
-    if (intervalRef.current) clearInterval(intervalRef.current);
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    };
-  }, [open, startCountdown]);
-
-  if (!method) return null;
-
-  const isVnPay = method === 'vnpay';
-  const brandLabel = isVnPay ? 'VNPay' : 'Momo';
-  const Logo = isVnPay ? VnPayLogo : MomoLogo;
-
-  const isExpired = countdown <= 0;
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[440px] gap-0 rounded-xl border border-[#e5edf6] p-0 shadow-[0_18px_44px_rgba(15,23,42,0.12)]">
-        {/* Header */}
-        <div className="flex items-center gap-3 border-b border-[#e5edf6] px-6 py-4">
-          <Logo />
-          <div>
-            <DialogTitle className="text-lg font-black text-[#15243a]">
-              Thanh toán qua {brandLabel}
-            </DialogTitle>
-            <DialogDescription className="mt-0.5 text-sm text-[#64748b]">
-              Quét mã QR để thanh toán
-            </DialogDescription>
-          </div>
-        </div>
-
-        {/* QR Code */}
-        <div className="flex flex-col items-center px-6 py-6">
-          <div className="relative rounded-xl border-2 border-dashed border-[#e5edf6] bg-slate-50 p-5">
-            <QrCode className="size-44 text-[#64748b]" />
-            {isExpired ? (
-              <div className="absolute inset-0 flex flex-col items-center justify-center rounded-xl bg-white/90">
-                <Clock3 className="size-10 text-[#64748b]" />
-                <p className="mt-2 text-sm font-semibold text-[#64748b]">Mã QR đã hết hạn</p>
-              </div>
-            ) : null}
-          </div>
-
-          {/* Countdown */}
-          <div className="mt-4 flex items-center gap-2">
-            <Clock3 className={cn('size-4', isExpired ? 'text-rose-500' : 'text-[#64748b]')} />
-            <span
-              className={cn(
-                'text-sm font-semibold',
-                isExpired ? 'text-rose-500' : 'text-[#64748b]'
-              )}
-            >
-              {isExpired ? 'Đã hết hạn' : `Còn lại: ${formatCountdown(countdown)}`}
-            </span>
-          </div>
-        </div>
-
-        {/* Payment info */}
-        <div className="border-t border-[#e5edf6] bg-slate-50 px-6 py-4">
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-[#64748b]">Số tiền thanh toán</span>
-              <span className="text-lg font-black text-[#15243a]">{formatPrice(amount)}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-[#64748b]">Phương thức</span>
-              <span className="text-sm font-semibold text-[#15243a]">{brandLabel}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-[#64748b]">Mã giao dịch</span>
-              <div className="flex items-center gap-1.5">
-                <span className="text-sm font-semibold text-[#15243a]">Đang tạo...</span>
-                <button type="button" className="text-[#0b67c2] hover:text-[#0857a3]">
-                  <Copy className="size-3.5" />
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Actions */}
-        <div className="flex gap-3 border-t border-[#e5edf6] px-6 py-4">
-          <Button
-            type="button"
-            variant="outline"
-            className="h-[42px] flex-1 rounded-md"
-            onClick={() => onOpenChange(false)}
-          >
-            Hủy
-          </Button>
-          {isExpired ? (
-            <Button
-              type="button"
-              className="h-[42px] flex-1 rounded-md shadow-[0_12px_26px_rgba(11,103,194,0.24)]"
-              onClick={startCountdown}
-            >
-              Tạo mã mới
-            </Button>
-          ) : (
-            <Button
-              type="button"
-              className="h-[42px] flex-1 rounded-md shadow-[0_12px_26px_rgba(11,103,194,0.24)]"
-              onClick={onConfirmPaid}
-              disabled={isProcessing}
-            >
-              {isProcessing ? (
-                <>
-                  <Loader2 className="size-4 animate-spin" />
-                  Đang xử lý...
-                </>
-              ) : (
-                'Đã thanh toán xong'
-              )}
-            </Button>
-          )}
-        </div>
-
-        <div className="flex items-center justify-center gap-2 border-t border-[#e5edf6] px-6 py-3">
-          <ShieldCheck className="size-4 text-emerald-600" />
-          <span className="text-xs text-[#64748b]">Thanh toán được bảo mật bởi {brandLabel}</span>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-}
 
 function CashConfirmPopup({
   open,
@@ -328,7 +136,6 @@ export default function PaymentPage() {
   const [selectedMethod, setSelectedMethod] = useState<AppointmentPaymentMethod | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
-  const [showQrPopup, setShowQrPopup] = useState(false);
   const [showCashPopup, setShowCashPopup] = useState(false);
 
   const { data: appointment, isLoading, isError } = useAppointmentDetail(appointmentId ?? null);
@@ -345,15 +152,7 @@ export default function PaymentPage() {
       return;
     }
 
-    // VNPay / Momo: show QR popup
-    setShowQrPopup(true);
-  };
-
-  const handleQrConfirmPaid = async () => {
-    if (!selectedMethod || !appointmentId || selectedMethod === 'cash') {
-      return;
-    }
-
+    // VNPay: call API and redirect to gateway
     setIsProcessing(true);
     setPaymentError(null);
 
@@ -377,31 +176,6 @@ export default function PaymentPage() {
     setSelectedMethod(null);
     navigate('/customer/appointments');
   };
-
-  if (isLoading) {
-    return (
-      <main className="flex min-h-[calc(100vh-73px)] items-center justify-center bg-[#f8fafc] px-4">
-        <div className="w-full max-w-[1040px] space-y-4">
-          <Skeleton className="h-48 rounded-xl" />
-          <Skeleton className="h-64 rounded-xl" />
-        </div>
-      </main>
-    );
-  }
-
-  if (isError || !appointment) {
-    return (
-      <main className="flex min-h-[calc(100vh-73px)] items-center justify-center bg-[#f8fafc] px-4">
-        <section className="w-full max-w-[560px] rounded-xl border border-rose-200 bg-white px-6 py-12 text-center shadow-[0_18px_44px_rgba(15,23,42,0.08)]">
-          <XCircle className="mx-auto size-12 text-rose-500" />
-          <h2 className="mt-4 text-xl font-black text-[#15243a]">Không tìm thấy lịch hẹn</h2>
-          <p className="mt-2 text-sm text-[#64748b]">
-            Lịch hẹn không tồn tại hoặc bạn không có quyền truy cập.
-          </p>
-        </section>
-      </main>
-    );
-  }
 
   if (paymentStatus === 'success') {
     return (
@@ -436,12 +210,46 @@ export default function PaymentPage() {
           <p className="mt-2 text-sm text-[#64748b]">
             Giao dịch không thành công. Vui lòng thử lại hoặc chọn phương thức thanh toán khác.
           </p>
-          <Button
-            className="mt-6 h-[42px] rounded-md shadow-[0_12px_26px_rgba(11,103,194,0.24)]"
-            onClick={() => (window.location.href = `/customer/payment/${appointmentId}`)}
-          >
-            Thử lại
-          </Button>
+          {appointmentId && appointmentId !== 'result' ? (
+            <Button
+              className="mt-6 h-[42px] rounded-md shadow-[0_12px_26px_rgba(11,103,194,0.24)]"
+              onClick={() => (window.location.href = `/customer/payment/${appointmentId}`)}
+            >
+              Thử lại
+            </Button>
+          ) : (
+            <Button
+              className="mt-6 h-[42px] rounded-md shadow-[0_12px_26px_rgba(11,103,194,0.24)]"
+              onClick={() => navigate('/customer/appointments')}
+            >
+              Quay lại lịch hẹn
+            </Button>
+          )}
+        </section>
+      </main>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <main className="flex min-h-[calc(100vh-73px)] items-center justify-center bg-[#f8fafc] px-4">
+        <div className="w-full max-w-[1040px] space-y-4">
+          <Skeleton className="h-48 rounded-xl" />
+          <Skeleton className="h-64 rounded-xl" />
+        </div>
+      </main>
+    );
+  }
+
+  if (isError || !appointment) {
+    return (
+      <main className="flex min-h-[calc(100vh-73px)] items-center justify-center bg-[#f8fafc] px-4">
+        <section className="w-full max-w-[560px] rounded-xl border border-rose-200 bg-white px-6 py-12 text-center shadow-[0_18px_44px_rgba(15,23,42,0.08)]">
+          <XCircle className="mx-auto size-12 text-rose-500" />
+          <h2 className="mt-4 text-xl font-black text-[#15243a]">Không tìm thấy lịch hẹn</h2>
+          <p className="mt-2 text-sm text-[#64748b]">
+            Lịch hẹn không tồn tại hoặc bạn không có quyền truy cập.
+          </p>
         </section>
       </main>
     );
@@ -573,6 +381,15 @@ export default function PaymentPage() {
                 })}
             </div>
 
+            <div className="mt-4 flex gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+              <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+              <p>
+                Lưu ý: Với phương thức thanh toán trực tuyến, lịch hẹn sau khi thanh toán thành công
+                sẽ không thể hủy trực tiếp trên hệ thống. Vui lòng kiểm tra kỹ thông tin trước khi
+                tiếp tục.
+              </p>
+            </div>
+
             {paymentError ? (
               <div className="mt-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
                 {paymentError}
@@ -597,32 +414,18 @@ export default function PaymentPage() {
               ) : (
                 <>
                   <CreditCard className="size-4" />
-                  Thanh toán qua {selectedMethod === 'vnpay' ? 'VNPay' : 'Momo'}
+                  Thanh toán qua VNPay
                 </>
               )}
             </Button>
 
             <div className="mt-4 flex items-center justify-center gap-2 text-xs text-[#64748b]">
               <ShieldCheck className="size-4 text-emerald-600" />
-              Thanh toán được bảo mật bởi{' '}
-              {selectedMethod === 'vnpay'
-                ? 'VNPay'
-                : selectedMethod === 'momo'
-                  ? 'Momo'
-                  : 'AutoWash Pro'}
+              Thanh toán được bảo mật bởi {selectedMethod === 'vnpay' ? 'VNPay' : 'AutoWash Pro'}
             </div>
           </section>
         </div>
       </div>
-
-      <PaymentQrPopup
-        open={showQrPopup}
-        onOpenChange={setShowQrPopup}
-        method={selectedMethod === 'vnpay' || selectedMethod === 'momo' ? selectedMethod : null}
-        amount={discountedPrice}
-        onConfirmPaid={handleQrConfirmPaid}
-        isProcessing={isProcessing}
-      />
 
       <CashConfirmPopup
         open={showCashPopup}

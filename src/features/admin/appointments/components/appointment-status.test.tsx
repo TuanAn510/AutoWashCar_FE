@@ -4,12 +4,8 @@ import { afterEach, describe, expect, expectTypeOf, it } from 'vitest';
 
 import { AppointmentStatusBadge } from '@/features/customers/appointments/components/AppointmentStatusBadge';
 import { AppointmentStatusTimeline } from '@/features/admin/appointments/components/AppointmentStatusTimeline';
-import {
-  getAllowedAdminAppointmentStatuses,
-} from '@/features/admin/appointments/constants/appointmentStatus';
-import {
-  getAllowedStaffAppointmentStatuses,
-} from '@/features/staff/appointments/constants/appointmentStatus';
+import { getAllowedAdminAppointmentStatuses } from '@/features/admin/appointments/constants/appointmentStatus';
+import { getAllowedStaffAppointmentStatuses } from '@/features/staff/appointments/constants/appointmentStatus';
 import { adminAppointmentsApi } from '@/services/appointmentService';
 import type { AppointmentStatus, PriorityQueueItem } from '@/types/appointment';
 
@@ -39,6 +35,8 @@ describe('appointment status lifecycle', () => {
   });
 
   it('types the priority queue response separately from appointment items', () => {
-    expectTypeOf(adminAppointmentsApi.getPriorityQueue).returns.toEqualTypeOf<Promise<PriorityQueueItem[]>>();
+    expectTypeOf(adminAppointmentsApi.getPriorityQueue).returns.toEqualTypeOf<
+      Promise<PriorityQueueItem[]>
+    >();
   });
 });

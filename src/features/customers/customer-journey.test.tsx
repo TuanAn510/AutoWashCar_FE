@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import type { PropsWithChildren, ReactNode } from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { CarFront } from 'lucide-react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -11,7 +12,13 @@ import CustomerAppointmentsPage from '@/features/customers/appointments/pages/Cu
 import { CustomerEmptyState } from '@/features/customers/components/CustomerEmptyState';
 import type { AppointmentItem } from '@/types/appointment';
 
-const defaultSlots: Array<{ startAt: string; available: boolean; reason: string | null }> = ['08:00', '08:05', '08:10', '08:15', '08:20'].map((time) => ({
+const defaultSlots: Array<{ startAt: string; available: boolean; reason: string | null }> = [
+  '08:00',
+  '08:05',
+  '08:10',
+  '08:15',
+  '08:20',
+].map((time) => ({
   startAt: `2099-08-13T${time}:00`,
   available: true,
   reason: null,
@@ -191,6 +198,18 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
+function renderWithQueryClient(ui: ReactNode) {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+      },
+    },
+  });
+
+  return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
+}
+
 beforeEach(() => {
   vi.spyOn(Date, 'now').mockReturnValue(new Date('2099-08-12T08:00:00').getTime());
   availability = { slots: defaultSlots, vehicleAvailabilityReason: null };
@@ -217,7 +236,7 @@ describe('customer journey UI', () => {
 
   it('validates each booking step, preserves values, submits, and shows success', async () => {
     const onSubmit = vi.fn().mockResolvedValue(undefined);
-    const { container } = render(
+    const { container } = renderWithQueryClient(
       <CreateAppointmentModal
         isOpen
         isSubmitting={false}
@@ -277,7 +296,12 @@ describe('customer journey UI', () => {
 
   it('uses a dropdown-only five-minute appointment-time selector', async () => {
     const { container } = render(
-      <CreateAppointmentModal isOpen isSubmitting={false} onOpenChange={vi.fn()} onSubmit={vi.fn()} />
+      <CreateAppointmentModal
+        isOpen
+        isSubmitting={false}
+        onOpenChange={vi.fn()}
+        onSubmit={vi.fn()}
+      />
     );
 
     fireEvent.change(container.querySelector('select[name="vehicleId"]')!, {
@@ -303,7 +327,12 @@ describe('customer journey UI', () => {
       vehicleAvailabilityReason: null,
     };
     const { container } = render(
-      <CreateAppointmentModal isOpen isSubmitting={false} onOpenChange={vi.fn()} onSubmit={vi.fn()} />
+      <CreateAppointmentModal
+        isOpen
+        isSubmitting={false}
+        onOpenChange={vi.fn()}
+        onSubmit={vi.fn()}
+      />
     );
 
     fireEvent.change(container.querySelector('select[name="vehicleId"]')!, {
@@ -383,7 +412,12 @@ describe('customer journey UI', () => {
       vehicleAvailabilityReason: null,
     };
     const { container } = render(
-      <CreateAppointmentModal isOpen isSubmitting={false} onOpenChange={vi.fn()} onSubmit={vi.fn()} />
+      <CreateAppointmentModal
+        isOpen
+        isSubmitting={false}
+        onOpenChange={vi.fn()}
+        onSubmit={vi.fn()}
+      />
     );
 
     fireEvent.change(container.querySelector('select[name="vehicleId"]')!, {
@@ -401,7 +435,12 @@ describe('customer journey UI', () => {
   it('shows one unfinished-vehicle message and disables time selection', async () => {
     availability = { slots: [], vehicleAvailabilityReason: 'VEHICLE_UNFINISHED_BOOKING' };
     const { container } = render(
-      <CreateAppointmentModal isOpen isSubmitting={false} onOpenChange={vi.fn()} onSubmit={vi.fn()} />
+      <CreateAppointmentModal
+        isOpen
+        isSubmitting={false}
+        onOpenChange={vi.fn()}
+        onSubmit={vi.fn()}
+      />
     );
 
     fireEvent.change(container.querySelector('select[name="vehicleId"]')!, {

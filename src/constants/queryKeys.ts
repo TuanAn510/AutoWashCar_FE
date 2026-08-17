@@ -26,6 +26,11 @@ export const queryKeys = {
       list: (params?: object) => keyed(['vehicles', 'admin', 'list', params ?? {}] as const),
     },
   },
+  vehicleCatalog: {
+    all: ['vehicle-catalog'] as const,
+    brands: () => ['vehicle-catalog', 'brands'] as const,
+    models: (brandId: string) => ['vehicle-catalog', 'models', brandId] as const,
+  },
   appointments: {
     all: ['appointments'] as const,
     mine: (params?: object) => keyed(['appointments', 'mine', params ?? {}] as const),

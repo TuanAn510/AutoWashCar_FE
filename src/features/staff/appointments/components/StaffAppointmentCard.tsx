@@ -11,6 +11,10 @@ import { formatDateTime, formatTime } from '@/lib/utils';
 
 const getQuickAction = (status: AppointmentStatus) => {
   if (status === 'confirmed') {
+    return { label: 'Check-in', nextStatus: 'in_queue' as const };
+  }
+
+  if (status === 'in_queue') {
     return { label: 'Bắt đầu xử lý', nextStatus: 'in_progress' as const };
   }
 
@@ -30,7 +34,10 @@ export function StaffAppointmentCard({
   appointment: AppointmentItem;
   onViewDetail: (appointment: AppointmentItem) => void;
   onOpenStatusDialog: (appointment: AppointmentItem) => void;
-  onQuickUpdate: (appointment: AppointmentItem, nextStatus: 'in_progress' | 'completed') => void;
+  onQuickUpdate: (
+    appointment: AppointmentItem,
+    nextStatus: 'in_queue' | 'in_progress' | 'completed'
+  ) => void;
 }) {
   const serviceNames = appointment.services.map((service) => service.nameSnapshot).join(', ');
   const quickAction = getQuickAction(appointment.status);

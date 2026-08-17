@@ -1,5 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { CustomerModalShell } from '@/features/customers/components/CustomerModalShell';
+import { formatLicensePlateDisplay } from '@/features/customers/vehicles/utils/license-plate';
 import { type ApiVehicle } from '@/types/vehicle';
 
 interface DeleteVehicleDialogProps {
@@ -24,7 +25,7 @@ export function DeleteVehicleDialog({
       title="Xóa xe này?"
       description={
         vehicle
-          ? `Xe ${vehicle.brand} ${vehicle.model} - ${vehicle.licensePlate} sẽ được xóa khỏi danh sách ô tô của bạn. Bạn có chắc muốn tiếp tục?`
+          ? `Xe ${vehicle.brand} ${vehicle.model} - ${formatLicensePlateDisplay(vehicle.licensePlate)} sẽ được xóa khỏi danh sách ô tô của bạn. Bạn có chắc muốn tiếp tục?`
           : 'Xe sẽ được xóa khỏi danh sách ô tô của bạn. Bạn có chắc muốn tiếp tục?'
       }
       contentClassName="max-w-[720px]"

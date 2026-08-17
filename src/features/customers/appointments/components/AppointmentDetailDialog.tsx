@@ -2,6 +2,7 @@ import { CarFront, Clock3, CreditCard, NotebookPen, UserRound } from 'lucide-rea
 import { useNavigate } from 'react-router';
 
 import { Button } from '@/components/ui/button';
+import { AppointmentEvidenceImages } from '@/features/customers/appointments/components/AppointmentEvidenceImages';
 import { AppointmentStatusBadge } from '@/features/customers/appointments/components/AppointmentStatusBadge';
 import { AppointmentTimeMilestones } from '@/features/customers/appointments/components/AppointmentTimeMilestones';
 import { PaymentStatusBadge } from '@/components/shared/PaymentStatusBadge';
@@ -48,6 +49,12 @@ export function AppointmentDetailDialog({
   }
 
   const canPay = appointment.paymentStatus === 'unpaid' || appointment.paymentStatus === 'pending';
+  const assignedStaffs = appointment.assignedStaffIds?.length
+    ? appointment.assignedStaffIds
+    : appointment.assignedStaffId
+      ? [appointment.assignedStaffId]
+      : [];
+  const assignedStaffNames = assignedStaffs.map((staff) => staff.displayName).join(', ');
 
   return (
     <CustomerModalShell
@@ -95,6 +102,8 @@ export function AppointmentDetailDialog({
 
       <AppointmentTimeMilestones appointment={appointment} />
 
+      <AppointmentEvidenceImages appointment={appointment} />
+
       <section className="rounded-xl border border-[#e5edf6] bg-slate-50 p-4 sm:p-5">
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           <DetailItem
@@ -140,7 +149,7 @@ export function AppointmentDetailDialog({
           <DetailItem
             icon={UserRound}
             label="Nhân viên phụ trách"
-            value={appointment.assignedStaffId?.displayName || 'Sẽ được xác nhận sau'}
+            value={assignedStaffNames || 'Sẽ được xác nhận sau'}
           />
         </div>
       </section>

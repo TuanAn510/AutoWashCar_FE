@@ -1,6 +1,19 @@
-import { Car, CarFront, Eye, Loader2, Pencil, Search, Trash2, User, X } from 'lucide-react';
+import {
+  Car,
+  CarFront,
+  Eye,
+  Loader2,
+  Pencil,
+  Search,
+  ShieldAlert,
+  ShieldCheck,
+  Trash2,
+  User,
+  X,
+} from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
@@ -21,9 +34,11 @@ import { StatCard } from '@/components/dashboard';
 import { PaginationControls } from '@/components/shared/PaginationControls';
 import { useAdminVehicles } from '@/features/admin/vehicles/hooks/useAdminVehicles';
 import { vehiclesApi } from '@/services/vehicleService';
+import { vehicleAccessRequestApi } from '@/services/vehicleAccessRequestService';
 import { queryKeys } from '@/constants/queryKeys';
 import { cn } from '@/lib/utils';
-import type { ApiVehicle, CarType } from '@/types/vehicle';
+import { resolveImageUrl } from '@/lib/image-url';
+import type { ApiVehicle, CarType, VehicleAccessRequest } from '@/types/vehicle';
 
 const CAR_TYPE_LABELS: Record<CarType, string> = {
   sedan: 'Sedan',
@@ -36,6 +51,13 @@ const CAR_TYPE_BADGES: Record<CarType, string> = {
   suv: 'bg-emerald-50 text-emerald-700',
   pickup: 'bg-amber-50 text-amber-700',
 };
+
+/** Trạng thái xác minh của xe trên bảng Quản lý xe. */
+const VERIFY_META = {
+  approved: { label: 'Đã xác minh', className: 'bg-emerald-50 text-emerald-700' },
+  pending: { label: 'Chờ xác minh', className: 'bg-amber-50 text-amber-700' },
+  rejected: { label: 'Bị từ chối', className: 'bg-rose-50 text-rose-700' },
+} as const;
 
 function ownerName(vehicle: ApiVehicle): string {
   if (typeof vehicle.customerId === 'object' && vehicle.customerId) {
@@ -57,6 +79,34 @@ function vehicleCreatedAt(vehicle: ApiVehicle, options?: Intl.DateTimeFormatOpti
   return new Intl.DateTimeFormat('vi-VN', options).format(new Date(vehicle.createdAt));
 }
 
+function isCombinedRequest(request: VehicleAccessRequest) {
+  return (
+    (request.requestType ?? 'access_request') === 'access_request' &&
+    Boolean(request.suggestedBrandName || request.suggestedModelName)
+  );
+}
+
+function requestTypeLabel(request: VehicleAccessRequest): string {
+  if ((request.requestType ?? 'access_request') === 'brand_model_verification') {
+    return 'Hãng / Dòng xe';
+  }
+  return isCombinedRequest(request) ? 'Biển số + Hãng/Dòng' : 'Biển số / Quyền sử dụng';
+}
+
+function requesterName(request: VehicleAccessRequest): string {
+  if (typeof request.requesterId !== 'object') return 'Không rõ';
+  return (
+    request.requesterId.displayName ||
+    request.requesterId.phone ||
+    request.requesterId.email ||
+    'Không rõ'
+  );
+}
+
+function suggestedVehicleText(request: VehicleAccessRequest): string {
+  return [request.suggestedBrandName, request.suggestedModelName].filter(Boolean).join(' ');
+}
+
 export default function AdminVehiclesPage() {
   const [keyword, setKeyword] = useState('');
   const [carTypeFilter, setCarTypeFilter] = useState<CarType | 'all'>('all');
@@ -68,6 +118,19 @@ export default function AdminVehiclesPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
 
+  const navigate = useNavigate();
+
+  // Các yêu cầu xác minh đang chờ (cả 3 luồng) — để admin thấy XE CHƯA XÁC MINH
+  // mà chưa có record trong bảng xe (xe chỉ được tạo khi duyệt yêu cầu).
+  const pendingRequestsQuery = useQuery({
+    queryKey: ['vehicle-access-requests', 'admin', 'pending'],
+    queryFn: () => vehicleAccessRequestApi.listAdmin('pending'),
+  });
+  const pendingRequests = useMemo(
+    () => pendingRequestsQuery.data ?? [],
+    [pendingRequestsQuery.data]
+  );
+
   const queryClient = useQueryClient();
   const vehiclesQuery = useAdminVehicles({
     page,
@@ -78,9 +141,19 @@ export default function AdminVehiclesPage() {
     sortOrder: 'desc',
   });
 
-  const vehicles = useMemo(
+  // Toàn bộ xe trong hệ thống (dùng cho thẻ thống kê bên trên).
+  const allVehicles = useMemo(
     () => vehiclesQuery.data?.vehicles ?? [],
     [vehiclesQuery.data?.vehicles]
+  );
+  // Bảng "Danh sách xe" chỉ hiển thị xe ĐÃ XÁC MINH (approved hoặc không yêu cầu
+  // xác minh). Xe đang chờ/bị từ chối nằm ở mục "Xe chờ xác minh" phía trên.
+  const verifiedVehicles = useMemo(
+    () =>
+      allVehicles.filter(
+        (vehicle) => !vehicle.verificationStatus || vehicle.verificationStatus === 'approved'
+      ),
+    [allVehicles]
   );
   const pagination = vehiclesQuery.data?.pagination;
   const total = vehiclesQuery.data?.total ?? 0;
@@ -88,11 +161,11 @@ export default function AdminVehiclesPage() {
   const stats = useMemo(() => {
     return {
       total,
-      sedan: vehicles.filter((v) => v.carType === 'sedan').length,
-      suv: vehicles.filter((v) => v.carType === 'suv').length,
-      pickup: vehicles.filter((v) => v.carType === 'pickup').length,
+      sedan: allVehicles.filter((v) => v.carType === 'sedan').length,
+      suv: allVehicles.filter((v) => v.carType === 'suv').length,
+      pickup: allVehicles.filter((v) => v.carType === 'pickup').length,
     };
-  }, [vehicles, total]);
+  }, [allVehicles, total]);
 
   const handleViewDetail = async (vehicle: ApiVehicle) => {
     setLoadingDetailId(vehicle._id);
@@ -206,13 +279,89 @@ export default function AdminVehiclesPage() {
         </div>
       </PageSection>
 
+      {/* Xe chờ xác minh — gồm cả yêu cầu chưa có xe trong hệ thống (biển số /
+          biển + hãng/dòng) để admin thấy đầy đủ mọi xe cần duyệt. */}
+      {pendingRequests.length > 0 && (
+        <PageSection>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="flex items-center gap-2 text-xl font-semibold text-slate-950">
+                <ShieldAlert className="size-5 text-amber-500" />
+                Xe chờ xác minh
+                <span className="text-sm font-normal text-slate-500">
+                  ({pendingRequests.length} yêu cầu)
+                </span>
+              </h2>
+              <p className="mt-1 text-sm text-slate-500">
+                Các xe chưa được xác minh, kể cả những yêu cầu chưa có xe trong danh sách. Bấm "Xác
+                minh" để xử lý tại mục Xác minh xe.
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="rounded-xl"
+              onClick={() => navigate('/admin/vehicle-access-requests')}
+            >
+              <ShieldCheck className="size-4" />
+              Qua mục Xác minh xe
+            </Button>
+          </div>
+          <div className="mt-4 grid gap-2">
+            {pendingRequests.map((request) => (
+              <div
+                key={request._id}
+                className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50/60 px-4 py-3"
+              >
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-bold text-slate-950">{request.licensePlate}</span>
+                    <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-700">
+                      Chờ xác minh
+                    </span>
+                    <span className="rounded-full bg-white/70 px-2.5 py-0.5 text-xs font-medium text-slate-600">
+                      {requestTypeLabel(request)}
+                    </span>
+                  </div>
+                  {suggestedVehicleText(request) ? (
+                    <p className="mt-1 text-sm text-slate-600">
+                      Hãng/Dòng đề xuất: {suggestedVehicleText(request)}
+                    </p>
+                  ) : null}
+                  <p className="mt-0.5 text-xs text-slate-500">
+                    Người yêu cầu: {requesterName(request)}
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="rounded-xl border-amber-300 text-amber-700 hover:bg-amber-100"
+                  onClick={() =>
+                    navigate(
+                      `/admin/vehicle-access-requests?keyword=${encodeURIComponent(
+                        request.licensePlate
+                      )}`
+                    )
+                  }
+                >
+                  <ShieldCheck className="size-4" />
+                  Xác minh
+                </Button>
+              </div>
+            ))}
+          </div>
+        </PageSection>
+      )}
+
       {/* Table */}
       <PageSection>
         <div className="flex items-center justify-between gap-3">
           <h2 className="text-xl font-semibold text-slate-950">
             Danh sách xe
             {!vehiclesQuery.isLoading && (
-              <span className="ml-2 text-sm font-normal text-slate-500">({total} xe)</span>
+              <span className="ml-2 text-sm font-normal text-slate-500">
+                ({verifiedVehicles.length} xe đã xác minh)
+              </span>
             )}
           </h2>
           {vehiclesQuery.isError && (
@@ -221,13 +370,14 @@ export default function AdminVehiclesPage() {
         </div>
 
         <div className="mt-5 overflow-x-auto">
-          <table className="w-full min-w-[900px] border-collapse text-left text-sm">
+          <table className="w-full min-w-[1040px] border-collapse text-left text-sm">
             <thead>
               <tr className="border-b border-border text-slate-900">
                 <th className="px-2 py-3 font-semibold">Biển số</th>
                 <th className="px-2 py-3 font-semibold">Hãng - Dòng xe</th>
                 <th className="px-2 py-3 font-semibold">Năm SX</th>
                 <th className="px-2 py-3 font-semibold">Loại xe</th>
+                <th className="px-2 py-3 font-semibold">Trạng thái xác minh</th>
                 <th className="px-2 py-3 font-semibold">Chủ xe</th>
                 <th className="px-2 py-3 font-semibold">Ngày tạo</th>
                 <th className="w-[160px] px-2 py-3 text-right font-semibold">Thao tác</th>
@@ -235,11 +385,11 @@ export default function AdminVehiclesPage() {
             </thead>
             <tbody>
               {vehiclesQuery.isLoading && <LoadingRow />}
-              {!vehiclesQuery.isLoading && !vehiclesQuery.isError && !vehicles.length && (
-                <EmptyRow text="Không có xe nào phù hợp." />
+              {!vehiclesQuery.isLoading && !vehiclesQuery.isError && !verifiedVehicles.length && (
+                <EmptyRow text="Không có xe nào đã xác minh." />
               )}
               {vehiclesQuery.isError && <EmptyRow text="Đã có lỗi xảy ra khi tải dữ liệu." />}
-              {vehicles.map((vehicle) => (
+              {verifiedVehicles.map((vehicle) => (
                 <tr
                   key={vehicle._id}
                   className="border-b border-border/70 align-middle last:border-0"
@@ -261,6 +411,22 @@ export default function AdminVehiclesPage() {
                     >
                       {CAR_TYPE_LABELS[vehicle.carType]}
                     </span>
+                  </td>
+                  <td className="px-2 py-3.5">
+                    {vehicle.verificationStatus ? (
+                      <span
+                        className={cn(
+                          'inline-flex whitespace-nowrap rounded-md px-2.5 py-1 text-xs font-semibold',
+                          VERIFY_META[vehicle.verificationStatus].className
+                        )}
+                      >
+                        {VERIFY_META[vehicle.verificationStatus].label}
+                      </span>
+                    ) : (
+                      <span className="inline-flex whitespace-nowrap rounded-md bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500">
+                        Không yêu cầu
+                      </span>
+                    )}
                   </td>
                   <td className="px-2 py-3.5">
                     <p className="font-medium text-slate-900">{ownerName(vehicle)}</p>
@@ -286,6 +452,24 @@ export default function AdminVehiclesPage() {
                           <Eye className="size-4" />
                         )}
                       </Button>
+                      {vehicle.verificationStatus && vehicle.verificationStatus !== 'approved' && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="size-8 text-amber-600 hover:bg-amber-50 hover:text-amber-700"
+                          title="Xác minh xe (chuyển sang mục Xác minh xe)"
+                          onClick={() =>
+                            navigate(
+                              `/admin/vehicle-access-requests?keyword=${encodeURIComponent(
+                                vehicle.licensePlate
+                              )}`
+                            )
+                          }
+                        >
+                          <ShieldCheck className="size-4" />
+                        </Button>
+                      )}
                       <Button
                         type="button"
                         variant="ghost"
@@ -316,7 +500,7 @@ export default function AdminVehiclesPage() {
 
         <PaginationControls
           pagination={pagination}
-          itemCount={vehicles.length}
+          itemCount={verifiedVehicles.length}
           onPageChange={setPage}
         />
       </PageSection>
@@ -348,7 +532,10 @@ export default function AdminVehiclesPage() {
           if (!open) setDeleteVehicle(null);
         }}
       >
-        <DialogContent className="max-w-[420px] gap-0 rounded-xl border border-[#e5edf6] p-0 shadow-[0_18px_44px_rgba(15,23,42,0.12)]">
+        <DialogContent
+          className="max-w-[420px] gap-0 rounded-xl border border-[#e5edf6] p-0 shadow-[0_18px_44px_rgba(15,23,42,0.12)]"
+          showCloseButton={false}
+        >
           <DialogHeader className="border-b border-[#e5edf6] px-6 py-4">
             <DialogTitle className="text-lg font-black text-[#15243a]">Xóa xe</DialogTitle>
             <DialogDescription className="mt-0.5 text-sm text-[#64748b]">
@@ -420,7 +607,10 @@ function VehicleDetailDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[560px] gap-0 rounded-xl border border-[#e5edf6] p-0 shadow-[0_18px_44px_rgba(15,23,42,0.12)]">
+      <DialogContent
+        className="max-w-[560px] gap-0 rounded-xl border border-[#e5edf6] p-0 shadow-[0_18px_44px_rgba(15,23,42,0.12)]"
+        showCloseButton={false}
+      >
         <DialogHeader className="flex flex-row items-start justify-between border-b border-[#e5edf6] px-6 py-4">
           <div>
             <DialogTitle className="text-lg font-black text-[#15243a]">Chi tiết xe</DialogTitle>
@@ -446,7 +636,7 @@ function VehicleDetailDialog({
               {vehicle.images.map((img) => (
                 <img
                   key={img.id}
-                  src={img.url}
+                  src={resolveImageUrl(img.url)}
                   alt={`${vehicle.brand} ${vehicle.model}`}
                   className="h-32 w-48 shrink-0 rounded-lg border object-cover"
                   loading="lazy"
@@ -590,7 +780,10 @@ function EditVehicleDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[480px] gap-0 rounded-xl border border-[#e5edf6] p-0 shadow-[0_18px_44px_rgba(15,23,42,0.12)]">
+      <DialogContent
+        className="max-w-[480px] gap-0 rounded-xl border border-[#e5edf6] p-0 shadow-[0_18px_44px_rgba(15,23,42,0.12)]"
+        showCloseButton={false}
+      >
         <DialogHeader className="flex flex-row items-start justify-between border-b border-[#e5edf6] px-6 py-4">
           <div>
             <DialogTitle className="text-lg font-black text-[#15243a]">
@@ -711,7 +904,7 @@ function EditVehicleDialog({
 function LoadingRow() {
   return (
     <tr>
-      <td colSpan={7} className="px-2 py-4">
+      <td colSpan={8} className="px-2 py-4">
         <div className="space-y-3">
           {Array.from({ length: 5 }).map((_, i) => (
             <Skeleton key={i} className="h-10 w-full" />
@@ -725,7 +918,7 @@ function LoadingRow() {
 function EmptyRow({ text }: { text: string }) {
   return (
     <tr>
-      <td colSpan={7} className="px-2 py-12 text-center text-slate-500">
+      <td colSpan={8} className="px-2 py-12 text-center text-slate-500">
         {text}
       </td>
     </tr>

@@ -7,9 +7,10 @@ import {
   CreditCard,
   History,
   Megaphone,
-  Trophy,
-  Users,
   ShieldCheck,
+  Trophy,
+  UserCog,
+  Users,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -36,6 +37,7 @@ export const sidebarNav: NavItem[] = [
   { label: 'Lịch sử', icon: History, href: '/service-histories', roles: ['staff'] },
   { label: 'Tích điểm', icon: Coins, href: '/loyalty', roles: ['admin', 'staff', 'customer'] },
   { label: 'Khách hàng', icon: Users, href: '/customers', roles: ['admin'] },
+  { label: 'Quản lý staff', icon: UserCog, href: '/staff', roles: ['admin'] },
   { label: 'Xác minh xe', icon: ShieldCheck, href: '/vehicle-access-requests', roles: ['admin'] },
   {
     label: 'Chương trình thành viên',

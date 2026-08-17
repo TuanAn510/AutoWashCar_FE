@@ -1,8 +1,11 @@
+import { ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { AdminAppointmentActionsMenu } from '@/features/admin/appointments/components/AdminAppointmentActionsMenu';
 import { AppointmentStatusBadge } from '@/features/customers/appointments/components/AppointmentStatusBadge';
 import { cn, formatPrice } from '@/lib/utils';
 import type { AppointmentItem } from '@/types/appointment';
+
+export type DateSort = 'asc' | 'desc';
 
 const getCustomerFallback = (name: string) =>
   name
@@ -63,6 +66,9 @@ export function AdminAppointmentsTable({
   onConfirmPayment,
   onReschedule,
   onCancel,
+  dateSort = 'desc',
+  onDateSortToggle,
+  showSortLabel = true,
 }: {
   appointments: AppointmentItem[];
   onViewDetail: (appointment: AppointmentItem) => void;
@@ -71,9 +77,26 @@ export function AdminAppointmentsTable({
   onConfirmPayment: (appointment: AppointmentItem) => void;
   onReschedule: (appointment: AppointmentItem) => void;
   onCancel: (appointment: AppointmentItem) => void;
+  dateSort?: DateSort;
+  onDateSortToggle?: () => void;
+  showSortLabel?: boolean;
 }) {
+  const sortedAppointments = [...appointments].sort((a, b) => {
+    const diff = new Date(b.scheduledAt).getTime() - new Date(a.scheduledAt).getTime();
+    return dateSort === 'desc' ? diff : -diff;
+  });
+
   return (
     <section className="rounded-lg border border-border/80 bg-white p-3">
+      {showSortLabel ? (
+        <div className="mb-2 flex items-center justify-end gap-1.5 text-xs font-medium text-slate-500">
+          <ArrowUpDown className="size-3.5" />
+          Sắp xếp theo ngày:{' '}
+          <span className="font-semibold text-slate-700">
+            {dateSort === 'desc' ? 'Mới nhất trước' : 'Cũ nhất trước'}
+          </span>
+        </div>
+      ) : null}
       <div className="w-full max-w-full overflow-x-auto">
         <table className="w-full min-w-[960px] table-fixed border-collapse text-left text-sm">
           <thead>
@@ -81,7 +104,21 @@ export function AdminAppointmentsTable({
               <th className="w-[17%] px-2 py-2.5 font-semibold">Khách hàng</th>
               <th className="w-[14%] px-2 py-2.5 font-semibold">Xe</th>
               <th className="w-[21%] px-2 py-2.5 font-semibold">Dịch vụ</th>
-              <th className="w-[10%] px-2 py-2.5 font-semibold">Ngày hẹn</th>
+              <th className="w-[10%] px-2 py-2.5 font-semibold">
+                <button
+                  type="button"
+                  onClick={onDateSortToggle}
+                  className="inline-flex items-center gap-1 rounded hover:text-slate-950"
+                  title="Sắp xếp theo ngày hẹn"
+                >
+                  Ngày hẹn
+                  {dateSort === 'desc' ? (
+                    <ArrowDown className="size-3.5" />
+                  ) : (
+                    <ArrowUp className="size-3.5" />
+                  )}
+                </button>
+              </th>
               <th className="w-[13%] px-2 py-2.5 font-semibold">Nhân viên</th>
               <th className="w-[13%] px-2 py-2.5 font-semibold">Trạng thái</th>
               <th className="w-[7%] px-2 py-2.5 text-right font-semibold">Giá</th>
@@ -89,12 +126,16 @@ export function AdminAppointmentsTable({
             </tr>
           </thead>
           <tbody>
-            {appointments.map((appointment) => {
+            {sortedAppointments.map((appointment) => {
               const serviceNames = appointment.services
                 .map((service) => service.nameSnapshot)
                 .join(', ');
               const vehicleLabel = `${appointment.vehicleId.brand} ${appointment.vehicleId.model}`;
-              const staffName = appointment.assignedStaffId?.displayName;
+              const assignedStaffs = appointment.assignedStaffIds?.length
+                ? appointment.assignedStaffIds
+                : appointment.assignedStaffId
+                  ? [appointment.assignedStaffId]
+                  : [];
               const schedule = formatAppointmentSchedule(appointment.scheduledAt);
 
               return (
@@ -148,10 +189,18 @@ export function AdminAppointmentsTable({
                     <p className="mt-0.5 text-xs leading-4 text-slate-500">{schedule.date}</p>
                   </td>
                   <td className="px-2 py-3 text-slate-700">
-                    {staffName ? (
-                      <p className="truncate" title={staffName}>
-                        {staffName}
-                      </p>
+                    {assignedStaffs.length ? (
+                      <div className="flex flex-wrap gap-1.5">
+                        {assignedStaffs.map((staff) => (
+                          <span
+                            key={staff._id}
+                            className="inline-flex max-w-full rounded-md bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700"
+                            title={staff.displayName}
+                          >
+                            <span className="truncate">{staff.displayName}</span>
+                          </span>
+                        ))}
+                      </div>
                     ) : (
                       <span className="inline-flex max-w-full rounded-md bg-slate-100 px-2 py-1 text-xs font-medium text-slate-600">
                         Chưa phân công

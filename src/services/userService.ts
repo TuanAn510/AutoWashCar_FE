@@ -10,6 +10,20 @@ export interface UpdateUserByAdminPayload {
   isActive?: boolean;
 }
 
+export interface CreateStaffPayload {
+  fullName: string;
+  phone: string;
+  password: string;
+}
+
+export interface UpdateStaffPayload {
+  fullName?: string;
+  displayName?: string;
+  phone?: string;
+  password?: string;
+  isActive?: boolean;
+}
+
 export interface StaffWorkload {
   _id: string;
   displayName: string;
@@ -65,6 +79,41 @@ export const userService = {
     };
   },
 
+  listStaffAccounts: async (
+    params?: PaginationParams & { active?: boolean },
+    signal?: AbortSignal
+  ) => {
+    const response = await api.get<ApiEnvelope<User[]>>('/admin/users/staffs', {
+      params,
+      signal,
+    });
+
+    return {
+      staffs: response.data.data,
+      total: response.data.data.length,
+    };
+  },
+
+  createStaffAccount: async (payload: CreateStaffPayload) => {
+    const response = await api.post<ApiEnvelope<User>>('/admin/users/staffs', payload);
+    return response.data.data;
+  },
+
+  updateStaffAccount: async (userId: string, payload: UpdateStaffPayload) => {
+    const response = await api.patch<ApiEnvelope<User>>(`/admin/users/staffs/${userId}`, payload);
+    return response.data.data;
+  },
+
+  lockStaffAccount: async (userId: string) => {
+    const response = await api.delete<ApiEnvelope<User>>(`/admin/users/staffs/${userId}`);
+    return response.data.data;
+  },
+
+  unlockStaffAccount: async (userId: string) => {
+    const response = await api.patch<ApiEnvelope<User>>(`/admin/users/staffs/${userId}/restore`);
+    return response.data.data;
+  },
+
   getStaffWorkload: async (signal?: AbortSignal) => {
     const response = await api.get<ApiEnvelope<StaffWorkload[]>>('/users/staffs/workload', {
       signal,
@@ -113,5 +162,10 @@ export const customersApi = {
 
 export const staffsApi = {
   list: userService.listStaffs,
+  listAccounts: userService.listStaffAccounts,
+  createAccount: userService.createStaffAccount,
+  updateAccount: userService.updateStaffAccount,
+  lockAccount: userService.lockStaffAccount,
+  unlockAccount: userService.unlockStaffAccount,
   workload: userService.getStaffWorkload,
 };

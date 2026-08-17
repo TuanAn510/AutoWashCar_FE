@@ -18,6 +18,17 @@ import type {
   UpdateAppointmentStatusPayload,
 } from '@/types/appointment';
 
+function statusPayload(payload: UpdateAppointmentStatusPayload) {
+  if (!payload.evidenceImage) {
+    return payload;
+  }
+
+  const formData = new FormData();
+  formData.append('status', payload.status);
+  formData.append('evidenceImage', payload.evidenceImage);
+  return formData;
+}
+
 export const appointmentApi = {
   async getMyAppointments(params?: PaginationParams, signal?: AbortSignal) {
     const response = await api.get<PaginatedEnvelope<AppointmentItem, AppointmentStatusSummary>>(
@@ -67,10 +78,7 @@ export const appointmentApi = {
     return response.data.data;
   },
 
-  async checkBookingAvailability(
-    params: BookingCandidateAvailabilityParams,
-    signal?: AbortSignal
-  ) {
+  async checkBookingAvailability(params: BookingCandidateAvailabilityParams, signal?: AbortSignal) {
     const response = await api.get<ApiEnvelope<BookingCandidateAvailability>>(
       '/bookings/availability/check',
       { params, signal }
@@ -109,7 +117,7 @@ export const adminAppointmentsApi = {
   async updateAppointmentStatus(appointmentId: string, payload: UpdateAppointmentStatusPayload) {
     const response = await api.patch<ApiEnvelope<AppointmentItem>>(
       `/appointments/${appointmentId}/status`,
-      payload
+      statusPayload(payload)
     );
     return response.data.data;
   },
@@ -187,7 +195,7 @@ export const staffAppointmentsApi = {
   async updateAppointmentStatus(appointmentId: string, payload: UpdateAppointmentStatusPayload) {
     const response = await api.patch<ApiEnvelope<AppointmentItem>>(
       `/appointments/${appointmentId}/status`,
-      payload
+      statusPayload(payload)
     );
 
     return response.data.data;

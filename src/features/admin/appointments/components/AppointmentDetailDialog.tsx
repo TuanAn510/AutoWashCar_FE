@@ -1,6 +1,7 @@
 import { CarFront, Clock3, CreditCard, NotebookPen, Phone, UserRound } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import { AppointmentEvidenceImages } from '@/features/customers/appointments/components/AppointmentEvidenceImages';
 import { AppointmentStatusBadge } from '@/features/customers/appointments/components/AppointmentStatusBadge';
 import { AppointmentTimeMilestones } from '@/features/customers/appointments/components/AppointmentTimeMilestones';
 import type { AppointmentItem } from '@/types/appointment';
@@ -34,6 +35,14 @@ export function AdminAppointmentDetailDialog({
   if (!appointment) {
     return null;
   }
+
+  const assignedStaffs = appointment.assignedStaffIds?.length
+    ? appointment.assignedStaffIds
+    : appointment.assignedStaffId
+      ? [appointment.assignedStaffId]
+      : [];
+  const assignedStaffNames = assignedStaffs.map((staff) => staff.displayName).join(', ');
+  const assignedStaffPhones = assignedStaffs.map((staff) => staff.phone).join(', ');
 
   return (
     <CustomerModalShell
@@ -69,8 +78,8 @@ export function AdminAppointmentDetailDialog({
         <DetailTile
           icon={Phone}
           label="Liên hệ"
-          value={appointment.assignedStaffId?.phone || 'Chưa phân công'}
-          subValue={appointment.assignedStaffId?.displayName}
+          value={assignedStaffPhones || 'Chưa phân công'}
+          subValue={assignedStaffNames}
         />
         <DetailTile
           icon={CarFront}
@@ -81,6 +90,8 @@ export function AdminAppointmentDetailDialog({
       </section>
 
       <AppointmentTimeMilestones appointment={appointment} />
+
+      <AppointmentEvidenceImages appointment={appointment} />
 
       <section className="rounded-2xl border border-slate-200 p-5">
         <h3 className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-400">

@@ -1,5 +1,8 @@
 import {
   Award,
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
   CalendarClock,
   CalendarDays,
   CarFront,
@@ -59,6 +62,7 @@ import type { User } from '@/types/user';
 
 type CustomerStatusFilter = 'all' | 'active' | 'inactive';
 type CustomerDetailTab = 'overview' | 'appointments' | 'payments';
+type CustomerSortKey = 'name' | 'phone' | 'status' | 'createdAt';
 
 interface CustomerRow {
   id: string;
@@ -190,6 +194,40 @@ function DetailField({ label, value }: { label: string; value: string }) {
         {value}
       </p>
     </div>
+  );
+}
+
+function SortHeader({
+  activeKey,
+  children,
+  currentKey,
+  direction,
+  onSort,
+  align = 'left',
+}: {
+  activeKey: CustomerSortKey;
+  children: React.ReactNode;
+  currentKey: CustomerSortKey;
+  direction: 'asc' | 'desc';
+  onSort: (key: CustomerSortKey) => void;
+  align?: 'left' | 'center';
+}) {
+  const active = activeKey === currentKey;
+  const Icon = active ? (direction === 'asc' ? ArrowUp : ArrowDown) : ArrowUpDown;
+
+  return (
+    <button
+      type="button"
+      onClick={() => onSort(activeKey)}
+      className={cn(
+        'inline-flex items-center gap-1 rounded hover:text-slate-950',
+        align === 'center' && 'justify-center'
+      )}
+      title="Sắp xếp bảng"
+    >
+      {children}
+      <Icon className="size-3.5" />
+    </button>
   );
 }
 
@@ -575,6 +613,7 @@ function PaymentHistoryTab({
 export default function CustomerManagementPage() {
   const [keyword, setKeyword] = useState('');
   const [status, setStatus] = useState<CustomerStatusFilter>('all');
+  const [sortKey, setSortKey] = useState<CustomerSortKey>('createdAt');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [statusTarget, setStatusTarget] = useState<CustomerRow | null>(null);
   const [detailTarget, setDetailTarget] = useState<CustomerRow | null>(null);
@@ -614,7 +653,30 @@ export default function CustomerManagementPage() {
     Boolean(detailTarget && detailTab === 'payments')
   );
 
-  const customers = useMemo(() => data?.customers.map(mapUserToCustomer) ?? [], [data]);
+  const customers = useMemo(() => {
+    const list = data?.customers.map(mapUserToCustomer) ?? [];
+    return [...list].sort((a, b) => {
+      const direction = sortOrder === 'asc' ? 1 : -1;
+      if (sortKey === 'createdAt') {
+        const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return (timeA - timeB) * direction;
+      }
+      if (sortKey === 'status') {
+        return (Number(a.isActive) - Number(b.isActive)) * direction;
+      }
+      return String(a[sortKey] ?? '').localeCompare(String(b[sortKey] ?? ''), 'vi') * direction;
+    });
+  }, [data, sortKey, sortOrder]);
+
+  const handleSort = (key: CustomerSortKey) => {
+    if (key === sortKey) {
+      setSortOrder((current) => (current === 'asc' ? 'desc' : 'asc'));
+      return;
+    }
+    setSortKey(key);
+    setSortOrder(key === 'createdAt' ? 'desc' : 'asc');
+  };
 
   const openEditDialog = (customer: CustomerRow) => {
     setEditTarget(customer);
@@ -771,10 +833,48 @@ export default function CustomerManagementPage() {
               </colgroup>
               <thead>
                 <tr className="border-b border-border text-slate-900">
-                  <th className="px-3 py-3 font-semibold">Khách hàng</th>
-                  <th className="px-3 py-3 font-semibold">Số điện thoại</th>
-                  <th className="px-3 py-3 text-center font-semibold">Trạng thái</th>
-                  <th className="px-3 py-3 text-center font-semibold">Ngày tham gia</th>
+                  <th className="px-3 py-3 font-semibold">
+                    <SortHeader
+                      activeKey="name"
+                      currentKey={sortKey}
+                      direction={sortOrder}
+                      onSort={handleSort}
+                    >
+                      Khách hàng
+                    </SortHeader>
+                  </th>
+                  <th className="px-3 py-3 font-semibold">
+                    <SortHeader
+                      activeKey="phone"
+                      currentKey={sortKey}
+                      direction={sortOrder}
+                      onSort={handleSort}
+                    >
+                      Số điện thoại
+                    </SortHeader>
+                  </th>
+                  <th className="px-3 py-3 text-center font-semibold">
+                    <SortHeader
+                      activeKey="status"
+                      currentKey={sortKey}
+                      direction={sortOrder}
+                      onSort={handleSort}
+                      align="center"
+                    >
+                      Trạng thái
+                    </SortHeader>
+                  </th>
+                  <th className="px-3 py-3 text-center font-semibold">
+                    <SortHeader
+                      activeKey="createdAt"
+                      currentKey={sortKey}
+                      direction={sortOrder}
+                      onSort={handleSort}
+                      align="center"
+                    >
+                      Ngày tham gia
+                    </SortHeader>
+                  </th>
                   <th className="px-3 py-3 text-right font-semibold">Thao tác</th>
                 </tr>
               </thead>

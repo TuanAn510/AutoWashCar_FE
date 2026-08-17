@@ -1,4 +1,10 @@
-export type AppointmentStatus = 'pending' | 'confirmed' | 'in_queue' | 'in_progress' | 'completed' | 'cancelled';
+export type AppointmentStatus =
+  | 'pending'
+  | 'confirmed'
+  | 'in_queue'
+  | 'in_progress'
+  | 'completed'
+  | 'cancelled';
 export type AppointmentPaymentMethod = 'cash' | 'vnpay' | 'momo';
 export type AppointmentPaymentStatus = 'unpaid' | 'paid' | 'cancelled' | 'pending';
 
@@ -117,7 +123,12 @@ export interface AppointmentItem {
   paymentStatus: AppointmentPaymentStatus;
   cancelReason?: string | null;
   cancelledAt?: string | null;
+  checkInAt?: string | null;
+  serviceStartedAt?: string | null;
   completedAt?: string | null;
+  checkInImageUrl?: string | null;
+  completionImageUrl?: string | null;
+  statusHistory?: AppointmentStatusHistoryItem[];
   paidAt?: string | null;
   pointsEarned?: number;
   isPointsAwarded?: boolean;
@@ -125,6 +136,18 @@ export interface AppointmentItem {
   carTypeSnapshot?: string;
   createdAt?: string;
   updatedAt?: string;
+}
+
+export interface AppointmentStatusHistoryItem {
+  id: number;
+  oldStatus?: AppointmentStatus | null;
+  newStatus: AppointmentStatus;
+  actorId?: string | null;
+  actorName?: string | null;
+  actorRole?: 'admin' | 'staff' | 'customer' | null;
+  changedAt: string;
+  evidenceImageUrl?: string | null;
+  note?: string | null;
 }
 
 export interface PriorityQueueItem {
@@ -217,6 +240,7 @@ export interface AppointmentStatusSummary {
 
 export interface UpdateAppointmentStatusPayload {
   status: AppointmentStatus;
+  evidenceImage?: File | null;
 }
 
 export interface UpdateAppointmentPaymentStatusPayload {
@@ -259,6 +283,7 @@ export interface PaymentResult {
   method: 'vnpay' | 'momo';
   amount: number;
   expiresAt: string;
+  qrCodeUrl?: string;
 }
 
 export interface PaymentCallbackParams {
