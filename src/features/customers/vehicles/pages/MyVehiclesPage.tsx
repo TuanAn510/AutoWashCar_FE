@@ -34,6 +34,9 @@ import {
   useDeleteVehicle,
   useUpdateVehicle,
 } from '@/features/customers/vehicles/hooks/useVehicleMutations';
+import { formatLicensePlateDisplay } from '@/features/customers/vehicles/utils/license-plate';
+
+const normalizeLicensePlate = (value: string) => value.replace(/[^0-9A-Za-z]/g, '').toUpperCase();
 
 export default function MyVehiclesPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -66,6 +69,10 @@ export default function MyVehiclesPage() {
   const vehicles = myVehiclesQuery.data?.vehicles ?? [];
   const accessRequests = accessRequestsQuery.data ?? [];
   const pendingAccessRequests = accessRequests.filter((request) => request.status === 'pending');
+  const hasPendingRequestForPlate = (licensePlate: string) =>
+    pendingAccessRequests.some(
+      (request) => normalizeLicensePlate(request.licensePlate) === normalizeLicensePlate(licensePlate)
+    );
   const approvedAccessRequests = accessRequests.filter((request) => request.status === 'approved');
   // Ẩn thẻ "Chưa đủ minh chứng" chỉ khi biến số đó còn một yêu cầu khác (pending hoặc approved)
   // MỚI HƠN — tức là khách đã gửi lại / đã được duyệt xong. Các approved cũ không làm ẩn.
@@ -93,12 +100,23 @@ export default function MyVehiclesPage() {
   };
 
   const handleCreateVehicle = async (payload: CreateVehiclePayload | UpdateVehiclePayload) => {
+    const vehiclePayload = payload as CreateVehiclePayload;
+
+    if (hasPendingRequestForPlate(vehiclePayload.licensePlate)) {
+      toast.error('Biển số này đã có yêu cầu xác minh đang chờ xử lý.');
+      return;
+    }
+
     try {
-      await createVehicleMutation.mutateAsync(payload as CreateVehiclePayload);
+      await createVehicleMutation.mutateAsync(vehiclePayload);
     } catch (error) {
       const code = toApiError(error).code;
       if (code === 'VEHICLE_VERIFICATION_REQUIRED') {
-        const vehiclePayload = payload as CreateVehiclePayload;
+        if (hasPendingRequestForPlate(vehiclePayload.licensePlate)) {
+          toast.error('Biển số này đã có yêu cầu xác minh đang chờ xử lý.');
+          return;
+        }
+
         // Popup mang đủ hãng/dòng cuối cùng khách chọn: lấy tên custom nếu chọn
         // "Khác", ngược lại lấy tên catalog — để xe mới khi duyệt không bị kế
         // thừa nhầm hãng/dòng của xe cũ trong trường hợp chỉ "Khác" 1 trong 2.
@@ -344,6 +362,10 @@ export default function MyVehiclesPage() {
         }}
         onSubmit={async (value) => {
           if (!verificationPlate) return;
+          if (hasPendingRequestForPlate(verificationPlate.licensePlate)) {
+            toast.error('Xe này đã có yêu cầu xác minh đang chờ xử lý.');
+            return;
+          }
           // Chỉ gửi hãng/dòng đề xuất khi khách thực sự chọn "Khác" (tự nhập).
           // Nếu chọn hãng/dòng CÓ SẴN trong catalog (chỉ trùng biển) thì KHÔNG
           // gửi suggestedBrandName/Model → luồng xác minh chỉ là "biển số".
@@ -388,6 +410,10 @@ export default function MyVehiclesPage() {
         }}
         onSubmit={async (value) => {
           if (!resubmitRequest) return;
+          if (hasPendingRequestForPlate(resubmitRequest.licensePlate)) {
+            toast.error('Xe này đã có yêu cầu xác minh đang chờ xử lý.');
+            return;
+          }
           // Giữ nguyên hãng/dòng đề xuất (trường hợp cần xác minh cả hãng/dòng
           // lẫn biển) khi gửi lại, để admin duyệt lại đúng yêu cầu cũ.
           await createAccessRequest.mutateAsync({
@@ -472,7 +498,7 @@ function RequestCard({
         <div className="min-w-0">
           <p className="font-semibold">
             {isBrandModel ? 'Xác minh hãng / dòng xe' : 'Yêu cầu quyền sử dụng xe'}
-            <span className="ml-2 text-slate-500">{request.licensePlate}</span>
+            <span className="ml-2 text-slate-500">{formatLicensePlateDisplay(request.licensePlate)}</span>
           </p>
           {isBrandModel ? (
             <p className="mt-0.5 text-xs text-slate-500">
