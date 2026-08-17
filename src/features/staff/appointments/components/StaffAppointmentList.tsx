@@ -35,7 +35,10 @@ export function StaffAppointmentList({
   appointments: AppointmentItem[];
   onViewDetail: (appointment: AppointmentItem) => void;
   onOpenStatusDialog: (appointment: AppointmentItem) => void;
-  onQuickUpdate: (appointment: AppointmentItem, nextStatus: 'in_progress' | 'completed') => void;
+  onQuickUpdate: (
+    appointment: AppointmentItem,
+    nextStatus: 'in_queue' | 'in_progress' | 'completed'
+  ) => void;
   dateSort?: DateSort;
   onDateSortToggle?: () => void;
 }) {
@@ -126,7 +129,8 @@ export function StaffAppointmentList({
                           {quickAction.label}
                         </Button>
                       ) : null}
-                      {appointment.status === 'completed' && appointment.paymentStatus === 'paid' ? (
+                      {appointment.status === 'completed' &&
+                      appointment.paymentStatus === 'paid' ? (
                         <Badge variant="success" className="rounded-full px-2.5 py-0.5 text-xs">
                           <CreditCard className="mr-1 size-3" />
                           Đã thanh toán
