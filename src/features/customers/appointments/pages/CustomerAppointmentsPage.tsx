@@ -121,11 +121,13 @@ export default function CustomerAppointmentsPage() {
   const orderedAppointments = isDefaultPrimaryView
     ? defaultOrderedAppointments
     : filteredAppointments;
+  const collapsedAppointments = isDefaultPrimaryView
+    ? defaultOrderedAppointments.filter(isUpcomingAppointment).slice(0, 6)
+    : orderedAppointments.slice(0, 6);
   const displayedAppointments = showAllAppointments
     ? orderedAppointments
-    : orderedAppointments.slice(0, 6);
-  const canShowMoreAppointments =
-    !showAllAppointments && orderedAppointments.length > displayedAppointments.length;
+    : collapsedAppointments;
+  const hasAdditionalAppointments = orderedAppointments.length > collapsedAppointments.length;
   const clearFilters = () => {
     setActiveFilter('all');
     setKeyword('');
@@ -303,7 +305,7 @@ export default function CustomerAppointmentsPage() {
 
         {!appointmentsQuery.isLoading &&
           !appointmentsQuery.isError &&
-          displayedAppointments.length > 0 && (
+          orderedAppointments.length > 0 && (
             <section className="space-y-4">
               <div className="flex items-center justify-between gap-4">
                 <div>
@@ -314,17 +316,21 @@ export default function CustomerAppointmentsPage() {
                 </div>
               </div>
 
-              {canShowMoreAppointments ? (
-                <Button type="button" variant="outline" onClick={() => setShowAllAppointments(true)}>
-                  Xem thêm
-                </Button>
-              ) : null}
-
               <AppointmentList
                 appointments={displayedAppointments}
                 onViewDetail={openDetailDialog}
                 onCancel={openCancelDialog}
               />
+
+              {hasAdditionalAppointments ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowAllAppointments((current) => !current)}
+                >
+                  {showAllAppointments ? 'Thu gọn' : 'Xem thêm'}
+                </Button>
+              ) : null}
             </section>
           )}
       </div>
