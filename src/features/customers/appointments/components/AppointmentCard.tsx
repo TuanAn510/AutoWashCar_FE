@@ -34,7 +34,11 @@ export function AppointmentCard({
   onViewDetail: (appointment: AppointmentItem) => void;
   onCancel: (appointment: AppointmentItem) => void;
 }) {
-  const canCancel = canCustomerCancelAppointment(appointment.status, appointment.paymentStatus);
+  const canCancel = canCustomerCancelAppointment(
+    appointment.status,
+    appointment.paymentStatus,
+    appointment.scheduledAt
+  );
   const note = appointment.note?.trim();
   const { discountedPrice, hasDiscount, originalPrice } = getAppointmentPriceDisplay(appointment);
   const createdAt = appointment.createdAt ? `Đặt lúc: ${formatDateTime(appointment.createdAt)}` : null;

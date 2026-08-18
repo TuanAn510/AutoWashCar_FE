@@ -382,6 +382,26 @@ describe('customer journey UI', () => {
     expect(screen.getByRole('button', { name: 'Hủy lịch' })).toBeTruthy();
   });
 
+  it('hides cancellation at and inside the thirty-minute appointment deadline', () => {
+    const atBoundary = {
+      ...appointmentCardItem('unpaid'),
+      scheduledAt: '2099-08-12T08:30:00',
+    };
+    const { rerender } = render(
+      <AppointmentCard appointment={atBoundary} onViewDetail={vi.fn()} onCancel={vi.fn()} />
+    );
+    expect(screen.queryByRole('button', { name: 'Hủy lịch' })).toBeNull();
+
+    rerender(
+      <AppointmentCard
+        appointment={{ ...atBoundary, scheduledAt: '2099-08-12T08:29:00' }}
+        onViewDetail={vi.fn()}
+        onCancel={vi.fn()}
+      />
+    );
+    expect(screen.queryByRole('button', { name: 'Hủy lịch' })).toBeNull();
+  });
+
   it('shows six nearest upcoming appointments first and reveals the full current list on demand', () => {
     pageAppointments = [
       ...Array.from({ length: 7 }, (_, index) => ({
@@ -399,11 +419,70 @@ describe('customer journey UI', () => {
     expect(initialList).toContain('upcoming-2');
     expect(initialList).not.toContain('upcoming-1');
     expect(initialList).not.toContain('completed-history');
-    expect(screen.getByRole('button', { name: 'Xem tất cả lịch hẹn' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Xem thêm' })).toBeTruthy();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Xem tất cả lịch hẹn' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Xem thêm' }));
     expect(screen.getByTestId('appointment-list').textContent).toContain('upcoming-1');
     expect(screen.getByTestId('appointment-list').textContent).toContain('completed-history');
+  });
+
+  it('fills the default six with recent history after upcoming appointments', () => {
+    pageAppointments = [
+      { ...appointmentCardItem('unpaid'), _id: 'upcoming-later', scheduledAt: '2099-08-14T09:00:00' },
+      { ...appointmentCardItem('unpaid'), _id: 'upcoming-nearest', scheduledAt: '2099-08-13T09:00:00' },
+      ...Array.from({ length: 5 }, (_, index) => ({
+        ...appointmentCardItem('unpaid'),
+        _id: `history-${index + 1}`,
+        status: 'completed' as const,
+        scheduledAt: `2099-08-${String(11 - index).padStart(2, '0')}T09:00:00`,
+      })),
+    ];
+
+    render(<CustomerAppointmentsPage />);
+
+    const initialList = screen.getByTestId('appointment-list').textContent ?? '';
+    expect(initialList.indexOf('upcoming-nearest')).toBeLessThan(initialList.indexOf('upcoming-later'));
+    expect(initialList.indexOf('upcoming-later')).toBeLessThan(initialList.indexOf('history-1'));
+    expect(initialList.indexOf('history-1')).toBeLessThan(initialList.indexOf('history-4'));
+    expect(initialList).not.toContain('history-5');
+    expect(screen.getByRole('button', { name: 'Xem thêm' })).toBeTruthy();
+  });
+
+  it('does not show more for six matches and keeps the true empty state clear', () => {
+    pageAppointments = Array.from({ length: 6 }, (_, index) => ({
+      ...appointmentCardItem('unpaid'),
+      _id: `appointment-${index + 1}`,
+      scheduledAt: `2099-08-${String(13 + index).padStart(2, '0')}T09:00:00`,
+    }));
+    const { unmount } = render(<CustomerAppointmentsPage />);
+    expect(screen.queryByRole('button', { name: 'Xem thêm' })).toBeNull();
+
+    unmount();
+    pageAppointments = [];
+    render(<CustomerAppointmentsPage />);
+    expect(screen.getByText('Bạn chưa có lịch hẹn nào')).toBeTruthy();
+  });
+
+  it('keeps explicit status filters and reveals matches beyond the first six', () => {
+    pageAppointments = [
+      ...Array.from({ length: 7 }, (_, index) => ({
+        ...appointmentCardItem('unpaid'),
+        _id: `completed-${index + 1}`,
+        status: 'completed' as const,
+        scheduledAt: `2099-08-${String(11 - index).padStart(2, '0')}T09:00:00`,
+      })),
+      { ...appointmentCardItem('unpaid'), _id: 'pending-future' },
+    ];
+
+    render(<CustomerAppointmentsPage />);
+    fireEvent.click(screen.getByRole('button', { name: 'Bộ lọc' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Hoàn thành' }));
+
+    const initialList = screen.getByTestId('appointment-list').textContent ?? '';
+    expect(initialList).not.toContain('pending-future');
+    expect(initialList).not.toContain('completed-7');
+    fireEvent.click(screen.getByRole('button', { name: 'Xem thêm' }));
+    expect(screen.getByTestId('appointment-list').textContent).toContain('completed-7');
   });
 
   it('does not render structurally impossible end-of-day options', async () => {
