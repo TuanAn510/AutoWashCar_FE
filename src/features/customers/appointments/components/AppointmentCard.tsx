@@ -42,6 +42,10 @@ export function AppointmentCard({
   const note = appointment.note?.trim();
   const { discountedPrice, hasDiscount, originalPrice } = getAppointmentPriceDisplay(appointment);
   const createdAt = appointment.createdAt ? `Đặt lúc: ${formatDateTime(appointment.createdAt)}` : null;
+  const requiresRefund =
+    appointment.status === 'cancelled' &&
+    appointment.refundRequired === true &&
+    appointment.cancelReason === 'store_not_confirmed';
 
   return (
     <Card
@@ -86,6 +90,12 @@ export function AppointmentCard({
             <NotebookPen className="mt-0.5 size-4 shrink-0 text-slate-400" />
             <p className="line-clamp-2 leading-5">{note}</p>
           </div>
+        ) : null}
+
+        {requiresRefund ? (
+          <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm font-semibold leading-5 text-amber-800">
+            Lịch hẹn đã bị hủy do không được xác nhận đúng hạn. Khoản thanh toán này cần được xử lý hoàn tiền.
+          </p>
         ) : null}
 
         <div className="mt-auto flex flex-wrap items-center gap-2">

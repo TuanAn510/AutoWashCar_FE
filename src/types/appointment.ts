@@ -122,6 +122,7 @@ export interface AppointmentItem {
   paymentMethod: AppointmentPaymentMethod;
   paymentStatus: AppointmentPaymentStatus;
   cancelReason?: string | null;
+  refundRequired?: boolean;
   cancelledAt?: string | null;
   checkInAt?: string | null;
   serviceStartedAt?: string | null;

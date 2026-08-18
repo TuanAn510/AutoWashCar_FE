@@ -382,6 +382,29 @@ describe('customer journey UI', () => {
     expect(screen.getByRole('button', { name: 'Hủy lịch' })).toBeTruthy();
   });
 
+  it('shows a refund-required warning without claiming the refund completed', () => {
+    render(
+      <AppointmentCard
+        appointment={{
+          ...appointmentCardItem('paid'),
+          status: 'cancelled',
+          cancelReason: 'store_not_confirmed',
+          refundRequired: true,
+        }}
+        onViewDetail={vi.fn()}
+        onCancel={vi.fn()}
+      />
+    );
+
+    expect(
+      screen.getByText(
+        'Lịch hẹn đã bị hủy do không được xác nhận đúng hạn. Khoản thanh toán này cần được xử lý hoàn tiền.'
+      )
+    ).toBeTruthy();
+    expect(screen.queryByText(/Đã hoàn tiền|Hoàn tiền thành công/)).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Hủy lịch' })).toBeNull();
+  });
+
   it('hides cancellation at and inside the thirty-minute appointment deadline', () => {
     const atBoundary = {
       ...appointmentCardItem('unpaid'),
@@ -419,14 +442,29 @@ describe('customer journey UI', () => {
     expect(initialList).toContain('upcoming-2');
     expect(initialList).not.toContain('upcoming-1');
     expect(initialList).not.toContain('completed-history');
-    expect(screen.getByRole('button', { name: 'Xem thêm' })).toBeTruthy();
+    const showMore = screen.getByRole('button', { name: 'Xem thêm' });
+    expect(
+      screen.getByTestId('appointment-list').compareDocumentPosition(showMore) &
+        Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Xem thêm' }));
+    fireEvent.click(showMore);
     expect(screen.getByTestId('appointment-list').textContent).toContain('upcoming-1');
     expect(screen.getByTestId('appointment-list').textContent).toContain('completed-history');
+    expect(screen.queryByRole('button', { name: 'Xem thêm' })).toBeNull();
+    const collapse = screen.getByRole('button', { name: 'Thu gọn' });
+    expect(
+      screen.getByTestId('appointment-list').compareDocumentPosition(collapse) &
+        Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+
+    fireEvent.click(collapse);
+    expect(screen.getByTestId('appointment-list').textContent).not.toContain('upcoming-1');
+    expect(screen.getByTestId('appointment-list').textContent).not.toContain('completed-history');
+    expect(screen.getByRole('button', { name: 'Xem thêm' })).toBeTruthy();
   });
 
-  it('fills the default six with recent history after upcoming appointments', () => {
+  it('keeps the collapsed default list limited to upcoming appointments', () => {
     pageAppointments = [
       { ...appointmentCardItem('unpaid'), _id: 'upcoming-later', scheduledAt: '2099-08-14T09:00:00' },
       { ...appointmentCardItem('unpaid'), _id: 'upcoming-nearest', scheduledAt: '2099-08-13T09:00:00' },
@@ -442,10 +480,14 @@ describe('customer journey UI', () => {
 
     const initialList = screen.getByTestId('appointment-list').textContent ?? '';
     expect(initialList.indexOf('upcoming-nearest')).toBeLessThan(initialList.indexOf('upcoming-later'));
-    expect(initialList.indexOf('upcoming-later')).toBeLessThan(initialList.indexOf('history-1'));
-    expect(initialList.indexOf('history-1')).toBeLessThan(initialList.indexOf('history-4'));
+    expect(initialList).not.toContain('history-1');
     expect(initialList).not.toContain('history-5');
     expect(screen.getByRole('button', { name: 'Xem thêm' })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Xem thêm' }));
+    expect(screen.getByTestId('appointment-list').textContent).toContain('history-1');
+    expect(screen.getByTestId('appointment-list').textContent).toContain('history-5');
+    expect(screen.getByRole('button', { name: 'Thu gọn' })).toBeTruthy();
   });
 
   it('does not show more for six matches and keeps the true empty state clear', () => {
