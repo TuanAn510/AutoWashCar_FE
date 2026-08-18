@@ -15,6 +15,7 @@ import {
   type VehicleAccessRequest,
 } from '@/types/vehicle';
 import { DeleteVehicleDialog } from '@/features/customers/vehicles/components/delete-vehicle-dialog';
+import { DismissVehicleDialog } from '@/features/customers/vehicles/components/dismiss-vehicle-dialog';
 import { toApiError } from '@/api/errors';
 import { queryKeys } from '@/constants/queryKeys';
 import { VehicleVerificationDialog } from '@/features/customers/vehicles/components/vehicle-verification-dialog';
@@ -32,6 +33,7 @@ import { useMyVehicles } from '@/features/customers/vehicles/hooks/useMyVehicles
 import {
   useCreateVehicle,
   useDeleteVehicle,
+  useDismissVehicle,
   useUpdateVehicle,
 } from '@/features/customers/vehicles/hooks/useVehicleMutations';
 import { formatLicensePlateDisplay } from '@/features/customers/vehicles/utils/license-plate';
@@ -44,6 +46,7 @@ export default function MyVehiclesPage() {
   const [editingVehicle, setEditingVehicle] = useState<ApiVehicle | null>(null);
   const [detailVehicle, setDetailVehicle] = useState<ApiVehicle | null>(null);
   const [deletingVehicle, setDeletingVehicle] = useState<ApiVehicle | null>(null);
+  const [dismissingVehicle, setDismissingVehicle] = useState<ApiVehicle | null>(null);
   const [verificationPlate, setVerificationPlate] = useState<{
     licensePlate: string;
     brand?: string;
@@ -67,6 +70,7 @@ export default function MyVehiclesPage() {
   const createVehicleMutation = useCreateVehicle();
   const updateVehicleMutation = useUpdateVehicle();
   const deleteVehicleMutation = useDeleteVehicle();
+  const dismissVehicleMutation = useDismissVehicle();
   const accessRequestsQuery = useMyVehicleAccessRequests();
   const createAccessRequest = useCreateVehicleAccessRequest();
   const resubmitBrandModel = useResubmitBrandModel();
@@ -82,7 +86,12 @@ export default function MyVehiclesPage() {
     .filter((vehicle) => vehicle.deletedAt == null && vehicle.verificationStatus !== 'approved')
     .sort(byNewestFirst);
   const lockedVehicles = vehicles
-    .filter((vehicle) => vehicle.deletedAt != null)
+    .filter(
+      (vehicle) =>
+        vehicle.deletedAt != null &&
+        // Bỏ xe khách đã ẩn (dismiss) khỏi tab "Đã khóa" để tránh hiện nhiều mục.
+        !vehicle.customerDismissed
+    )
     .sort(byNewestFirst);
   const shownVehicles =
     vehicleFilter === 'approved'
@@ -91,10 +100,11 @@ export default function MyVehiclesPage() {
         ? verifyingVehicles
         : lockedVehicles;
   const accessRequests = accessRequestsQuery.data ?? [];
-  // Tab "Yêu cầu xác minh" giữ đúng 2 khối như thời điểm chưa chia filter:
-  // - Khối "Yêu cầu xác minh xe": đang chờ (pending) + bị từ chối (rejected).
-  //   Bị từ chối phải còn hiện để khách bổ sung lại giấy tờ; chờ hiện trước, từ chối sau.
-  // - Khối "Yêu cầu đã xác minh": đã được admin duyệt (approved).
+  // Tab "Yêu cầu xác minh" CHỈ còn 2 bảng:
+  // - Khối "Yêu cầu xác minh xe": các yêu cầu bị admin KHÔNG chấp nhận (rejected) —
+  //   để khách bổ sung giấy tờ rồi gửi lại.
+  // - Khối "Yêu cầu đã xác minh": admin đã duyệt (approved).
+  // Yêu cầu ĐANG ĐỢI admin duyệt (pending) hiển thị ở tab filter "Đang xác minh".
   const pendingRequests = accessRequests
     .filter((request) => request.status === 'pending')
     .sort(byRequestNewestFirst);
@@ -104,26 +114,44 @@ export default function MyVehiclesPage() {
   const approvedRequests = accessRequests
     .filter((request) => request.status === 'approved')
     .sort(byRequestNewestFirst);
-  // Biển đã được duyệt (có trong khối "Yêu cầu đã xác minh") coi như đã xử lý xong.
-  // Bỏ hết mọi yêu cầu pending/rejected còn sót cho cùng biển đó khỏi khối "Yêu cầu xác minh xe",
-  // tránh hiện lặp/yêu cầu cũ của cùng một chiếc xe.
-  const approvedPlates = new Set(
-    approvedRequests
-      .filter((request) => request.licensePlate)
-      .map((request) => request.licensePlate)
-  );
+  // Biển đã thuộc quyền sở hữu của khách (đã là xe đã xác minh, active): mọi yêu cầu
+  // rejected còn sót cho biển đó coi như đã hoàn tất — bỏ để tránh hiện lặp yêu cầu cũ
+  // của cùng một chiếc xe. So sánh bằng biển chuẩn hóa.
   const hasPendingRequestForPlate = (licensePlate: string) =>
     pendingRequests.some(
       (request) =>
         normalizeLicensePlate(request.licensePlate) === normalizeLicensePlate(licensePlate)
     );
-  // Khối đang xử lý: gộp pending (trước) + rejected (sau), bỏ biển đã duyệt.
-  const activeRequests = [...pendingRequests, ...rejectedRequests].filter(
-    (request) => !approvedPlates.has(request.licensePlate)
-  );
+  // Khối "Yêu cầu xác minh xe": CHỈ các yêu cầu bị admin từ chối (rejected) — đang chờ
+  // khách bổ sung giấy tờ rồi gửi lại.
+  // Chỉ cất KHỎI bảng khi biển đó đã được xác minh lại SAU lúc bị từ chối (khách sở hữu
+  // xe active / có yêu cầu ĐƯỢC DUYỆT cùng biển, đều SINH RA SAU lời từ chối) — tức lời
+  // từ chối đã trở nên vô nghĩa. KHÔNG phủ theo "biển đang có thuộc quyền khách hay không"
+  // đơn thuần: khi khách tạo xe TRÙNG biển với xe mình rồi bị từ chối, biển đó đã thuộc
+  // về họ từ trước, nhưng yêu cầu bị từ chối VẪN phải hiện để khách bổ sung giấy tờ.
+  const supplementRequests = rejectedRequests.filter((request) => {
+    // Đã gửi lại (đang có yêu cầu pending mới cùng biển) → cất yêu cầu rejected cũ.
+    if (hasPendingRequestForPlate(request.licensePlate)) return false;
+    const plate = normalizeLicensePlate(request.licensePlate);
+    const rejectedAt = new Date(request.createdAt).getTime();
+    // Nếu timestamp null/không chuẩn → coi là KHÔNG xác minh sau từ chối (vẫn hiện).
+    const happenedAfterReject = (timestamp?: string) =>
+      timestamp != null && new Date(timestamp).getTime() > rejectedAt;
+    const ownsVehicleAfter = verifiedVehicles.some(
+      (vehicle) =>
+        normalizeLicensePlate(vehicle.licensePlate) === plate &&
+        (happenedAfterReject(vehicle.createdAt) || happenedAfterReject(vehicle.updatedAt))
+    );
+    const approvedAfter = approvedRequests.some(
+      (approved) =>
+        normalizeLicensePlate(approved.licensePlate) === plate &&
+        happenedAfterReject(approved.createdAt)
+    );
+    return !ownsVehicleAfter && !approvedAfter;
+  });
   const vehicleFilterOptions = [
     { key: 'approved' as const, label: 'Đã xác minh', count: verifiedVehicles.length },
-    { key: 'pending' as const, label: 'Đang xác minh', count: verifyingVehicles.length },
+    { key: 'pending' as const, label: 'Đang xác minh', count: pendingRequests.length },
     { key: 'locked' as const, label: 'Đã khóa', count: lockedVehicles.length },
     { key: 'requests' as const, label: 'Yêu cầu xác minh', count: accessRequests.length },
   ];
@@ -181,6 +209,10 @@ export default function MyVehiclesPage() {
         clearCreateSearchParam();
         return;
       }
+      if (code === 'VEHICLE_ALREADY_VERIFIED') {
+        toast.error('Xe này đã được xác minh rồi, không thể gửi yêu cầu.');
+        return;
+      }
       throw error;
     }
     setIsCreateOpen(false);
@@ -202,6 +234,13 @@ export default function MyVehiclesPage() {
 
     await deleteVehicleMutation.mutateAsync(deletingVehicle._id);
     setDeletingVehicle(null);
+  };
+
+  const handleDismissVehicle = async () => {
+    if (!dismissingVehicle) return;
+
+    await dismissVehicleMutation.mutateAsync(dismissingVehicle._id);
+    setDismissingVehicle(null);
   };
 
   return (
@@ -293,22 +332,22 @@ export default function MyVehiclesPage() {
 
             {vehicleFilter === 'requests' ? (
               <div className="grid gap-4">
-                {activeRequests.length + approvedRequests.length === 0 ? (
+                {supplementRequests.length + approvedRequests.length === 0 ? (
                   <p className="rounded-xl bg-slate-50 px-4 py-6 text-center text-sm text-slate-500">
                     Chưa có yêu cầu xác minh nào.
                   </p>
                 ) : (
                   <>
-                    {activeRequests.length > 0 ? (
+                    {supplementRequests.length > 0 ? (
                       <section className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
                         <div className="flex items-center justify-between gap-3">
                           <h2 className="text-lg font-semibold">Yêu cầu xác minh xe</h2>
-                          <span className="text-sm text-slate-500">({activeRequests.length})</span>
+                          <span className="text-sm text-slate-500">({supplementRequests.length})</span>
                         </div>
                         <div className="mt-3 grid gap-2">
                           {(showAllPending
-                            ? activeRequests
-                            : activeRequests.slice(0, MAX_REQUEST_ROWS)
+                            ? supplementRequests
+                            : supplementRequests.slice(0, MAX_REQUEST_ROWS)
                           ).map((request) => (
                             <RequestCard
                               key={request._id}
@@ -321,7 +360,7 @@ export default function MyVehiclesPage() {
                             />
                           ))}
                         </div>
-                        {activeRequests.length > MAX_REQUEST_ROWS ? (
+                        {supplementRequests.length > MAX_REQUEST_ROWS ? (
                           <Button
                             variant="outline"
                             size="sm"
@@ -330,7 +369,7 @@ export default function MyVehiclesPage() {
                           >
                             {showAllPending
                               ? 'Thu gọn'
-                              : `Xem thêm ${activeRequests.length - MAX_REQUEST_ROWS} yêu cầu`}
+                              : `Xem thêm ${supplementRequests.length - MAX_REQUEST_ROWS} yêu cầu`}
                           </Button>
                         ) : null}
                       </section>
@@ -372,6 +411,18 @@ export default function MyVehiclesPage() {
                   </>
                 )}
               </div>
+            ) : vehicleFilter === 'pending' ? (
+              pendingRequests.length === 0 ? (
+                <p className="rounded-xl bg-slate-50 px-4 py-6 text-center text-sm text-slate-500">
+                  Không có yêu cầu đang chờ admin xác minh.
+                </p>
+              ) : (
+                <div className="grid gap-2">
+                  {pendingRequests.map((request) => (
+                    <RequestCard key={request._id} request={request} />
+                  ))}
+                </div>
+              )
             ) : shownVehicles.length === 0 ? (
               <p className="rounded-xl bg-slate-50 px-4 py-6 text-center text-sm text-slate-500">
                 Không có xe nào trong mục này.
@@ -385,6 +436,7 @@ export default function MyVehiclesPage() {
                     onView={setDetailVehicle}
                     onEdit={setEditingVehicle}
                     onDelete={setDeletingVehicle}
+                    onDismiss={setDismissingVehicle}
                   />
                 ))}
               </div>
@@ -435,6 +487,16 @@ export default function MyVehiclesPage() {
         onConfirm={handleDeleteVehicle}
       />
 
+      <DismissVehicleDialog
+        open={!!dismissingVehicle}
+        vehicle={dismissingVehicle}
+        isDismissing={dismissVehicleMutation.isPending}
+        onOpenChange={(open) => {
+          if (!open) setDismissingVehicle(null);
+        }}
+        onConfirm={handleDismissVehicle}
+      />
+
       <VehicleVerificationDialog
         title={
           verificationPlate?.needsBrandModelVerification
@@ -450,6 +512,8 @@ export default function MyVehiclesPage() {
         initialBrand={verificationPlate?.brand ?? ''}
         initialModel={verificationPlate?.model ?? ''}
         needsBrandModelVerification={false}
+        // Luồng 4 (khách chọn "Khác" + biển trùng): hiện thêm thẻ hãng/dòng dạng text-only.
+        showBrandModelInfoOnly={verificationPlate?.needsBrandModelVerification ?? false}
         open={Boolean(verificationPlate)}
         pending={createAccessRequest.isPending}
         onOpenChange={(open) => {
@@ -462,13 +526,16 @@ export default function MyVehiclesPage() {
             return;
           }
           // Customer chỉ upload minh chứng biển số; hãng/dòng khác nếu có sẽ để admin kiểm tra sau.
+          // CHỈ gửi tên hãng/dòng đề xuất khi khách chọn "Khác" (luồng 4, kèm biển trùng →
+          // admin xem mục "biển + hãng/dòng"). Luồng 3 (hãng/dòng chọn từ hệ thống, biển trùng)
+          // KHÔNG gửi suggested → admin xem mục "xác minh biển/quyền sử dụng".
           await createAccessRequest.mutateAsync({
             licensePlate: verificationPlate.licensePlate,
             suggestedBrandName: verificationPlate.needsBrandModelVerification
-              ? verificationPlate.brand
+              ? verificationPlate.brand || undefined
               : undefined,
             suggestedModelName: verificationPlate.needsBrandModelVerification
-              ? verificationPlate.model
+              ? verificationPlate.model || undefined
               : undefined,
             ...value,
           });
@@ -483,6 +550,11 @@ export default function MyVehiclesPage() {
         initialBrand={resubmitRequest?.suggestedBrandName ?? ''}
         initialModel={resubmitRequest?.suggestedModelName ?? ''}
         needsBrandModelVerification={false}
+        // Luồng 4 (từ chối yêu cầu biển + hãng/dòng "Khác"): hiện thẻ hãng/dòng
+        // text-only + thẻ biển yêu cầu nộp file. Luồng 3 (chỉ biển) thì plate-only.
+        showBrandModelInfoOnly={Boolean(
+          resubmitRequest?.suggestedBrandName || resubmitRequest?.suggestedModelName
+        )}
         initialRelationship={resubmitRequest?.relationship ?? ''}
         initialNote={resubmitRequest?.note ?? ''}
         reviewNote={resubmitRequest?.reviewNote}

@@ -1,4 +1,4 @@
-import { Calendar, CarFront, Eye, ImageIcon, Pencil, Trash2 } from 'lucide-react';
+import { Calendar, CarFront, Eye, ImageIcon, Pencil, Trash2, X } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -30,9 +30,11 @@ interface VehicleCardProps {
   onView: (vehicle: ApiVehicle) => void;
   onEdit: (vehicle: ApiVehicle) => void;
   onDelete: (vehicle: ApiVehicle) => void;
+  /** Chỉ dùng cho xe đã khóa: ẩn xe khỏi tab "Đã khóa". Không xóa dữ liệu. */
+  onDismiss?: (vehicle: ApiVehicle) => void;
 }
 
-export function VehicleCard({ vehicle, onView, onEdit, onDelete }: VehicleCardProps) {
+export function VehicleCard({ vehicle, onView, onEdit, onDelete, onDismiss }: VehicleCardProps) {
   const coverImage = vehicle.images?.[0]?.url;
   const vehicleName = [vehicle.brand, vehicle.model, vehicle.year].filter(Boolean).join(' ');
   const verification = vehicle.verificationStatus
@@ -68,6 +70,17 @@ export function VehicleCard({ vehicle, onView, onEdit, onDelete }: VehicleCardPr
             </Badge>
           </div>
         )}
+        {isLocked && onDismiss ? (
+          <button
+            type="button"
+            aria-label="Ẩn xe này khỏi danh sách"
+            title="Ẩn xe này khỏi danh sách"
+            onClick={() => onDismiss(vehicle)}
+            className="absolute right-2 top-2 z-10 grid size-8 place-items-center rounded-full bg-slate-900/70 text-white transition-colors hover:bg-rose-600"
+          >
+            <X className="size-4" />
+          </button>
+        ) : null}
       </div>
 
       <CardHeader className="gap-3 px-4 pt-4">
