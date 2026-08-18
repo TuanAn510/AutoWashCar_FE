@@ -7,8 +7,13 @@ import type {
 
 export const canCustomerCancelAppointment = (
   status: AppointmentStatus | string,
-  paymentStatus: AppointmentPaymentStatus | string
-) => status === 'pending' && paymentStatus !== 'paid';
+  paymentStatus: AppointmentPaymentStatus | string,
+  scheduledAt: string,
+  now = Date.now()
+) =>
+  status === 'pending' &&
+  paymentStatus !== 'paid' &&
+  now < new Date(scheduledAt).getTime() - 30 * 60 * 1000;
 
 export const getAppointmentNote = (note?: string | null) =>
   note?.trim() ? note.trim() : 'Không có ghi chú';
