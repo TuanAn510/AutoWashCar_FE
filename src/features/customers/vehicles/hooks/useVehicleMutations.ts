@@ -22,9 +22,10 @@ export function useCreateVehicle() {
       const code = toApiError(error).code;
       if (
         code === 'VEHICLE_VERIFICATION_REQUIRED' ||
-        code === 'BRAND_MODEL_VERIFICATION_REQUIRED'
+        code === 'BRAND_MODEL_VERIFICATION_REQUIRED' ||
+        code === 'VEHICLE_ALREADY_VERIFIED'
       ) {
-        return; // handled by the page (popup / wait-for-approval toast)
+        return; // handled by the page (popup / wait-for-approval toast / already-verified)
       }
       toast.error(getErrorMessage(error, 'Không thể thêm xe. Vui lòng thử lại.'));
     },
@@ -71,6 +72,22 @@ export function useDeleteVehicle() {
         return;
       }
       toast.error(getErrorMessage(error, 'Không thể xóa xe. Vui lòng thử lại.'));
+    },
+  });
+}
+
+export function useDismissVehicle() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (vehicleId: string) => vehiclesApi.dismissVehicle(vehicleId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.vehicles.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.vehicles.mine() });
+      toast.success('Đã ẩn xe khỏi danh sách đã khóa.');
+    },
+    onError: (error) => {
+      toast.error(getErrorMessage(error, 'Không thể ẩn xe. Vui lòng thử lại.'));
     },
   });
 }

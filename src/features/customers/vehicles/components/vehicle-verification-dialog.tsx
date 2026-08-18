@@ -28,6 +28,10 @@ type VehicleVerificationDialogProps = {
   /** True khi khách chọn "Khác" (custom) ở hãng và/hoặc dòng → yêu cầu này phải
    *  xác minh CẢ hãng/dòng lẫn biển số, và minh chứng được tách làm 2 nhóm. */
   needsBrandModelVerification?: boolean;
+  /** True (luồng 4: hãng/dòng "Khác" + biển trùng): hiện thẻ hãng/dòng dạng
+   *  THÔNG TIN (text-only, KHÔNG upload file — chỉ để customer biết admin sẽ xác
+   *  nhận lại hãng/dòng), chỉ thẻ biển số mới yêu cầu nộp minh chứng. */
+  showBrandModelInfoOnly?: boolean;
   onOpenChange: (open: boolean) => void;
   onSubmit: (value: VehicleVerificationSubmitValue) => Promise<void>;
 };
@@ -39,6 +43,7 @@ export function VehicleVerificationDialog(props: VehicleVerificationDialogProps)
     props.initialRelationship,
     props.initialNote,
     props.needsBrandModelVerification,
+    props.showBrandModelInfoOnly,
   ].join('|');
 
   return <VehicleVerificationDialogContent key={formKey} {...props} />;
@@ -56,6 +61,7 @@ function VehicleVerificationDialogContent({
   initialModel,
   reviewNote,
   needsBrandModelVerification = false,
+  showBrandModelInfoOnly = false,
   onOpenChange,
   onSubmit,
 }: VehicleVerificationDialogProps) {
@@ -64,6 +70,10 @@ function VehicleVerificationDialogContent({
   const [documents, setDocuments] = useState<File[]>([]);
   const [brandModelDocuments, setBrandModelDocuments] = useState<File[]>([]);
   const formId = 'vehicle-verification-form';
+
+  // Thẻ hãng/dòng chỉ hiển thị khi cần xác minh hãng/dòng (upload) HOẶC chỉ báo
+  // thông tin hãng/dòng để admin xác nhận lại (luồng 4, text-only).
+  const showBrandCard = needsBrandModelVerification || showBrandModelInfoOnly;
 
   const submitDisabled =
     pending ||
@@ -112,7 +122,7 @@ function VehicleVerificationDialogContent({
         ) : null}
 
         {/* Hành động cần xác minh — hiển thị dạng các thẻ gọn thay vì khối dài */}
-        {needsBrandModelVerification ? (
+        {showBrandCard ? (
           <div className="grid gap-3">
             {/* Thẻ 1: hãng/dòng */}
             <div className="rounded-2xl border border-amber-200 bg-amber-50/60 p-4">
@@ -126,26 +136,36 @@ function VehicleVerificationDialogContent({
                   </p>
                   <p className="mt-1.5 text-sm font-semibold text-amber-900">{modelName || '—'}</p>
                   <p className="mt-0.5 text-xs leading-5 text-amber-700">
-                    Cần minh chứng tên hãng/dòng này (giấy đăng ký xe, hóa đơn, cataloge).
+                    {showBrandModelInfoOnly
+                      ? 'Thông tin hãng/dòng này sẽ được admin xác nhận lại khi duyệt yêu cầu. Bạn không cần nộp thêm file cho mục này.'
+                      : 'Cần minh chứng tên hãng/dòng này (giấy đăng ký xe, hóa đơn, cataloge).'}
                   </p>
                 </div>
-                <span
-                  className={cn(
-                    'shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold',
-                    brandModelDocuments.length
-                      ? 'bg-emerald-100 text-emerald-700'
-                      : 'bg-amber-100 text-amber-700'
-                  )}
-                >
-                  {brandModelDocuments.length ? 'Xong' : 'Thiếu tài liệu'}
-                </span>
+                {showBrandModelInfoOnly ? (
+                  <span className="shrink-0 rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-bold text-slate-600">
+                    Đã gửi thông tin
+                  </span>
+                ) : (
+                  <span
+                    className={cn(
+                      'shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold',
+                      brandModelDocuments.length
+                        ? 'bg-emerald-100 text-emerald-700'
+                        : 'bg-amber-100 text-amber-700'
+                    )}
+                  >
+                    {brandModelDocuments.length ? 'Xong' : 'Thiếu tài liệu'}
+                  </span>
+                )}
               </div>
-              <div className="mt-3">
-                <EvidenceUpload
-                  files={brandModelDocuments}
-                  onFilesChange={setBrandModelDocuments}
-                />
-              </div>
+              {!showBrandModelInfoOnly ? (
+                <div className="mt-3">
+                  <EvidenceUpload
+                    files={brandModelDocuments}
+                    onFilesChange={setBrandModelDocuments}
+                  />
+                </div>
+              ) : null}
             </div>
 
             {/* Thẻ 2: biển số */}

@@ -36,6 +36,9 @@ export interface ApiVehicle {
   carType: CarType;
   images?: VehicleImage[];
   deletedAt?: string | null;
+  /** Khách đã ẩn xe này khỏi tab "Đã khóa". Dữ liệu vẫn còn trong hệ thống.
+   *  Tên trường khớp BE `vehicle.customerDismissed`. */
+  customerDismissed?: boolean;
   /** Xe mới này thay thế (khóa) xe có biển số nào — null nếu xe không phải kết quả
    *  của việc chuyển quyền biển số. Giúp hiện trạng thái "xe cũ đã bị khóa" / lịch sử. */
   replacedByVehicleId?: number | null;

@@ -123,6 +123,12 @@ export const vehiclesApi = {
     return response.data.data;
   },
 
+  /** Ẩn xe đã khóa (bất hoạt) khỏi tab "Đã khóa" của customer. Không xóa dữ liệu. */
+  dismissVehicle: async (vehicleId: string) => {
+    const response = await api.patch<ApiEnvelope<ApiVehicle>>(`/vehicles/${vehicleId}/dismiss`);
+    return response.data.data;
+  },
+
   // Admin
   listAll: async (params?: PaginationParams, signal?: AbortSignal) => {
     const response = await api.get<VehicleListEnvelope>('/vehicles', {
