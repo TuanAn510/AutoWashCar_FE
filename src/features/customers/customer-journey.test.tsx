@@ -10,6 +10,7 @@ import { AppointmentCard } from '@/features/customers/appointments/components/Ap
 import { CreateAppointmentModal } from '@/features/customers/appointments/components/CreateAppointmentModal';
 import CustomerAppointmentsPage from '@/features/customers/appointments/pages/CustomerAppointmentsPage';
 import { CustomerEmptyState } from '@/features/customers/components/CustomerEmptyState';
+import { formatDateTime } from '@/lib/utils';
 import type { AppointmentItem } from '@/types/appointment';
 
 const defaultSlots: Array<{ startAt: string; available: boolean; reason: string | null }> = [
@@ -375,8 +376,15 @@ describe('customer journey UI', () => {
     );
 
     expect(screen.queryByRole('button', { name: 'Hủy lịch' })).toBeNull();
-    expect(screen.getByText(/Đặt lúc:/)).toBeTruthy();
+    expect(
+      screen.getByText(`Đặt lúc: ${formatDateTime(appointmentCardItem('paid').createdAt!)}`)
+    ).toBeTruthy();
     expect(screen.getByText('Thời gian hẹn')).toBeTruthy();
+    expect(
+      screen.getByText(
+        formatDateTime(appointmentCardItem('paid').scheduledAt, { weekday: 'short' })
+      )
+    ).toBeTruthy();
 
     rerender(<AppointmentCard appointment={appointmentCardItem('unpaid')} onViewDetail={vi.fn()} onCancel={vi.fn()} />);
     expect(screen.getByRole('button', { name: 'Hủy lịch' })).toBeTruthy();
@@ -425,22 +433,22 @@ describe('customer journey UI', () => {
     expect(screen.queryByRole('button', { name: 'Hủy lịch' })).toBeNull();
   });
 
-  it('shows the six latest appointment times across future, today, and history, then expands and collapses', () => {
+  it('shows the six most recently created appointments across future, today, and history, then expands and collapses', () => {
     pageAppointments = [
-      { ...appointmentCardItem('unpaid'), _id: 'oldest', status: 'completed', scheduledAt: '2099-08-01T09:00:00' },
-      { ...appointmentCardItem('unpaid'), _id: 'future-18', scheduledAt: '2099-08-18T09:00:00' },
-      { ...appointmentCardItem('unpaid'), _id: 'past-10', status: 'completed', scheduledAt: '2099-08-10T09:00:00' },
-      { ...appointmentCardItem('unpaid'), _id: 'future-19', scheduledAt: '2099-08-19T09:00:00' },
-      { ...appointmentCardItem('unpaid'), _id: 'cancelled-09', status: 'cancelled', scheduledAt: '2099-08-09T09:00:00' },
-      { ...appointmentCardItem('unpaid'), _id: 'today', status: 'confirmed', scheduledAt: '2099-08-12T09:00:00' },
-      { ...appointmentCardItem('unpaid'), _id: 'completed-08', status: 'completed', scheduledAt: '2099-08-08T09:00:00' },
-      { ...appointmentCardItem('unpaid'), _id: 'past-07', status: 'pending', scheduledAt: '2099-08-07T09:00:00' },
+      { ...appointmentCardItem('unpaid'), _id: 'past-01', status: 'completed', scheduledAt: '2099-08-01T09:00:00', createdAt: '2099-08-12T12:31:00' },
+      { ...appointmentCardItem('unpaid'), _id: 'future-18', scheduledAt: '2099-08-18T09:00:00', createdAt: '2099-08-12T12:02:00' },
+      { ...appointmentCardItem('unpaid'), _id: 'past-10', status: 'completed', scheduledAt: '2099-08-10T09:00:00', createdAt: '2099-08-12T11:50:00' },
+      { ...appointmentCardItem('unpaid'), _id: 'future-19', scheduledAt: '2099-08-19T09:00:00', createdAt: '2099-08-12T11:40:00' },
+      { ...appointmentCardItem('unpaid'), _id: 'cancelled-09', status: 'cancelled', scheduledAt: '2099-08-09T09:00:00', createdAt: '2099-08-12T11:30:00' },
+      { ...appointmentCardItem('unpaid'), _id: 'today', status: 'confirmed', scheduledAt: '2099-08-12T09:00:00', createdAt: '2099-08-12T11:20:00' },
+      { ...appointmentCardItem('unpaid'), _id: 'completed-08', status: 'completed', scheduledAt: '2099-08-08T09:00:00', createdAt: '2099-08-12T11:10:00' },
+      { ...appointmentCardItem('unpaid'), _id: 'past-07', status: 'pending', scheduledAt: '2099-08-07T09:00:00', createdAt: '2099-08-12T11:00:00' },
     ];
 
     render(<CustomerAppointmentsPage />);
 
     expect(screen.getByTestId('appointment-list').textContent).toBe(
-      'future-19,future-18,today,past-10,cancelled-09,completed-08,'
+      'past-01,future-18,past-10,future-19,cancelled-09,today,'
     );
     expect(screen.getByText('6 lịch hẹn đang hiển thị')).toBeTruthy();
     const showMore = screen.getByRole('button', { name: 'Xem thêm' });
@@ -451,7 +459,7 @@ describe('customer journey UI', () => {
 
     fireEvent.click(showMore);
     expect(screen.getByTestId('appointment-list').textContent).toBe(
-      'future-19,future-18,today,past-10,cancelled-09,completed-08,past-07,oldest,'
+      'past-01,future-18,past-10,future-19,cancelled-09,today,completed-08,past-07,'
     );
     expect(screen.getByText('8 lịch hẹn đang hiển thị')).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Xem thêm' })).toBeNull();
@@ -463,22 +471,22 @@ describe('customer journey UI', () => {
 
     fireEvent.click(collapse);
     expect(screen.getByTestId('appointment-list').textContent).toBe(
-      'future-19,future-18,today,past-10,cancelled-09,completed-08,'
+      'past-01,future-18,past-10,future-19,cancelled-09,today,'
     );
     expect(screen.getByRole('button', { name: 'Xem thêm' })).toBeTruthy();
   });
 
   it('shows every appointment without expansion when fewer than six exist', () => {
     pageAppointments = [
-      { ...appointmentCardItem('unpaid'), _id: 'past', status: 'completed', scheduledAt: '2099-08-10T09:00:00' },
-      { ...appointmentCardItem('unpaid'), _id: 'future', scheduledAt: '2099-08-14T09:00:00' },
-      { ...appointmentCardItem('unpaid'), _id: 'today', scheduledAt: '2099-08-12T09:00:00' },
-      { ...appointmentCardItem('unpaid'), _id: 'cancelled', status: 'cancelled', scheduledAt: '2099-08-11T09:00:00' },
+      { ...appointmentCardItem('unpaid'), _id: 'past', status: 'completed', scheduledAt: '2099-08-10T09:00:00', createdAt: '2099-08-12T12:03:00' },
+      { ...appointmentCardItem('unpaid'), _id: 'future', scheduledAt: '2099-08-14T09:00:00', createdAt: '2099-08-12T12:04:00' },
+      { ...appointmentCardItem('unpaid'), _id: 'today', scheduledAt: '2099-08-12T09:00:00', createdAt: '2099-08-12T12:02:00' },
+      { ...appointmentCardItem('unpaid'), _id: 'cancelled', status: 'cancelled', scheduledAt: '2099-08-11T09:00:00', createdAt: '2099-08-12T12:01:00' },
     ];
 
     render(<CustomerAppointmentsPage />);
 
-    expect(screen.getByTestId('appointment-list').textContent).toBe('future,today,cancelled,past,');
+    expect(screen.getByTestId('appointment-list').textContent).toBe('future,past,today,cancelled,');
     expect(screen.getByText('4 lịch hẹn đang hiển thị')).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Xem thêm' })).toBeNull();
   });

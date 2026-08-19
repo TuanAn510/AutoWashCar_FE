@@ -102,11 +102,12 @@ export default function CustomerAppointmentsPage() {
   const isDefaultPrimaryView = !hasFilters;
   const defaultOrderedAppointments = useMemo(
     () =>
-      appointments.slice().sort(
-        (left, right) =>
-          new Date(right.scheduledAt).getTime() - new Date(left.scheduledAt).getTime()
-      ),
-    [appointments]
+      appointments.slice().sort((left, right) => {
+        const difference =
+          new Date(left.createdAt ?? 0).getTime() - new Date(right.createdAt ?? 0).getTime();
+        return sortOrder === 'asc' ? difference : -difference;
+      }),
+    [appointments, sortOrder]
   );
   const orderedAppointments = isDefaultPrimaryView
     ? defaultOrderedAppointments
