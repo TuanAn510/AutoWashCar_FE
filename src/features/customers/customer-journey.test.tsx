@@ -406,9 +406,11 @@ describe('customer journey UI', () => {
 
     expect(
       screen.getByText(
-        'Lịch hẹn đã bị hủy do không được xác nhận đúng hạn. Khoản thanh toán này cần được xử lý hoàn tiền.'
+        'Lịch hẹn đã bị hủy do cửa hàng chưa xác nhận đúng hạn. Khoản thanh toán của bạn đang chờ được xử lý hoàn tiền.'
       )
     ).toBeTruthy();
+    expect(screen.getByText('Chờ hoàn tiền')).toBeTruthy();
+    expect(screen.queryByText('Đã thanh toán')).toBeNull();
     expect(screen.queryByText(/Đã hoàn tiền|Hoàn tiền thành công/)).toBeNull();
     expect(screen.queryByRole('button', { name: 'Hủy lịch' })).toBeNull();
   });

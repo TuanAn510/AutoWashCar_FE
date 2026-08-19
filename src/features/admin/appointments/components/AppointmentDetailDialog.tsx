@@ -1,9 +1,11 @@
 import { CarFront, Clock3, CreditCard, NotebookPen, Phone, UserRound } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { AppointmentEvidenceImages } from '@/features/customers/appointments/components/AppointmentEvidenceImages';
 import { AppointmentStatusBadge } from '@/features/customers/appointments/components/AppointmentStatusBadge';
 import { AppointmentTimeMilestones } from '@/features/customers/appointments/components/AppointmentTimeMilestones';
+import { isAppointmentRefundRequired } from '@/features/customers/appointments/utils/appointmentDisplay';
 import type { AppointmentItem } from '@/types/appointment';
 import { CustomerModalShell } from '@/features/customers/components/CustomerModalShell';
 import { formatPrice, formatTime } from '@/lib/utils';
@@ -43,6 +45,7 @@ export function AdminAppointmentDetailDialog({
       : [];
   const assignedStaffNames = assignedStaffs.map((staff) => staff.displayName).join(', ');
   const assignedStaffPhones = assignedStaffs.map((staff) => staff.phone).join(', ');
+  const requiresRefund = isAppointmentRefundRequired(appointment);
 
   return (
     <CustomerModalShell
@@ -50,7 +53,16 @@ export function AdminAppointmentDetailDialog({
       onOpenChange={onOpenChange}
       title="Chi tiết lịch hẹn"
       description="Theo dõi toàn bộ thông tin khách hàng, xe, dịch vụ và tiến độ xử lý."
-      headerAside={<AppointmentStatusBadge status={appointment.status} />}
+      headerAside={
+        <div className="flex flex-wrap gap-2">
+          <AppointmentStatusBadge status={appointment.status} />
+          {requiresRefund ? (
+            <Badge variant="warning" className="rounded-full px-3 py-1">
+              Cần hoàn tiền
+            </Badge>
+          ) : null}
+        </div>
+      }
       contentClassName="!max-w-[1040px]"
       bodyClassName="grid gap-6"
       footer={
@@ -93,6 +105,12 @@ export function AdminAppointmentDetailDialog({
 
       <AppointmentEvidenceImages appointment={appointment} />
 
+      {requiresRefund ? (
+        <section className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm font-semibold leading-6 text-amber-800">
+          Lịch hẹn đã bị hủy do cửa hàng chưa xác nhận đúng hạn.
+        </section>
+      ) : null}
+
       <section className="rounded-2xl border border-slate-200 p-5">
         <h3 className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-400">
           Dịch vụ đã chọn
@@ -133,6 +151,13 @@ export function AdminAppointmentDetailDialog({
           label="Thanh toán"
           value={paymentStatusLabels[appointment.paymentStatus]}
         />
+        {requiresRefund ? (
+          <DetailTile
+            icon={CreditCard}
+            label="Trạng thái hoàn tiền"
+            value="Cần hoàn tiền"
+          />
+        ) : null}
         <DetailTile
           icon={CreditCard}
           label="Hình thức"

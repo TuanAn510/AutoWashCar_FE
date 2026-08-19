@@ -1,7 +1,9 @@
 import { ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 import { AdminAppointmentActionsMenu } from '@/features/admin/appointments/components/AdminAppointmentActionsMenu';
 import { AppointmentStatusBadge } from '@/features/customers/appointments/components/AppointmentStatusBadge';
+import { isAppointmentRefundRequired } from '@/features/customers/appointments/utils/appointmentDisplay';
 import { cn, formatPrice } from '@/lib/utils';
 import type { AppointmentItem } from '@/types/appointment';
 
@@ -208,7 +210,14 @@ export function AdminAppointmentsTable({
                     )}
                   </td>
                   <td className="px-2 py-3 align-middle">
-                    <AppointmentStatusBadge status={appointment.status} />
+                    <div className="flex flex-wrap gap-1.5">
+                      <AppointmentStatusBadge status={appointment.status} />
+                      {isAppointmentRefundRequired(appointment) ? (
+                        <Badge variant="warning" className="rounded-full px-3 py-1">
+                          Cần hoàn tiền
+                        </Badge>
+                      ) : null}
+                    </div>
                   </td>
                   <td className="px-2 py-3 text-right font-semibold text-slate-950">
                     {formatPrice(appointment.totalPrice)}
