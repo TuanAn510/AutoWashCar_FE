@@ -153,7 +153,7 @@ export default function MyVehiclesPage() {
     { key: 'approved' as const, label: 'Đã xác minh', count: verifiedVehicles.length },
     { key: 'pending' as const, label: 'Đang xác minh', count: pendingRequests.length },
     { key: 'locked' as const, label: 'Đã khóa', count: lockedVehicles.length },
-    { key: 'requests' as const, label: 'Yêu cầu xác minh', count: accessRequests.length },
+    { key: 'requests' as const, label: 'Yêu cầu xác minh', count: supplementRequests.length + approvedRequests.length },
   ];
   const isCreateRequested = searchParams.get('create') === '1';
   const isCreateDialogOpen = isCreateOpen || isCreateRequested;
