@@ -34,6 +34,7 @@ import {
   getPromotionReferenceId,
 } from '@/features/customers/appointments/utils/appointment-pricing';
 import { useMyVehicles } from '@/features/customers/vehicles/hooks/useMyVehicles';
+import { formatLicensePlateDisplay } from '@/features/customers/vehicles/utils/license-plate';
 import { appointmentApi } from '@/services/appointmentService';
 import type { Promotion } from '@/services/promotionService';
 import type { BookingAvailabilitySlot, CreateAppointmentPayload } from '@/types/appointment';
@@ -641,7 +642,8 @@ export function CreateAppointmentModal({
                     <option value="">Chọn xe của bạn</option>
                     {bookableVehicles.map((vehicle) => (
                       <option key={vehicle._id} value={vehicle._id}>
-                        {vehicle.brand} {vehicle.model} - {vehicle.licensePlate}
+                        {vehicle.brand} {vehicle.model} -{' '}
+                        {formatLicensePlateDisplay(vehicle.licensePlate)}
                       </option>
                     ))}
                   </select>
@@ -940,7 +942,7 @@ export function CreateAppointmentModal({
                     label="Xe"
                     value={
                       selectedVehicle
-                        ? `${selectedVehicle.brand} ${selectedVehicle.model} · ${selectedVehicle.licensePlate}`
+                        ? `${selectedVehicle.brand} ${selectedVehicle.model} · ${formatLicensePlateDisplay(selectedVehicle.licensePlate)}`
                         : 'Chưa chọn'
                     }
                   />

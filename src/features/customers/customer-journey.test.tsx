@@ -425,23 +425,24 @@ describe('customer journey UI', () => {
     expect(screen.queryByRole('button', { name: 'Hủy lịch' })).toBeNull();
   });
 
-  it('shows six nearest upcoming appointments first and reveals the full current list on demand', () => {
+  it('shows the six latest appointment times across future, today, and history, then expands and collapses', () => {
     pageAppointments = [
-      ...Array.from({ length: 7 }, (_, index) => ({
-        ...appointmentCardItem('unpaid'),
-        _id: `upcoming-${index + 1}`,
-        scheduledAt: `2099-08-${String(19 - index).padStart(2, '0')}T09:00:00`,
-      })),
-      { ...appointmentCardItem('unpaid'), _id: 'completed-history', status: 'completed', scheduledAt: '2099-08-11T09:00:00' },
+      { ...appointmentCardItem('unpaid'), _id: 'oldest', status: 'completed', scheduledAt: '2099-08-01T09:00:00' },
+      { ...appointmentCardItem('unpaid'), _id: 'future-18', scheduledAt: '2099-08-18T09:00:00' },
+      { ...appointmentCardItem('unpaid'), _id: 'past-10', status: 'completed', scheduledAt: '2099-08-10T09:00:00' },
+      { ...appointmentCardItem('unpaid'), _id: 'future-19', scheduledAt: '2099-08-19T09:00:00' },
+      { ...appointmentCardItem('unpaid'), _id: 'cancelled-09', status: 'cancelled', scheduledAt: '2099-08-09T09:00:00' },
+      { ...appointmentCardItem('unpaid'), _id: 'today', status: 'confirmed', scheduledAt: '2099-08-12T09:00:00' },
+      { ...appointmentCardItem('unpaid'), _id: 'completed-08', status: 'completed', scheduledAt: '2099-08-08T09:00:00' },
+      { ...appointmentCardItem('unpaid'), _id: 'past-07', status: 'pending', scheduledAt: '2099-08-07T09:00:00' },
     ];
 
     render(<CustomerAppointmentsPage />);
 
-    const initialList = screen.getByTestId('appointment-list').textContent ?? '';
-    expect(initialList).toContain('upcoming-7');
-    expect(initialList).toContain('upcoming-2');
-    expect(initialList).not.toContain('upcoming-1');
-    expect(initialList).not.toContain('completed-history');
+    expect(screen.getByTestId('appointment-list').textContent).toBe(
+      'future-19,future-18,today,past-10,cancelled-09,completed-08,'
+    );
+    expect(screen.getByText('6 lịch hẹn đang hiển thị')).toBeTruthy();
     const showMore = screen.getByRole('button', { name: 'Xem thêm' });
     expect(
       screen.getByTestId('appointment-list').compareDocumentPosition(showMore) &
@@ -449,8 +450,10 @@ describe('customer journey UI', () => {
     ).toBeTruthy();
 
     fireEvent.click(showMore);
-    expect(screen.getByTestId('appointment-list').textContent).toContain('upcoming-1');
-    expect(screen.getByTestId('appointment-list').textContent).toContain('completed-history');
+    expect(screen.getByTestId('appointment-list').textContent).toBe(
+      'future-19,future-18,today,past-10,cancelled-09,completed-08,past-07,oldest,'
+    );
+    expect(screen.getByText('8 lịch hẹn đang hiển thị')).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Xem thêm' })).toBeNull();
     const collapse = screen.getByRole('button', { name: 'Thu gọn' });
     expect(
@@ -459,35 +462,25 @@ describe('customer journey UI', () => {
     ).toBeTruthy();
 
     fireEvent.click(collapse);
-    expect(screen.getByTestId('appointment-list').textContent).not.toContain('upcoming-1');
-    expect(screen.getByTestId('appointment-list').textContent).not.toContain('completed-history');
+    expect(screen.getByTestId('appointment-list').textContent).toBe(
+      'future-19,future-18,today,past-10,cancelled-09,completed-08,'
+    );
     expect(screen.getByRole('button', { name: 'Xem thêm' })).toBeTruthy();
   });
 
-  it('keeps the collapsed default list limited to upcoming appointments', () => {
+  it('shows every appointment without expansion when fewer than six exist', () => {
     pageAppointments = [
-      { ...appointmentCardItem('unpaid'), _id: 'upcoming-later', scheduledAt: '2099-08-14T09:00:00' },
-      { ...appointmentCardItem('unpaid'), _id: 'upcoming-nearest', scheduledAt: '2099-08-13T09:00:00' },
-      ...Array.from({ length: 5 }, (_, index) => ({
-        ...appointmentCardItem('unpaid'),
-        _id: `history-${index + 1}`,
-        status: 'completed' as const,
-        scheduledAt: `2099-08-${String(11 - index).padStart(2, '0')}T09:00:00`,
-      })),
+      { ...appointmentCardItem('unpaid'), _id: 'past', status: 'completed', scheduledAt: '2099-08-10T09:00:00' },
+      { ...appointmentCardItem('unpaid'), _id: 'future', scheduledAt: '2099-08-14T09:00:00' },
+      { ...appointmentCardItem('unpaid'), _id: 'today', scheduledAt: '2099-08-12T09:00:00' },
+      { ...appointmentCardItem('unpaid'), _id: 'cancelled', status: 'cancelled', scheduledAt: '2099-08-11T09:00:00' },
     ];
 
     render(<CustomerAppointmentsPage />);
 
-    const initialList = screen.getByTestId('appointment-list').textContent ?? '';
-    expect(initialList.indexOf('upcoming-nearest')).toBeLessThan(initialList.indexOf('upcoming-later'));
-    expect(initialList).not.toContain('history-1');
-    expect(initialList).not.toContain('history-5');
-    expect(screen.getByRole('button', { name: 'Xem thêm' })).toBeTruthy();
-
-    fireEvent.click(screen.getByRole('button', { name: 'Xem thêm' }));
-    expect(screen.getByTestId('appointment-list').textContent).toContain('history-1');
-    expect(screen.getByTestId('appointment-list').textContent).toContain('history-5');
-    expect(screen.getByRole('button', { name: 'Thu gọn' })).toBeTruthy();
+    expect(screen.getByTestId('appointment-list').textContent).toBe('future,today,cancelled,past,');
+    expect(screen.getByText('4 lịch hẹn đang hiển thị')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Xem thêm' })).toBeNull();
   });
 
   it('does not show more for six matches and keeps the true empty state clear', () => {
@@ -497,12 +490,16 @@ describe('customer journey UI', () => {
       scheduledAt: `2099-08-${String(13 + index).padStart(2, '0')}T09:00:00`,
     }));
     const { unmount } = render(<CustomerAppointmentsPage />);
+    expect((screen.getByTestId('appointment-list').textContent?.match(/appointment-/g) ?? [])).toHaveLength(6);
+    expect(screen.getByText('6 lịch hẹn đang hiển thị')).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Xem thêm' })).toBeNull();
 
     unmount();
     pageAppointments = [];
     render(<CustomerAppointmentsPage />);
     expect(screen.getByText('Bạn chưa có lịch hẹn nào')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Xem thêm' })).toBeNull();
+    expect(screen.queryByText('0 lịch hẹn đang hiển thị')).toBeNull();
   });
 
   it('keeps explicit status filters and reveals matches beyond the first six', () => {
@@ -525,6 +522,48 @@ describe('customer journey UI', () => {
     expect(initialList).not.toContain('completed-7');
     fireEvent.click(screen.getByRole('button', { name: 'Xem thêm' }));
     expect(screen.getByTestId('appointment-list').textContent).toContain('completed-7');
+  });
+
+  it('does not show expansion when a status filter has six or fewer matches', () => {
+    pageAppointments = [
+      ...Array.from({ length: 6 }, (_, index) => ({
+        ...appointmentCardItem('unpaid'),
+        _id: `completed-${index + 1}`,
+        status: 'completed' as const,
+        scheduledAt: `2099-08-${String(11 - index).padStart(2, '0')}T09:00:00`,
+      })),
+      { ...appointmentCardItem('unpaid'), _id: 'pending-future' },
+    ];
+
+    render(<CustomerAppointmentsPage />);
+    fireEvent.click(screen.getByRole('button', { name: 'Bộ lọc' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Hoàn thành' }));
+
+    expect(screen.getByText('6 lịch hẹn đang hiển thị')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Xem thêm' })).toBeNull();
+  });
+
+  it('filters by search before limiting results and resets expanded mode', () => {
+    pageAppointments = Array.from({ length: 7 }, (_, index) => ({
+      ...appointmentCardItem('unpaid'),
+      _id: `search-${index + 1}`,
+      vehicleId: {
+        ...appointmentCardItem('unpaid').vehicleId,
+        licensePlate: index === 6 ? 'MATCH-ONLY' : `OTHER-${index + 1}`,
+      },
+      scheduledAt: `2099-08-${String(13 + index).padStart(2, '0')}T09:00:00`,
+    }));
+
+    render(<CustomerAppointmentsPage />);
+    fireEvent.click(screen.getByRole('button', { name: 'Xem thêm' }));
+    fireEvent.change(screen.getByPlaceholderText(/Tìm theo dịch vụ/), {
+      target: { value: 'MATCH-ONLY' },
+    });
+
+    expect(screen.getByTestId('appointment-list').textContent).toBe('search-7,');
+    expect(screen.getByText('1 lịch hẹn đang hiển thị')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Xem thêm' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Thu gọn' })).toBeNull();
   });
 
   it('does not render structurally impossible end-of-day options', async () => {

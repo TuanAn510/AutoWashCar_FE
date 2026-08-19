@@ -4,6 +4,7 @@ import type {
   AppointmentServiceSnapshot,
   AppointmentStatus,
 } from '@/types/appointment';
+import { formatLicensePlateDisplay } from '@/features/customers/vehicles/utils/license-plate';
 
 export const canCustomerCancelAppointment = (
   status: AppointmentStatus | string,
@@ -31,4 +32,4 @@ export const formatAppointmentServicesTitle = (services: AppointmentServiceSnaps
 };
 
 export const formatAppointmentVehicleLine = (appointment: AppointmentItem) =>
-  `${appointment.vehicleId.brand} ${appointment.vehicleId.model} · ${appointment.vehicleId.licensePlate}`;
+  `${appointment.vehicleId.brand} ${appointment.vehicleId.model} · ${formatLicensePlateDisplay(appointment.vehicleId.licensePlate)}`;
