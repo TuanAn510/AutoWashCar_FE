@@ -101,33 +101,21 @@ export default function CustomerAppointmentsPage() {
   const hasFilters = activeFilter !== 'all' || keyword.trim().length > 0;
   const isDefaultPrimaryView = !hasFilters;
   const defaultOrderedAppointments = useMemo(
-    () => {
-      const upcoming = appointments
-        .filter(isUpcomingAppointment)
-        .slice()
-        .sort((left, right) =>
-          new Date(left.scheduledAt).getTime() - new Date(right.scheduledAt).getTime()
-        );
-      const historical = appointments
-        .filter((appointment) => !isUpcomingAppointment(appointment))
-        .slice()
-        .sort((left, right) =>
+    () =>
+      appointments.slice().sort(
+        (left, right) =>
           new Date(right.scheduledAt).getTime() - new Date(left.scheduledAt).getTime()
-        );
-      return [...upcoming, ...historical];
-    },
+      ),
     [appointments]
   );
   const orderedAppointments = isDefaultPrimaryView
     ? defaultOrderedAppointments
     : filteredAppointments;
-  const collapsedAppointments = isDefaultPrimaryView
-    ? defaultOrderedAppointments.filter(isUpcomingAppointment).slice(0, 6)
-    : orderedAppointments.slice(0, 6);
+  const collapsedAppointments = orderedAppointments.slice(0, 6);
   const displayedAppointments = showAllAppointments
     ? orderedAppointments
     : collapsedAppointments;
-  const hasAdditionalAppointments = orderedAppointments.length > collapsedAppointments.length;
+  const hasAdditionalAppointments = orderedAppointments.length > 6;
   const clearFilters = () => {
     setActiveFilter('all');
     setKeyword('');
