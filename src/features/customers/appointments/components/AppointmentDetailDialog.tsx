@@ -8,6 +8,7 @@ import { AppointmentTimeMilestones } from '@/features/customers/appointments/com
 import { PaymentStatusBadge } from '@/components/shared/PaymentStatusBadge';
 import type { AppointmentItem } from '@/types/appointment';
 import { CustomerModalShell } from '@/features/customers/components/CustomerModalShell';
+import { formatLicensePlateDisplay } from '@/features/customers/vehicles/utils/license-plate';
 import { formatPrice, formatTime } from '@/lib/utils';
 
 const paymentMethodLabel: Record<string, string> = {
@@ -55,6 +56,7 @@ export function AppointmentDetailDialog({
       ? [appointment.assignedStaffId]
       : [];
   const assignedStaffNames = assignedStaffs.map((staff) => staff.displayName).join(', ');
+  const licensePlate = formatLicensePlateDisplay(appointment.vehicleId.licensePlate);
 
   return (
     <CustomerModalShell
@@ -96,7 +98,7 @@ export function AppointmentDetailDialog({
           {appointment.services.map((service) => service.nameSnapshot).join(', ')}
         </h3>
         <p className="mt-2 text-sm text-[#64748b]">
-          Lịch hẹn được tạo cho xe {appointment.vehicleId.licensePlate}.
+          Lịch hẹn được tạo cho xe {licensePlate}.
         </p>
       </section>
 
@@ -116,7 +118,7 @@ export function AppointmentDetailDialog({
             label="Xe của bạn"
             value={`${appointment.vehicleId.brand} ${appointment.vehicleId.model}`}
           />
-          <DetailItem icon={UserRound} label="Biển số" value={appointment.vehicleId.licensePlate} />
+          <DetailItem icon={UserRound} label="Biển số" value={licensePlate} />
           <DetailItem
             icon={CreditCard}
             label="Tổng thanh toán"
