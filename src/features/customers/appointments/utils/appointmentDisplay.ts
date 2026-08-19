@@ -6,6 +6,19 @@ import type {
 } from '@/types/appointment';
 import { formatLicensePlateDisplay } from '@/features/customers/vehicles/utils/license-plate';
 
+export const CUSTOMER_REFUND_REQUIRED_MESSAGE =
+  'Lịch hẹn đã bị hủy do cửa hàng chưa xác nhận đúng hạn. Khoản thanh toán của bạn đang chờ được xử lý hoàn tiền.';
+
+export const isAppointmentRefundRequired = (
+  appointment: Pick<AppointmentItem, 'status' | 'refundRequired'>
+) => appointment.status === 'cancelled' && appointment.refundRequired === true;
+
+export const isCustomerRefundRequired = (
+  appointment: Pick<AppointmentItem, 'status' | 'cancelReason' | 'refundRequired'>
+) =>
+  isAppointmentRefundRequired(appointment) &&
+  appointment.cancelReason === 'store_not_confirmed';
+
 export const canCustomerCancelAppointment = (
   status: AppointmentStatus | string,
   paymentStatus: AppointmentPaymentStatus | string,

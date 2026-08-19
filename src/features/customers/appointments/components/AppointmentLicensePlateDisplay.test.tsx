@@ -58,4 +58,59 @@ describe('customer appointment license plate display', () => {
     expect(screen.getAllByText(/50A-12345/)).toHaveLength(2);
     expect(screen.queryByText(/50A12345/)).toBeNull();
   });
+
+  it('shows the same pending-refund state in appointment card and detail', () => {
+    const refundAppointment: AppointmentItem = {
+      ...appointment,
+      status: 'cancelled',
+      paymentStatus: 'paid',
+      cancelReason: 'store_not_confirmed',
+      refundRequired: true,
+    };
+    const { unmount } = render(
+      <AppointmentCard
+        appointment={refundAppointment}
+        onViewDetail={vi.fn()}
+        onCancel={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText('Chờ hoàn tiền')).toBeTruthy();
+    expect(
+      screen.getByText(
+        'Lịch hẹn đã bị hủy do cửa hàng chưa xác nhận đúng hạn. Khoản thanh toán của bạn đang chờ được xử lý hoàn tiền.'
+      )
+    ).toBeTruthy();
+    expect(screen.queryByText('Đã thanh toán')).toBeNull();
+    expect(screen.queryByText(/Đã hoàn tiền|Hoàn tiền thành công/)).toBeNull();
+
+    unmount();
+    render(
+      <MemoryRouter>
+        <AppointmentDetailDialog appointment={refundAppointment} open onOpenChange={vi.fn()} />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText('Chờ hoàn tiền')).toBeTruthy();
+    expect(
+      screen.getByText(
+        'Lịch hẹn đã bị hủy do cửa hàng chưa xác nhận đúng hạn. Khoản thanh toán của bạn đang chờ được xử lý hoàn tiền.'
+      )
+    ).toBeTruthy();
+    expect(screen.queryByText('Đã thanh toán')).toBeNull();
+  });
+
+  it('preserves normal paid and unpaid payment labels', () => {
+    const { rerender } = render(
+      <AppointmentCard appointment={{ ...appointment, paymentStatus: 'paid' }} onViewDetail={vi.fn()} onCancel={vi.fn()} />
+    );
+    expect(screen.getByText('Đã thanh toán')).toBeTruthy();
+    expect(screen.queryByText('Chờ hoàn tiền')).toBeNull();
+
+    rerender(
+      <AppointmentCard appointment={{ ...appointment, paymentStatus: 'unpaid' }} onViewDetail={vi.fn()} onCancel={vi.fn()} />
+    );
+    expect(screen.getByText('Chưa thanh toán')).toBeTruthy();
+    expect(screen.queryByText('Chờ hoàn tiền')).toBeNull();
+  });
 });

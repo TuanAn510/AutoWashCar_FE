@@ -31,16 +31,20 @@ const statusIcons = {
 export function PaymentStatusBadge({
   status,
   className,
+  refundRequired = false,
 }: {
   status: AppointmentPaymentStatus;
   className?: string;
+  refundRequired?: boolean;
 }) {
-  const Icon = statusIcons[status];
+  const Icon = refundRequired ? Clock3 : statusIcons[status];
+  const label = refundRequired ? 'Chờ hoàn tiền' : paymentStatusLabels[status];
+  const variant = refundRequired ? 'warning' : statusVariant[status];
 
   return (
-    <Badge variant={statusVariant[status]} className={cn('rounded-full px-3 py-1', className)}>
+    <Badge variant={variant} className={cn('rounded-full px-3 py-1', className)}>
       <Icon className="size-3.5" />
-      {paymentStatusLabels[status]}
+      {label}
     </Badge>
   );
 }

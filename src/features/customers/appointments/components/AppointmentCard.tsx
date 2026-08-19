@@ -5,8 +5,10 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/componen
 import { AppointmentStatusBadge } from '@/features/customers/appointments/components/AppointmentStatusBadge';
 import {
   canCustomerCancelAppointment,
+  CUSTOMER_REFUND_REQUIRED_MESSAGE,
   formatAppointmentServicesTitle,
   formatAppointmentVehicleLine,
+  isCustomerRefundRequired,
 } from '@/features/customers/appointments/utils/appointmentDisplay';
 import { PaymentStatusBadge } from '@/components/shared/PaymentStatusBadge';
 import { formatDateTime, formatPrice, formatTime } from '@/lib/utils';
@@ -42,10 +44,7 @@ export function AppointmentCard({
   const note = appointment.note?.trim();
   const { discountedPrice, hasDiscount, originalPrice } = getAppointmentPriceDisplay(appointment);
   const createdAt = appointment.createdAt ? `Đặt lúc: ${formatDateTime(appointment.createdAt)}` : null;
-  const requiresRefund =
-    appointment.status === 'cancelled' &&
-    appointment.refundRequired === true &&
-    appointment.cancelReason === 'store_not_confirmed';
+  const requiresRefund = isCustomerRefundRequired(appointment);
 
   return (
     <Card
@@ -94,7 +93,7 @@ export function AppointmentCard({
 
         {requiresRefund ? (
           <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm font-semibold leading-5 text-amber-800">
-            Lịch hẹn đã bị hủy do không được xác nhận đúng hạn. Khoản thanh toán này cần được xử lý hoàn tiền.
+            {CUSTOMER_REFUND_REQUIRED_MESSAGE}
           </p>
         ) : null}
 
@@ -102,7 +101,10 @@ export function AppointmentCard({
           <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-black text-[#64748b]">
             {appointment.services.length} dịch vụ
           </span>
-          <PaymentStatusBadge status={appointment.paymentStatus} />
+          <PaymentStatusBadge
+            status={appointment.paymentStatus}
+            refundRequired={requiresRefund}
+          />
         </div>
       </CardContent>
 

@@ -5,6 +5,10 @@ import { Button } from '@/components/ui/button';
 import { AppointmentEvidenceImages } from '@/features/customers/appointments/components/AppointmentEvidenceImages';
 import { AppointmentStatusBadge } from '@/features/customers/appointments/components/AppointmentStatusBadge';
 import { AppointmentTimeMilestones } from '@/features/customers/appointments/components/AppointmentTimeMilestones';
+import {
+  CUSTOMER_REFUND_REQUIRED_MESSAGE,
+  isCustomerRefundRequired,
+} from '@/features/customers/appointments/utils/appointmentDisplay';
 import { PaymentStatusBadge } from '@/components/shared/PaymentStatusBadge';
 import type { AppointmentItem } from '@/types/appointment';
 import { CustomerModalShell } from '@/features/customers/components/CustomerModalShell';
@@ -57,6 +61,7 @@ export function AppointmentDetailDialog({
       : [];
   const assignedStaffNames = assignedStaffs.map((staff) => staff.displayName).join(', ');
   const licensePlate = formatLicensePlateDisplay(appointment.vehicleId.licensePlate);
+  const requiresRefund = isCustomerRefundRequired(appointment);
 
   return (
     <CustomerModalShell
@@ -106,6 +111,12 @@ export function AppointmentDetailDialog({
 
       <AppointmentEvidenceImages appointment={appointment} />
 
+      {requiresRefund ? (
+        <p className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold leading-6 text-amber-800">
+          {CUSTOMER_REFUND_REQUIRED_MESSAGE}
+        </p>
+      ) : null}
+
       <section className="rounded-xl border border-[#e5edf6] bg-slate-50 p-4 sm:p-5">
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           <DetailItem
@@ -129,7 +140,11 @@ export function AppointmentDetailDialog({
               <CreditCard className="size-4" />
               Trạng thái thanh toán
             </div>
-            <PaymentStatusBadge className="mt-2" status={appointment.paymentStatus} />
+            <PaymentStatusBadge
+              className="mt-2"
+              status={appointment.paymentStatus}
+              refundRequired={requiresRefund}
+            />
             <p className="mt-2 text-xs text-[#64748b]">
               {getPaymentMethodLabel(appointment.paymentMethod)}
             </p>
