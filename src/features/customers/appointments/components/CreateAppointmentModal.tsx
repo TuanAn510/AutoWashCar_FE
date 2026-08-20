@@ -33,6 +33,7 @@ import {
   calculatePromotionDiscount,
   getPromotionReferenceId,
 } from '@/features/customers/appointments/utils/appointment-pricing';
+import { useMyAppointments } from '@/features/customers/appointments/hooks/useMyAppointments';
 import { useMyVehicles } from '@/features/customers/vehicles/hooks/useMyVehicles';
 import { formatLicensePlateDisplay } from '@/features/customers/vehicles/utils/license-plate';
 import { appointmentApi } from '@/services/appointmentService';
@@ -229,6 +230,7 @@ export function CreateAppointmentModal({
   const [currentStep, setCurrentStep] = useState(0);
   const [isComplete, setComplete] = useState(false);
   const vehiclesQuery = useMyVehicles();
+  const appointmentsQuery = useMyAppointments();
 
   const {
     register,
@@ -258,6 +260,17 @@ export function CreateAppointmentModal({
   // chọn — backend cũng chặn ở BookingServiceLayer khi submit.
   const bookableVehicles = vehicles.filter(
     (vehicle) => !vehicle.verificationStatus || vehicle.verificationStatus === 'approved'
+  );
+  const unfinishedVehicleIds = useMemo(
+    () =>
+      new Set(
+        (appointmentsQuery.data?.appointments ?? [])
+          .filter((appointment) =>
+            ['pending', 'confirmed', 'in_queue', 'in_progress'].includes(appointment.status)
+          )
+          .map((appointment) => appointment.vehicleId._id)
+      ),
+    [appointmentsQuery.data?.appointments]
   );
   const categories = categoriesQuery.data ?? [];
   const allServices = useMemo(() => servicesQuery.data ?? [], [servicesQuery.data]);
@@ -478,9 +491,9 @@ export function CreateAppointmentModal({
   };
 
   const hasFormOptionsError =
-    vehiclesQuery.isError || categoriesQuery.isError || servicesQuery.isError;
+    vehiclesQuery.isError || appointmentsQuery.isError || categoriesQuery.isError || servicesQuery.isError;
   const isInitialOptionsLoading =
-    vehiclesQuery.isLoading || categoriesQuery.isLoading || servicesQuery.isLoading;
+    vehiclesQuery.isLoading || appointmentsQuery.isLoading || categoriesQuery.isLoading || servicesQuery.isLoading;
 
   const submitAppointment = handleSubmit(async (formValues) => {
     try {
@@ -636,14 +649,26 @@ export function CreateAppointmentModal({
                   <FieldLabel>Chọn xe</FieldLabel>
                   <select
                     className="h-[46px] rounded-md border border-[#d8e2ef] bg-white px-3 text-sm font-semibold text-[#64748b] outline-none focus:border-[#0b67c2]"
-                    disabled={isSubmitting || vehiclesQuery.isLoading || !bookableVehicles.length}
+                    disabled={
+                      isSubmitting ||
+                      vehiclesQuery.isLoading ||
+                      appointmentsQuery.isLoading ||
+                      !bookableVehicles.length
+                    }
                     {...register('vehicleId')}
                   >
                     <option value="">Chọn xe của bạn</option>
                     {bookableVehicles.map((vehicle) => (
-                      <option key={vehicle._id} value={vehicle._id}>
+                      <option
+                        key={vehicle._id}
+                        value={vehicle._id}
+                        disabled={unfinishedVehicleIds.has(vehicle._id)}
+                      >
                         {vehicle.brand} {vehicle.model} -{' '}
                         {formatLicensePlateDisplay(vehicle.licensePlate)}
+                        {unfinishedVehicleIds.has(vehicle._id)
+                          ? ' — Đã có lịch hẹn chưa hoàn thành'
+                          : ''}
                       </option>
                     ))}
                   </select>
