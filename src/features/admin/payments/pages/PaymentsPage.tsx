@@ -71,6 +71,11 @@ const paymentFilters: Array<{ label: string; value: PaymentFilter }> = [
 const getPaymentAmount = (appointment: AppointmentItem) =>
   Number(appointment.finalAmount ?? appointment.totalPrice ?? 0);
 
+const isRealizedRevenueAppointment = (appointment: AppointmentItem) =>
+  appointment.paymentStatus === 'paid' &&
+  appointment.status !== 'cancelled' &&
+  appointment.refundRequired !== true;
+
 const getDisplayDate = (appointment: AppointmentItem) =>
   appointment.paidAt || appointment.updatedAt || appointment.createdAt || appointment.scheduledAt;
 
@@ -189,7 +194,7 @@ export default function PaymentsPage() {
 
   const appointments = useMemo(() => paymentsQuery.data ?? [], [paymentsQuery.data]);
   const paidAppointments = useMemo(
-    () => appointments.filter((appointment) => appointment.paymentStatus === 'paid'),
+    () => appointments.filter(isRealizedRevenueAppointment),
     [appointments]
   );
   const totalRevenue = useMemo(
