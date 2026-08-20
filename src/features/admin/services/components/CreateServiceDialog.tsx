@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import type { ComponentProps } from 'react';
 
@@ -15,6 +15,8 @@ import {
 } from '@/components/ui/dialog';
 import { Field, FieldError, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+import { VndCurrencyInput } from '@/features/admin/services/components/VndCurrencyInput';
+import { MAX_SERVICE_PRICE } from '@/features/admin/services/utils/vnd-currency';
 import { cn } from '@/lib/utils';
 import type { ServiceCategory } from '@/types/serviceCategory';
 import type { CreateServicePayload } from '@/types/service';
@@ -27,7 +29,11 @@ const createServiceSchema = z.object({
     .max(150, 'Tên dịch vụ không được vượt quá 150 ký tự.'),
   description: z.string().trim().max(2000, 'Mô tả không được vượt quá 2000 ký tự.').optional(),
   categoryId: z.string().min(1, 'Vui lòng chọn danh mục dịch vụ.'),
-  price: z.number().min(0, 'Giá dịch vụ phải lớn hơn hoặc bằng 0.'),
+  price: z
+    .number()
+    .int('Giá dịch vụ phải là số nguyên.')
+    .min(0, 'Giá dịch vụ phải lớn hơn hoặc bằng 0.')
+    .max(MAX_SERVICE_PRICE, 'Giá dịch vụ vượt quá giới hạn cho phép.'),
   estimatedDuration: z
     .number()
     .int('Thời lượng phải là số nguyên.')
@@ -73,6 +79,7 @@ export function CreateServiceDialog({
 }: CreateServiceDialogProps) {
   const {
     register,
+    control,
     handleSubmit,
     reset,
     formState: { errors },
@@ -144,12 +151,24 @@ export function CreateServiceDialog({
               </Field>
             )}
 
-            <FormInput
-              type="number"
-              min={0}
-              label="Giá dịch vụ"
-              error={errors.price?.message}
-              {...register('price', { valueAsNumber: true })}
+            <Controller
+              control={control}
+              name="price"
+              render={({ field }) => (
+                <Field>
+                  <FieldLabel htmlFor="create-service-price">Giá dịch vụ</FieldLabel>
+                  <VndCurrencyInput
+                    id="create-service-price"
+                    aria-invalid={!!errors.price}
+                    className={cn('h-10 rounded-md bg-white px-3', fieldFocusClassName)}
+                    disabled={isSubmitting}
+                    value={field.value}
+                    onBlur={field.onBlur}
+                    onValueChange={field.onChange}
+                  />
+                  <FieldError>{errors.price?.message}</FieldError>
+                </Field>
+              )}
             />
 
             <FormInput

@@ -26,8 +26,14 @@ import {
   useCreateServiceMutation,
   useUpdateServiceMutation,
 } from '@/features/admin/services/hooks/use-service-mutations';
-import { useAllServices, useServices } from '@/features/admin/services/hooks/useServices';
+import { useAllServices } from '@/features/admin/services/hooks/useServices';
 import { useServiceManagementStore } from '@/features/admin/services/store/useServiceManagementStore';
+import {
+  buildServiceFilterCategories,
+  filterAndSortServices,
+  type ServiceNameSortOrder,
+  type ServiceStatusFilter,
+} from '@/features/admin/services/utils/service-list';
 import { cn, formatTime } from '@/lib/utils';
 import { useCurrentUser } from '@/features/auth/hooks/use-auth-queries';
 import {
@@ -35,8 +41,11 @@ import {
   type Service,
   type UpdateServicePayload,
 } from '@/types/service';
+import type { ServiceCategory } from '@/types/serviceCategory';
 
-type StatusFilter = 'all' | 'active' | 'inactive';
+const SERVICE_PAGE_SIZE = 10;
+const EMPTY_SERVICES: Service[] = [];
+const EMPTY_CATEGORIES: ServiceCategory[] = [];
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat('vi-VN', {
@@ -169,29 +178,46 @@ export default function ServicesManagementPage() {
   const closeCreateDialog = useServiceManagementStore((state) => state.closeCreateDialog);
   const [keyword, setKeyword] = useState('');
   const [categoryId, setCategoryId] = useState('all');
-  const [status, setStatus] = useState<StatusFilter>('all');
+  const [status, setStatus] = useState<ServiceStatusFilter>('all');
   const [page, setPage] = useState(1);
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [sortOrder, setSortOrder] = useState<ServiceNameSortOrder>('asc');
   const [detailService, setDetailService] = useState<Service | null>(null);
   const [editingService, setEditingService] = useState<Service | null>(null);
 
-  const servicesQuery = useServices({
-    page,
-    limit: 10,
-    ...(keyword.trim() ? { search: keyword.trim() } : {}),
-    ...(categoryId !== 'all' ? { categoryId } : {}),
-    ...(status !== 'all' ? { isActive: status === 'active' } : {}),
-    sortBy: 'name',
-    sortOrder,
-  });
   const allServicesQuery = useAllServices();
   const categoriesQuery = useActiveServiceCategories();
   const createServiceMutation = useCreateServiceMutation();
   const updateServiceMutation = useUpdateServiceMutation();
 
-  const services = servicesQuery.data?.items ?? [];
-  const categories = categoriesQuery.data ?? [];
-  const stats = useMemo(() => buildStats(allServicesQuery.data ?? []), [allServicesQuery.data]);
+  const allServices = allServicesQuery.data ?? EMPTY_SERVICES;
+  const categories = categoriesQuery.data ?? EMPTY_CATEGORIES;
+  const stats = useMemo(() => buildStats(allServices), [allServices]);
+  const filterCategories = useMemo(
+    () => buildServiceFilterCategories(categories, allServices),
+    [allServices, categories]
+  );
+  const filteredServices = useMemo(
+    () =>
+      filterAndSortServices(allServices, {
+        keyword,
+        categoryId,
+        status,
+        sortOrder,
+      }),
+    [allServices, categoryId, keyword, sortOrder, status]
+  );
+  const totalPages = Math.max(1, Math.ceil(filteredServices.length / SERVICE_PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const services = filteredServices.slice(
+    (currentPage - 1) * SERVICE_PAGE_SIZE,
+    currentPage * SERVICE_PAGE_SIZE
+  );
+  const pagination = {
+    page: currentPage,
+    limit: SERVICE_PAGE_SIZE,
+    total: filteredServices.length,
+    totalPages,
+  };
 
   const handleCreateService = (payload: CreateServicePayload) => {
     createServiceMutation.mutate(payload);
@@ -251,7 +277,7 @@ export default function ServicesManagementPage() {
         </section>
 
         <section className="rounded-lg border border-border/80 bg-white p-4">
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_220px_190px]">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-[minmax(280px,1fr)_150px_220px_190px]">
             <div className="relative">
               <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
               <Input
@@ -263,18 +289,19 @@ export default function ServicesManagementPage() {
                   setPage(1);
                 }}
               />
-              <select
-                className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm outline-none focus:border-slate-700 focus:ring-2 focus:ring-slate-700/10"
-                value={sortOrder}
-                onChange={(event) => {
-                  setSortOrder(event.target.value as 'asc' | 'desc');
-                  setPage(1);
-                }}
-              >
-                <option value="asc">Tên A-Z</option>
-                <option value="desc">Tên Z-A</option>
-              </select>
             </div>
+            <select
+              aria-label="Sắp xếp theo tên"
+              className="h-10 rounded-md border border-input bg-white px-3 text-sm outline-none focus:border-slate-700 focus:ring-2 focus:ring-slate-700/10"
+              value={sortOrder}
+              onChange={(event) => {
+                setSortOrder(event.target.value as ServiceNameSortOrder);
+                setPage(1);
+              }}
+            >
+              <option value="asc">Tên A-Z</option>
+              <option value="desc">Tên Z-A</option>
+            </select>
             <select
               aria-label="Danh mục"
               className="h-10 rounded-md border border-input bg-white px-3 text-sm outline-none focus:border-slate-700 focus:ring-2 focus:ring-slate-700/10"
@@ -285,7 +312,7 @@ export default function ServicesManagementPage() {
               }}
             >
               <option value="all">Tất cả danh mục</option>
-              {categories.map((category) => (
+              {filterCategories.map((category) => (
                 <option key={category._id} value={category._id}>
                   {category.name}
                 </option>
@@ -296,7 +323,7 @@ export default function ServicesManagementPage() {
               className="h-10 rounded-md border border-input bg-white px-3 text-sm outline-none focus:border-slate-700 focus:ring-2 focus:ring-slate-700/10"
               value={status}
               onChange={(event) => {
-                setStatus(event.target.value as StatusFilter);
+                setStatus(event.target.value as ServiceStatusFilter);
                 setPage(1);
               }}
             >
@@ -312,7 +339,7 @@ export default function ServicesManagementPage() {
             <h2 className="text-xl font-semibold tracking-normal text-slate-950">
               Danh sách dịch vụ
             </h2>
-            {(servicesQuery.isError || allServicesQuery.isError) && (
+            {allServicesQuery.isError && (
               <p className="text-sm text-destructive">
                 Không thể tải dữ liệu dịch vụ. Vui lòng kiểm tra đăng nhập hoặc thử lại.
               </p>
@@ -332,14 +359,14 @@ export default function ServicesManagementPage() {
                 </tr>
               </thead>
               <tbody>
-                {servicesQuery.isLoading && (
+                {allServicesQuery.isLoading && (
                   <tr>
                     <td colSpan={7} className="px-2 py-8 text-center text-slate-500">
                       Đang tải dữ liệu dịch vụ...
                     </td>
                   </tr>
                 )}
-                {!servicesQuery.isLoading && !servicesQuery.isError && !services.length && (
+                {!allServicesQuery.isLoading && !allServicesQuery.isError && !services.length && (
                   <tr>
                     <td colSpan={7} className="px-2 py-8 text-center text-slate-500">
                       Không có dịch vụ phù hợp.
@@ -399,7 +426,7 @@ export default function ServicesManagementPage() {
             </table>
           </div>
           <PaginationControls
-            pagination={servicesQuery.data?.pagination}
+            pagination={pagination}
             itemCount={services.length}
             onPageChange={setPage}
           />
