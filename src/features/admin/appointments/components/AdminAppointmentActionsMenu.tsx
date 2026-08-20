@@ -65,6 +65,10 @@ export function AdminAppointmentActionsMenu({
               <CheckCircle2 className="size-4" />
               Xác nhận
             </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onReschedule(appointment)}>
+              <CalendarClock className="size-4" />
+              Đổi lịch
+            </DropdownMenuItem>
             <DropdownMenuItem variant="destructive" onClick={() => onCancel(appointment)}>
               <XCircle className="size-4" />
               Hủy
@@ -75,10 +79,6 @@ export function AdminAppointmentActionsMenu({
             <DropdownMenuItem onClick={() => onAssignStaff(appointment)} disabled={isTerminal}>
               <UserPlus className="size-4" />
               Phân công nhân viên
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onReschedule(appointment)} disabled={isTerminal}>
-              <CalendarClock className="size-4" />
-              Đổi lịch
             </DropdownMenuItem>
             <DropdownMenuItem
               variant="destructive"
