@@ -22,8 +22,18 @@ import { adminAppointmentsApi } from '@/services/appointmentService';
 
 export { loyaltyKeys, membershipTierKeys, rewardKeys };
 
+const dynamicLoyaltyQueryOptions = {
+  staleTime: 0,
+  refetchInterval: 15_000,
+  refetchIntervalInBackground: false,
+  refetchOnMount: 'always',
+  refetchOnWindowFocus: true,
+  refetchOnReconnect: true,
+} as const;
+
 export function useMyLoyaltyAccount() {
   return useQuery({
+    ...dynamicLoyaltyQueryOptions,
     queryKey: loyaltyKeys.me,
     queryFn: ({ signal }) => loyaltyApi.getMyAccount(signal),
   });
@@ -31,6 +41,7 @@ export function useMyLoyaltyAccount() {
 
 export function useMyLoyaltyTransactions() {
   return useQuery({
+    ...dynamicLoyaltyQueryOptions,
     queryKey: loyaltyKeys.myTransactions,
     queryFn: ({ signal }) => loyaltyApi.getMyTransactions(signal),
   });
@@ -78,6 +89,7 @@ export function useMembershipTiers() {
 
 export function useRewards(params: { sortBy?: string; sortOrder?: 'asc' | 'desc' } = {}) {
   return useQuery({
+    ...dynamicLoyaltyQueryOptions,
     queryKey: queryKeys.rewards.list(params),
     queryFn: ({ signal }) => rewardApi.list(params, signal),
   });
@@ -85,6 +97,7 @@ export function useRewards(params: { sortBy?: string; sortOrder?: 'asc' | 'desc'
 
 export function useMyRewardRedemptions() {
   return useQuery({
+    ...dynamicLoyaltyQueryOptions,
     queryKey: rewardKeys.myRedemptions,
     queryFn: ({ signal }) => rewardApi.getMyRedemptions(signal),
   });

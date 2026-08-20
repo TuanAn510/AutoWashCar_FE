@@ -32,6 +32,7 @@ const service = (
   description: '',
   price: 150_000,
   estimatedDuration: 30,
+  rewardPoints: 15,
   isActive,
   version: 0,
   createdAt: '2026-08-20T00:00:00',

@@ -146,6 +146,7 @@ function ServiceDetailDialog({
             <div className="grid gap-3 sm:grid-cols-2">
               <Info label="Giá" value={formatCurrency(service.price)} />
               <Info label="Thời lượng" value={formatTime(service.estimatedDuration)} />
+              <Info label="Điểm nhận được" value={`${service.rewardPoints} điểm`} />
               <Info label="Trạng thái" value={service.isActive ? 'Đang hoạt động' : 'Tạm ẩn'} />
             </div>
             <div className="rounded-lg border border-slate-200 p-3">
@@ -346,7 +347,7 @@ export default function ServicesManagementPage() {
             )}
           </div>
           <div className="mt-5 overflow-x-auto">
-            <table className="w-full min-w-[880px] table-fixed border-collapse text-left text-sm">
+            <table className="w-full min-w-[980px] table-fixed border-collapse text-left text-sm">
               <thead>
                 <tr className="border-b border-border text-slate-900">
                   <th className="w-[220px] px-2 py-3 font-semibold">Tên dịch vụ</th>
@@ -354,6 +355,7 @@ export default function ServicesManagementPage() {
                   <th className="w-[150px] px-2 py-3 font-semibold">Danh mục</th>
                   <th className="w-[130px] px-2 py-3 text-right font-semibold">Giá</th>
                   <th className="w-[110px] px-2 py-3 font-semibold">Thời lượng</th>
+                  <th className="w-[100px] px-2 py-3 font-semibold">Điểm nhận</th>
                   <th className="w-[130px] px-2 py-3 font-semibold">Trạng thái</th>
                   <th className="w-[80px] px-2 py-3 text-right font-semibold">Thao tác</th>
                 </tr>
@@ -361,14 +363,14 @@ export default function ServicesManagementPage() {
               <tbody>
                 {allServicesQuery.isLoading && (
                   <tr>
-                    <td colSpan={7} className="px-2 py-8 text-center text-slate-500">
+                    <td colSpan={8} className="px-2 py-8 text-center text-slate-500">
                       Đang tải dữ liệu dịch vụ...
                     </td>
                   </tr>
                 )}
                 {!allServicesQuery.isLoading && !allServicesQuery.isError && !services.length && (
                   <tr>
-                    <td colSpan={7} className="px-2 py-8 text-center text-slate-500">
+                    <td colSpan={8} className="px-2 py-8 text-center text-slate-500">
                       Không có dịch vụ phù hợp.
                     </td>
                   </tr>
@@ -400,6 +402,9 @@ export default function ServicesManagementPage() {
                     </td>
                     <td className="px-2 py-3 text-slate-900">
                       {formatTime(service.estimatedDuration)}
+                    </td>
+                    <td className="px-2 py-3 font-semibold text-emerald-700">
+                      {service.rewardPoints}
                     </td>
                     <td className="px-2 py-3">
                       <span

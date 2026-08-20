@@ -15,6 +15,7 @@ export interface Service {
   categoryId: ServiceCategoryRef;
   price: number;
   estimatedDuration: number;
+  rewardPoints: number;
   isActive: boolean;
   version: number;
   createdAt: string;

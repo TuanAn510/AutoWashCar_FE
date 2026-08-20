@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useEffect } from 'react';
-import { Controller, useForm } from 'react-hook-form';
+import { Controller, useForm, useWatch } from 'react-hook-form';
 import { z } from 'zod';
 import type { ComponentProps } from 'react';
 
@@ -16,7 +16,10 @@ import {
 import { Field, FieldError, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { VndCurrencyInput } from '@/features/admin/services/components/VndCurrencyInput';
-import { MAX_SERVICE_PRICE } from '@/features/admin/services/utils/vnd-currency';
+import {
+  calculateServiceRewardPoints,
+  MAX_SERVICE_PRICE,
+} from '@/features/admin/services/utils/vnd-currency';
 import { cn } from '@/lib/utils';
 import type { ServiceCategory } from '@/types/serviceCategory';
 import type { CreateServicePayload } from '@/types/service';
@@ -26,7 +29,7 @@ const createServiceSchema = z.object({
     .string()
     .trim()
     .min(1, 'Vui lòng nhập tên dịch vụ.')
-    .max(150, 'Tên dịch vụ không được vượt quá 150 ký tự.'),
+    .max(120, 'Tên dịch vụ không được vượt quá 120 ký tự.'),
   description: z.string().trim().max(2000, 'Mô tả không được vượt quá 2000 ký tự.').optional(),
   categoryId: z.string().min(1, 'Vui lòng chọn danh mục dịch vụ.'),
   price: z
@@ -87,6 +90,7 @@ export function CreateServiceDialog({
     resolver: zodResolver(createServiceSchema),
     defaultValues: buildDefaultValues(categories, fixedCategory),
   });
+  const rewardPoints = calculateServiceRewardPoints(useWatch({ control, name: 'price' }));
 
   useEffect(() => {
     if (!isOpen) {
@@ -178,6 +182,14 @@ export function CreateServiceDialog({
               error={errors.estimatedDuration?.message}
               {...register('estimatedDuration', { valueAsNumber: true })}
             />
+
+            <Field>
+              <FieldLabel>Điểm khách nhận được</FieldLabel>
+              <Input value={`${rewardPoints} điểm`} readOnly aria-readonly="true" />
+              <p className="text-xs text-muted-foreground">
+                Tự động tính: mỗi 10.000₫ được 1 điểm.
+              </p>
+            </Field>
           </div>
 
           <Field>

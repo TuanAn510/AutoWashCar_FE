@@ -228,6 +228,7 @@ export function CreateAppointmentModal({
 }: CreateAppointmentModalProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const [isComplete, setComplete] = useState(false);
+  const [catalogNotice, setCatalogNotice] = useState<string | null>(null);
   const vehiclesQuery = useMyVehicles();
 
   const {
@@ -259,7 +260,7 @@ export function CreateAppointmentModal({
   const bookableVehicles = vehicles.filter(
     (vehicle) => !vehicle.verificationStatus || vehicle.verificationStatus === 'approved'
   );
-  const categories = categoriesQuery.data ?? [];
+  const categories = useMemo(() => categoriesQuery.data ?? [], [categoriesQuery.data]);
   const allServices = useMemo(() => servicesQuery.data ?? [], [servicesQuery.data]);
   const services = useMemo(
     () =>
@@ -274,9 +275,14 @@ export function CreateAppointmentModal({
     [allServices, values.serviceIds]
   );
   const selectedServiceId = values.serviceIds[0] ?? '';
+  const selectedServiceVersion = selectedServices[0]?.version ?? 'unavailable';
   const subtotalPrice = selectedServices.reduce((sum, service) => sum + service.price, 0);
   const totalDuration = selectedServices.reduce(
     (sum, service) => sum + service.estimatedDuration,
+    0
+  );
+  const totalRewardPoints = selectedServices.reduce(
+    (sum, service) => sum + (service.rewardPoints ?? 0),
     0
   );
   const eligiblePromotions = useMemo(
@@ -356,6 +362,7 @@ export function CreateAppointmentModal({
       values.scheduledDate,
       values.vehicleId,
       selectedServiceId,
+      selectedServiceVersion,
       values.rewardRedemptionId,
     ],
     queryFn: ({ signal }) =>
@@ -416,10 +423,85 @@ export function CreateAppointmentModal({
     setValue,
   ]);
 
+  useEffect(() => {
+    if (!isOpen || servicesQuery.isLoading || servicesQuery.isError) return;
+
+    const selectedId = values.serviceIds[0];
+    if (selectedId && !allServices.some((service) => service._id === selectedId)) {
+      const updateId = window.setTimeout(() => {
+        setValue('serviceIds', [], { shouldDirty: true, shouldValidate: true });
+        setValue('promotionId', '', { shouldDirty: true });
+        setValue('rewardRedemptionId', '', { shouldDirty: true });
+        setCurrentStep((step) => Math.min(step, 1));
+        setCatalogNotice('Dịch vụ đã chọn vừa ngừng hoạt động. Vui lòng chọn dịch vụ khác.');
+      }, 0);
+      return () => window.clearTimeout(updateId);
+    }
+  }, [
+    allServices,
+    isOpen,
+    servicesQuery.isError,
+    servicesQuery.isLoading,
+    setValue,
+    values.serviceIds,
+  ]);
+
+  useEffect(() => {
+    if (!isOpen || categoriesQuery.isLoading || categoriesQuery.isError) return;
+    if (
+      values.categoryId !== 'all' &&
+      !categories.some((category) => category._id === values.categoryId)
+    ) {
+      setValue('categoryId', 'all', { shouldDirty: true, shouldValidate: true });
+    }
+  }, [
+    categories,
+    categoriesQuery.isError,
+    categoriesQuery.isLoading,
+    isOpen,
+    setValue,
+    values.categoryId,
+  ]);
+
+  useEffect(() => {
+    if (
+      values.promotionId &&
+      !promotionsQuery.isLoading &&
+      !promotionsQuery.isError &&
+      !eligiblePromotions.some((promotion) => promotion._id === values.promotionId)
+    ) {
+      setValue('promotionId', '', { shouldDirty: true });
+    }
+  }, [
+    eligiblePromotions,
+    promotionsQuery.isError,
+    promotionsQuery.isLoading,
+    setValue,
+    values.promotionId,
+  ]);
+
+  useEffect(() => {
+    if (
+      values.rewardRedemptionId &&
+      !redemptionsQuery.isLoading &&
+      !redemptionsQuery.isError &&
+      !availableRedemptions.some((redemption) => redemption._id === values.rewardRedemptionId)
+    ) {
+      setValue('rewardRedemptionId', '', { shouldDirty: true });
+    }
+  }, [
+    availableRedemptions,
+    redemptionsQuery.isError,
+    redemptionsQuery.isLoading,
+    setValue,
+    values.rewardRedemptionId,
+  ]);
+
   const resetWizard = () => {
     reset(createDefaultValues());
     setCurrentStep(0);
     setComplete(false);
+    setCatalogNotice(null);
   };
 
   const closeModal = () => {
@@ -440,6 +522,7 @@ export function CreateAppointmentModal({
     setValue('serviceIds', [serviceId], { shouldDirty: true, shouldValidate: true });
     setValue('promotionId', '', { shouldDirty: true });
     setValue('rewardRedemptionId', '', { shouldDirty: true });
+    setCatalogNotice(null);
   };
 
   const handleNext = async () => {
@@ -622,6 +705,12 @@ export function CreateAppointmentModal({
             {hasFormOptionsError && (
               <p className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
                 Không thể tải dữ liệu xe hoặc dịch vụ. Vui lòng thử lại sau.
+              </p>
+            )}
+
+            {catalogNotice && (
+              <p className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+                {catalogNotice}
               </p>
             )}
 
@@ -813,6 +902,15 @@ export function CreateAppointmentModal({
                           }`}
                         >
                           <span>{formatTime(service.estimatedDuration)}</span>
+                          <span
+                            className={
+                              isSelected
+                                ? 'font-semibold text-amber-200'
+                                : 'font-semibold text-emerald-700'
+                            }
+                          >
+                            +{service.rewardPoints ?? 0} điểm
+                          </span>
                           <span className="font-bold">{formatCurrency(service.price)}</span>
                         </div>
                       </label>
@@ -836,7 +934,8 @@ export function CreateAppointmentModal({
                             </p>
                             <p className="mt-0.5 truncate text-xs text-[#64748b]">
                               {service.categoryId?.name || 'Dịch vụ'} ·{' '}
-                              {formatTime(service.estimatedDuration)}
+                              {formatTime(service.estimatedDuration)} · +{service.rewardPoints ?? 0}{' '}
+                              điểm
                             </p>
                           </div>
                           <div className="flex shrink-0 items-center gap-3">
@@ -955,6 +1054,7 @@ export function CreateAppointmentModal({
                     value={selectedServices.map((service) => service.name).join(', ')}
                   />
                   <ReviewItem label="Thời lượng dự kiến" value={formatTime(totalDuration)} />
+                  <ReviewItem label="Điểm sẽ nhận" value={`+${totalRewardPoints} điểm`} />
                 </div>
                 {values.note?.trim() ? (
                   <ReviewItem label="Ghi chú" value={values.note.trim()} />
@@ -1007,6 +1107,10 @@ export function CreateAppointmentModal({
                 <div className="mt-3 flex justify-between gap-4 border-t border-[#e5edf6] pt-3 font-black text-[#15243a]">
                   <span>{estimatedTotalStep}. Tổng thanh toán dự kiến</span>
                   <span className="text-base">{formatCurrency(estimatedTotal)}</span>
+                </div>
+                <div className="mt-2 flex justify-between gap-4 text-emerald-700">
+                  <span>Điểm nhận sau khi hoàn tất</span>
+                  <span className="font-bold">+{totalRewardPoints} điểm</span>
                 </div>
                 <p className="mt-2 text-xs text-[#64748b]">
                   Hệ thống sẽ kiểm tra điều kiện và tính tổng tiền chính thức khi tạo lịch.

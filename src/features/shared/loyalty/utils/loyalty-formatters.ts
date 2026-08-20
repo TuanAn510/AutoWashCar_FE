@@ -1,5 +1,6 @@
 import type {
   LoyaltyTransactionType,
+  LoyaltyTransactionStatus,
   Reward,
   RewardDiscountType,
   RewardRedemptionStatus,
@@ -14,6 +15,12 @@ export const transactionTypeLabels: Record<LoyaltyTransactionType, string> = {
   redeem: 'Đổi thưởng',
   adjust: 'Điều chỉnh',
   expire: 'Hết hạn',
+};
+
+export const transactionStatusLabels: Record<LoyaltyTransactionStatus, string> = {
+  pending: 'Chờ hoàn thành',
+  posted: 'Đã ghi nhận',
+  reversed: 'Đã hoàn tác',
 };
 
 export const redemptionStatusLabels: Record<RewardRedemptionStatus, string> = {

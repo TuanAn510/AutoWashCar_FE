@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useEffect } from 'react';
-import { Controller, useForm } from 'react-hook-form';
+import { Controller, useForm, useWatch } from 'react-hook-form';
 import { z } from 'zod';
 
 import { AdminStatusSwitch } from '@/components/admin/AdminStatusSwitch';
@@ -16,13 +16,16 @@ import {
 import { Field, FieldError, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { VndCurrencyInput } from '@/features/admin/services/components/VndCurrencyInput';
-import { MAX_SERVICE_PRICE } from '@/features/admin/services/utils/vnd-currency';
+import {
+  calculateServiceRewardPoints,
+  MAX_SERVICE_PRICE,
+} from '@/features/admin/services/utils/vnd-currency';
 import { cn } from '@/lib/utils';
 import type { Service, UpdateServicePayload } from '@/types/service';
 import type { ServiceCategory } from '@/types/serviceCategory';
 
 const updateServiceSchema = z.object({
-  name: z.string().trim().min(1, 'Vui lòng nhập tên dịch vụ.').max(160),
+  name: z.string().trim().min(1, 'Vui lòng nhập tên dịch vụ.').max(120),
   description: z.string().trim().max(2000).optional(),
   categoryId: z.string().min(1, 'Vui lòng chọn danh mục.'),
   price: z
@@ -66,6 +69,7 @@ export function UpdateServiceDialog({
     setError,
     formState: { errors },
   } = useForm<FormValues>({ resolver: zodResolver(updateServiceSchema) });
+  const rewardPoints = calculateServiceRewardPoints(useWatch({ control, name: 'price' }));
 
   useEffect(() => {
     if (!service) return;
@@ -177,6 +181,18 @@ export function UpdateServiceDialog({
                 {...register('estimatedDuration', { valueAsNumber: true })}
               />
               <FieldError>{errors.estimatedDuration?.message}</FieldError>
+            </Field>
+            <Field>
+              <FieldLabel>Điểm khách nhận được</FieldLabel>
+              <Input
+                value={`${rewardPoints} điểm`}
+                readOnly
+                aria-readonly="true"
+                className={cn('h-10 rounded-md bg-white px-3', fieldFocusClassName)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Tự động tính: mỗi 10.000₫ được 1 điểm.
+              </p>
             </Field>
           </div>
           <Field>
