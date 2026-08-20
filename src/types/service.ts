@@ -15,6 +15,8 @@ export interface Service {
   categoryId: ServiceCategoryRef;
   price: number;
   estimatedDuration: number;
+  baseRewardPoints: number;
+  rewardMultiplier: number;
   rewardPoints: number;
   isActive: boolean;
   version: number;
@@ -28,6 +30,7 @@ export interface CreateServicePayload {
   categoryId: string;
   price: number;
   estimatedDuration: number;
+  rewardMultiplier: number;
 }
 
 export interface UpdateServicePayload {
@@ -36,6 +39,7 @@ export interface UpdateServicePayload {
   categoryId?: string;
   price?: number;
   estimatedDuration?: number;
+  rewardMultiplier?: number;
   isActive?: boolean;
   version?: number;
 }

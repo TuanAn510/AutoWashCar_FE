@@ -101,6 +101,7 @@ describe('useCreateServiceMutation', () => {
         categoryId: '1',
         price: 250_000,
         estimatedDuration: 45,
+        rewardMultiplier: 1,
       });
     });
 

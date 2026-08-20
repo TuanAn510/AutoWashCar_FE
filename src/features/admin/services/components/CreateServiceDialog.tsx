@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useEffect } from 'react';
-import { Controller, useForm, useWatch } from 'react-hook-form';
+import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import type { ComponentProps } from 'react';
 
@@ -16,11 +16,12 @@ import {
 import { Field, FieldError, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { VndCurrencyInput } from '@/features/admin/services/components/VndCurrencyInput';
-import {
-  calculateServiceRewardPoints,
-  MAX_SERVICE_PRICE,
-} from '@/features/admin/services/utils/vnd-currency';
+import { MAX_SERVICE_PRICE } from '@/features/admin/services/utils/vnd-currency';
 import { cn } from '@/lib/utils';
+import {
+  formatServiceRewardMultiplier,
+  SERVICE_REWARD_MULTIPLIER_OPTIONS,
+} from '@/lib/service-reward-points';
 import type { ServiceCategory } from '@/types/serviceCategory';
 import type { CreateServicePayload } from '@/types/service';
 
@@ -41,6 +42,11 @@ const createServiceSchema = z.object({
     .number()
     .int('Thời lượng phải là số nguyên.')
     .min(1, 'Thời lượng phải lớn hơn hoặc bằng 1 phút.'),
+  rewardMultiplier: z
+    .number()
+    .int('Hệ số điểm phải là số nguyên.')
+    .min(1, 'Hệ số điểm tối thiểu là ×1.')
+    .max(5, 'Hệ số điểm tối đa là ×5.'),
 });
 
 type CreateServiceFormValues = z.infer<typeof createServiceSchema>;
@@ -61,6 +67,7 @@ const buildDefaultValues = (
   categoryId: fixedCategory?._id ?? categories[0]?._id ?? '',
   price: 0,
   estimatedDuration: 45,
+  rewardMultiplier: 1,
 });
 
 interface CreateServiceDialogProps {
@@ -90,8 +97,6 @@ export function CreateServiceDialog({
     resolver: zodResolver(createServiceSchema),
     defaultValues: buildDefaultValues(categories, fixedCategory),
   });
-  const rewardPoints = calculateServiceRewardPoints(useWatch({ control, name: 'price' }));
-
   useEffect(() => {
     if (!isOpen) {
       return;
@@ -184,11 +189,22 @@ export function CreateServiceDialog({
             />
 
             <Field>
-              <FieldLabel>Điểm khách nhận được</FieldLabel>
-              <Input value={`${rewardPoints} điểm`} readOnly aria-readonly="true" />
-              <p className="text-xs text-muted-foreground">
-                Tự động tính: mỗi 10.000₫ được 1 điểm.
-              </p>
+              <FieldLabel>Hệ số nhân điểm</FieldLabel>
+              <select
+                className={cn(
+                  'h-10 rounded-md border border-input bg-white px-3 text-sm outline-none disabled:cursor-not-allowed disabled:bg-slate-100',
+                  fieldFocusClassName
+                )}
+                disabled={isSubmitting}
+                {...register('rewardMultiplier', { valueAsNumber: true })}
+              >
+                {SERVICE_REWARD_MULTIPLIER_OPTIONS.map((multiplier) => (
+                  <option key={multiplier} value={multiplier}>
+                    {formatServiceRewardMultiplier(multiplier)}
+                  </option>
+                ))}
+              </select>
+              <FieldError>{errors.rewardMultiplier?.message}</FieldError>
             </Field>
           </div>
 

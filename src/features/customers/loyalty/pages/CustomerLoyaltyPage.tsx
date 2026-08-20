@@ -520,8 +520,9 @@ export default function CustomerLoyaltyPage() {
 
               <div className="grid gap-3 px-5 pb-2 sm:grid-cols-2">
                 <PolicyItem icon={Coins} title="Cách tích điểm">
-                  Cứ mỗi 10.000₫ giá dịch vụ được 1 điểm (phần lẻ được làm tròn xuống). Điểm được
-                  hiển thị khi đặt lịch và tự động cộng sau khi dịch vụ hoàn tất.
+                  Cứ mỗi 10.000₫ giá dịch vụ được 1 điểm cơ bản (phần lẻ được làm tròn xuống), sau
+                  đó áp dụng hệ số riêng của dịch vụ. Tổng điểm được hiển thị khi đặt lịch và tự
+                  động cộng sau khi dịch vụ hoàn tất.
                 </PolicyItem>
                 <PolicyItem icon={CalendarClock} title="Điểm có thời hạn bao lâu?">
                   Điểm chưa sử dụng có hiệu lực trong 12 tháng. Kỳ xét hạng mới bắt đầu vào ngày

@@ -40,6 +40,7 @@ import type { Promotion } from '@/services/promotionService';
 import type { BookingAvailabilitySlot, CreateAppointmentPayload } from '@/types/appointment';
 import { CustomerModalShell } from '@/features/customers/components/CustomerModalShell';
 import { cn, formatTime } from '@/lib/utils';
+import { formatServiceRewardMultiplier } from '@/lib/service-reward-points';
 
 const BOOKING_WINDOW_DAYS: Record<string, number> = {
   Member: 7,
@@ -910,6 +911,9 @@ export function CreateAppointmentModal({
                             }
                           >
                             +{service.rewardPoints ?? 0} điểm
+                            {(service.rewardMultiplier ?? 1) > 1
+                              ? ` (${formatServiceRewardMultiplier(service.rewardMultiplier)})`
+                              : ''}
                           </span>
                           <span className="font-bold">{formatCurrency(service.price)}</span>
                         </div>
@@ -936,6 +940,9 @@ export function CreateAppointmentModal({
                               {service.categoryId?.name || 'Dịch vụ'} ·{' '}
                               {formatTime(service.estimatedDuration)} · +{service.rewardPoints ?? 0}{' '}
                               điểm
+                              {(service.rewardMultiplier ?? 1) > 1
+                                ? ` (${formatServiceRewardMultiplier(service.rewardMultiplier)})`
+                                : ''}
                             </p>
                           </div>
                           <div className="flex shrink-0 items-center gap-3">

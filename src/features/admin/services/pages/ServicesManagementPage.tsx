@@ -35,6 +35,10 @@ import {
   type ServiceStatusFilter,
 } from '@/features/admin/services/utils/service-list';
 import { cn, formatTime } from '@/lib/utils';
+import {
+  calculateBaseServiceRewardPoints,
+  formatServiceRewardMultiplier,
+} from '@/lib/service-reward-points';
 import { useCurrentUser } from '@/features/auth/hooks/use-auth-queries';
 import {
   type CreateServicePayload,
@@ -146,6 +150,14 @@ function ServiceDetailDialog({
             <div className="grid gap-3 sm:grid-cols-2">
               <Info label="Giá" value={formatCurrency(service.price)} />
               <Info label="Thời lượng" value={formatTime(service.estimatedDuration)} />
+              <Info
+                label="Điểm cơ bản"
+                value={`${service.baseRewardPoints ?? calculateBaseServiceRewardPoints(service.price)} điểm`}
+              />
+              <Info
+                label="Hệ số nhân"
+                value={formatServiceRewardMultiplier(service.rewardMultiplier)}
+              />
               <Info label="Điểm nhận được" value={`${service.rewardPoints} điểm`} />
               <Info label="Trạng thái" value={service.isActive ? 'Đang hoạt động' : 'Tạm ẩn'} />
             </div>
@@ -347,7 +359,7 @@ export default function ServicesManagementPage() {
             )}
           </div>
           <div className="mt-5 overflow-x-auto">
-            <table className="w-full min-w-[980px] table-fixed border-collapse text-left text-sm">
+            <table className="w-full min-w-[1000px] table-fixed border-collapse text-left text-sm">
               <thead>
                 <tr className="border-b border-border text-slate-900">
                   <th className="w-[220px] px-2 py-3 font-semibold">Tên dịch vụ</th>

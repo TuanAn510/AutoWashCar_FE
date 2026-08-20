@@ -43,6 +43,7 @@ export interface AppointmentServiceSnapshot {
   nameSnapshot: string;
   priceSnapshot: number;
   estimatedDurationSnapshot: number;
+  rewardMultiplierSnapshot?: number;
   rewardPointsSnapshot?: number;
 }
 

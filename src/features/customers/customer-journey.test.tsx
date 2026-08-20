@@ -34,7 +34,9 @@ const defaultActiveServices = [
     description: 'Rửa xe tiêu chuẩn',
     price: 150000,
     estimatedDuration: 45,
-    rewardPoints: 15,
+    baseRewardPoints: 15,
+    rewardMultiplier: 2,
+    rewardPoints: 30,
     version: 0,
     categoryId: { _id: 'category-1', name: 'Chăm sóc xe' },
   },
@@ -288,7 +290,7 @@ describe('customer journey UI', () => {
     await expectCurrentStep(2);
 
     expect(screen.getByText('Chọn gói dịch vụ')).toBeTruthy();
-    expect(screen.getAllByText('+15 điểm').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('+30 điểm (×2)').length).toBeGreaterThan(0);
     const primaryServiceRadio = container.querySelector('input[type="radio"]') as HTMLInputElement;
     fireEvent.click(primaryServiceRadio);
     fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));
