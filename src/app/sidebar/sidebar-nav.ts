@@ -11,6 +11,7 @@ import {
   Trophy,
   UserCog,
   Users,
+  Wrench,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -33,6 +34,7 @@ export const sidebarNav: NavItem[] = [
     href: '/appointments',
     roles: ['admin', 'staff', 'customer'],
   },
+  { label: 'Quản lý dịch vụ', icon: Wrench, href: '/services', roles: ['admin'] },
   { label: 'Xe', icon: Car, href: '/vehicles', roles: ['customer', 'admin'] },
   { label: 'Lịch sử', icon: History, href: '/service-histories', roles: ['staff'] },
   { label: 'Tích điểm', icon: Coins, href: '/loyalty', roles: ['admin', 'staff', 'customer'] },

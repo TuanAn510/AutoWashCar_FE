@@ -89,6 +89,8 @@ export function UpdateServiceDialog({
         <form
           className="grid gap-5 px-6 pb-6"
           onSubmit={handleSubmit(async (values) => {
+            if (!service) return;
+
             const selectedCategory = categoryOptions.find(
               (category) => category._id === values.categoryId
             );
@@ -102,12 +104,12 @@ export function UpdateServiceDialog({
             const payload: UpdateServicePayload = {
               name: values.name,
               description: values.description?.trim() ?? '',
+              categoryId: values.categoryId,
               price: values.price,
               estimatedDuration: values.estimatedDuration,
               isActive: values.isActive,
+              version: service.version,
             };
-            if (values.categoryId !== service?.categoryId._id)
-              payload.categoryId = values.categoryId;
             await onSubmit(payload);
           })}
         >

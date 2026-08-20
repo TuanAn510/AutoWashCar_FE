@@ -16,6 +16,7 @@ export interface Service {
   price: number;
   estimatedDuration: number;
   isActive: boolean;
+  version: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -35,6 +36,7 @@ export interface UpdateServicePayload {
   price?: number;
   estimatedDuration?: number;
   isActive?: boolean;
+  version?: number;
 }
 
 export interface ServiceListParams {

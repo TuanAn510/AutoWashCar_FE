@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { DollarSign, Ellipsis, Eye, Pencil, Plus, Search, Wrench, XCircle } from 'lucide-react';
 
+import { toApiError } from '@/api/errors';
 import { Button } from '@/components/ui/button';
 import { StatCard } from '@/components/dashboard';
 import {
@@ -198,8 +199,14 @@ export default function ServicesManagementPage() {
 
   const handleUpdateService = async (payload: UpdateServicePayload) => {
     if (!editingService) return;
-    await updateServiceMutation.mutateAsync({ serviceId: editingService._id, payload });
-    setEditingService(null);
+    try {
+      await updateServiceMutation.mutateAsync({ serviceId: editingService._id, payload });
+      setEditingService(null);
+    } catch (error) {
+      if (toApiError(error).status === 409) {
+        setEditingService(null);
+      }
+    }
   };
 
   return (
@@ -211,7 +218,8 @@ export default function ServicesManagementPage() {
               Quản lý dịch vụ
             </h1>
             <p className="mt-2 text-base text-slate-500">
-              Quản lý dịch vụ, thời lượng và bảng giá.
+              Quản lý dịch vụ, thời lượng và bảng giá. Dịch vụ đang hoạt động sẽ xuất hiện tại bước
+              Dịch vụ khi khách hàng đặt lịch.
             </p>
           </div>
           {isAdmin && (
