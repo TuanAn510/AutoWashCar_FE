@@ -153,7 +153,11 @@ export default function MyVehiclesPage() {
     { key: 'approved' as const, label: 'Đã xác minh', count: verifiedVehicles.length },
     { key: 'pending' as const, label: 'Đang xác minh', count: pendingRequests.length },
     { key: 'locked' as const, label: 'Đã khóa', count: lockedVehicles.length },
-    { key: 'requests' as const, label: 'Yêu cầu xác minh', count: supplementRequests.length + approvedRequests.length },
+    {
+      key: 'requests' as const,
+      label: 'Yêu cầu xác minh',
+      count: supplementRequests.length + approvedRequests.length,
+    },
   ];
   const isCreateRequested = searchParams.get('create') === '1';
   const isCreateDialogOpen = isCreateOpen || isCreateRequested;
@@ -342,7 +346,9 @@ export default function MyVehiclesPage() {
                       <section className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
                         <div className="flex items-center justify-between gap-3">
                           <h2 className="text-lg font-semibold">Yêu cầu xác minh xe</h2>
-                          <span className="text-sm text-slate-500">({supplementRequests.length})</span>
+                          <span className="text-sm text-slate-500">
+                            ({supplementRequests.length})
+                          </span>
                         </div>
                         <div className="mt-3 grid gap-2">
                           {(showAllPending

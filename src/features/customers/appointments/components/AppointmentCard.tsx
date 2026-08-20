@@ -43,7 +43,9 @@ export function AppointmentCard({
   );
   const note = appointment.note?.trim();
   const { discountedPrice, hasDiscount, originalPrice } = getAppointmentPriceDisplay(appointment);
-  const createdAt = appointment.createdAt ? `Đặt lúc: ${formatDateTime(appointment.createdAt)}` : null;
+  const createdAt = appointment.createdAt
+    ? `Đặt lúc: ${formatDateTime(appointment.createdAt)}`
+    : null;
   const requiresRefund = isCustomerRefundRequired(appointment);
 
   return (
@@ -101,10 +103,7 @@ export function AppointmentCard({
           <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-black text-[#64748b]">
             {appointment.services.length} dịch vụ
           </span>
-          <PaymentStatusBadge
-            status={appointment.paymentStatus}
-            refundRequired={requiresRefund}
-          />
+          <PaymentStatusBadge status={appointment.paymentStatus} refundRequired={requiresRefund} />
         </div>
       </CardContent>
 

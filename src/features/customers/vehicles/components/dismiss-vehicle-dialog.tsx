@@ -53,8 +53,8 @@ export function DismissVehicleDialog({
       }
     >
       <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm leading-6 text-slate-600">
-        Xe sẽ không còn hiển thị trong danh sách "Đã khóa" của bạn. Lịch sử lịch hẹn và dữ liệu
-        vẫn được hệ thống lưu giữ — bạn chỉ đang dọn bớt các mục đã khóa cho gọn màn hình.
+        Xe sẽ không còn hiển thị trong danh sách "Đã khóa" của bạn. Lịch sử lịch hẹn và dữ liệu vẫn
+        được hệ thống lưu giữ — bạn chỉ đang dọn bớt các mục đã khóa cho gọn màn hình.
       </div>
     </CustomerModalShell>
   );

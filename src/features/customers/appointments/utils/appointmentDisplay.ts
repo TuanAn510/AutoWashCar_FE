@@ -15,9 +15,7 @@ export const isAppointmentRefundRequired = (
 
 export const isCustomerRefundRequired = (
   appointment: Pick<AppointmentItem, 'status' | 'cancelReason' | 'refundRequired'>
-) =>
-  isAppointmentRefundRequired(appointment) &&
-  appointment.cancelReason === 'store_not_confirmed';
+) => isAppointmentRefundRequired(appointment) && appointment.cancelReason === 'store_not_confirmed';
 
 export const canCustomerCancelAppointment = (
   status: AppointmentStatus | string,

@@ -40,9 +40,7 @@ afterEach(cleanup);
 
 describe('customer appointment license plate display', () => {
   it('formats the appointment card plate with the canonical formatter', () => {
-    render(
-      <AppointmentCard appointment={appointment} onViewDetail={vi.fn()} onCancel={vi.fn()} />
-    );
+    render(<AppointmentCard appointment={appointment} onViewDetail={vi.fn()} onCancel={vi.fn()} />);
 
     expect(screen.getByText(/50A-12345/)).toBeTruthy();
     expect(screen.queryByText(/50A12345/)).toBeNull();
@@ -68,11 +66,7 @@ describe('customer appointment license plate display', () => {
       refundRequired: true,
     };
     const { unmount } = render(
-      <AppointmentCard
-        appointment={refundAppointment}
-        onViewDetail={vi.fn()}
-        onCancel={vi.fn()}
-      />
+      <AppointmentCard appointment={refundAppointment} onViewDetail={vi.fn()} onCancel={vi.fn()} />
     );
 
     expect(screen.getByText('Chờ hoàn tiền')).toBeTruthy();
@@ -102,13 +96,21 @@ describe('customer appointment license plate display', () => {
 
   it('preserves normal paid and unpaid payment labels', () => {
     const { rerender } = render(
-      <AppointmentCard appointment={{ ...appointment, paymentStatus: 'paid' }} onViewDetail={vi.fn()} onCancel={vi.fn()} />
+      <AppointmentCard
+        appointment={{ ...appointment, paymentStatus: 'paid' }}
+        onViewDetail={vi.fn()}
+        onCancel={vi.fn()}
+      />
     );
     expect(screen.getByText('Đã thanh toán')).toBeTruthy();
     expect(screen.queryByText('Chờ hoàn tiền')).toBeNull();
 
     rerender(
-      <AppointmentCard appointment={{ ...appointment, paymentStatus: 'unpaid' }} onViewDetail={vi.fn()} onCancel={vi.fn()} />
+      <AppointmentCard
+        appointment={{ ...appointment, paymentStatus: 'unpaid' }}
+        onViewDetail={vi.fn()}
+        onCancel={vi.fn()}
+      />
     );
     expect(screen.getByText('Chưa thanh toán')).toBeTruthy();
     expect(screen.queryByText('Chờ hoàn tiền')).toBeNull();

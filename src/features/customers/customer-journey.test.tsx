@@ -31,10 +31,23 @@ let pageAppointments: AppointmentItem[] = [];
 const appointmentCardItem = (paymentStatus: AppointmentItem['paymentStatus']): AppointmentItem => ({
   _id: 'appointment-1',
   customerId: { _id: 'customer-1', displayName: 'Khách hàng', phone: '0900000000' },
-  vehicleId: { _id: 'vehicle-1', brand: 'Toyota', model: 'Camry', licensePlate: '30A12345', year: 2024 },
+  vehicleId: {
+    _id: 'vehicle-1',
+    brand: 'Toyota',
+    model: 'Camry',
+    licensePlate: '30A12345',
+    year: 2024,
+  },
   assignedStaffId: null,
   cancelledBy: null,
-  services: [{ serviceId: 'service-1', nameSnapshot: 'Rửa xe', priceSnapshot: 150000, estimatedDurationSnapshot: 45 }],
+  services: [
+    {
+      serviceId: 'service-1',
+      nameSnapshot: 'Rửa xe',
+      priceSnapshot: 150000,
+      estimatedDurationSnapshot: 45,
+    },
+  ],
   scheduledAt: '2099-08-13T09:00:00',
   status: 'pending',
   totalEstimatedDuration: 45,
@@ -155,7 +168,11 @@ vi.mock('react-router', () => ({
 }));
 
 vi.mock('@/features/customers/appointments/hooks/useMyAppointments', () => ({
-  useMyAppointments: () => ({ data: { appointments: pageAppointments }, isLoading: false, isError: false }),
+  useMyAppointments: () => ({
+    data: { appointments: pageAppointments },
+    isLoading: false,
+    isError: false,
+  }),
 }));
 
 vi.mock('@/features/customers/appointments/hooks/useCreateAppointment', () => ({
@@ -183,7 +200,9 @@ vi.mock('@/features/customers/appointments/store/useCustomerAppointmentsStore', 
 
 vi.mock('@/features/customers/appointments/components/AppointmentList', () => ({
   AppointmentList: ({ appointments }: { appointments: AppointmentItem[] }) => (
-    <div data-testid="appointment-list">{appointments.map((appointment) => `${appointment._id},`)}</div>
+    <div data-testid="appointment-list">
+      {appointments.map((appointment) => `${appointment._id},`)}
+    </div>
   ),
 }));
 
@@ -356,7 +375,12 @@ describe('customer journey UI', () => {
       vehicleAvailabilityReason: null,
     };
     const { container } = render(
-      <CreateAppointmentModal isOpen isSubmitting={false} onOpenChange={vi.fn()} onSubmit={vi.fn()} />
+      <CreateAppointmentModal
+        isOpen
+        isSubmitting={false}
+        onOpenChange={vi.fn()}
+        onSubmit={vi.fn()}
+      />
     );
 
     fireEvent.change(container.querySelector('select[name="vehicleId"]')!, {
@@ -366,13 +390,23 @@ describe('customer journey UI', () => {
     fireEvent.click(container.querySelector('input[type="radio"]')!);
     fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));
 
-    expect(await screen.findByRole('option', { name: '08:00 - Đã qua' })).toHaveProperty('disabled', true);
-    expect(screen.getByRole('option', { name: '08:05 - Cần đặt trước 30 phút' })).toHaveProperty('disabled', true);
+    expect(await screen.findByRole('option', { name: '08:00 - Đã qua' })).toHaveProperty(
+      'disabled',
+      true
+    );
+    expect(screen.getByRole('option', { name: '08:05 - Cần đặt trước 30 phút' })).toHaveProperty(
+      'disabled',
+      true
+    );
   });
 
   it('hides cancellation for paid pending appointments and shows the explicit creation time', () => {
     const { rerender } = render(
-      <AppointmentCard appointment={appointmentCardItem('paid')} onViewDetail={vi.fn()} onCancel={vi.fn()} />
+      <AppointmentCard
+        appointment={appointmentCardItem('paid')}
+        onViewDetail={vi.fn()}
+        onCancel={vi.fn()}
+      />
     );
 
     expect(screen.queryByRole('button', { name: 'Hủy lịch' })).toBeNull();
@@ -386,7 +420,13 @@ describe('customer journey UI', () => {
       )
     ).toBeTruthy();
 
-    rerender(<AppointmentCard appointment={appointmentCardItem('unpaid')} onViewDetail={vi.fn()} onCancel={vi.fn()} />);
+    rerender(
+      <AppointmentCard
+        appointment={appointmentCardItem('unpaid')}
+        onViewDetail={vi.fn()}
+        onCancel={vi.fn()}
+      />
+    );
     expect(screen.getByRole('button', { name: 'Hủy lịch' })).toBeTruthy();
   });
 
@@ -437,14 +477,60 @@ describe('customer journey UI', () => {
 
   it('shows the six most recently created appointments across future, today, and history, then expands and collapses', () => {
     pageAppointments = [
-      { ...appointmentCardItem('unpaid'), _id: 'past-01', status: 'completed', scheduledAt: '2099-08-01T09:00:00', createdAt: '2099-08-12T12:31:00' },
-      { ...appointmentCardItem('unpaid'), _id: 'future-18', scheduledAt: '2099-08-18T09:00:00', createdAt: '2099-08-12T12:02:00' },
-      { ...appointmentCardItem('unpaid'), _id: 'past-10', status: 'completed', scheduledAt: '2099-08-10T09:00:00', createdAt: '2099-08-12T11:50:00' },
-      { ...appointmentCardItem('unpaid'), _id: 'future-19', scheduledAt: '2099-08-19T09:00:00', createdAt: '2099-08-12T11:40:00' },
-      { ...appointmentCardItem('unpaid'), _id: 'cancelled-09', status: 'cancelled', scheduledAt: '2099-08-09T09:00:00', createdAt: '2099-08-12T11:30:00' },
-      { ...appointmentCardItem('unpaid'), _id: 'today', status: 'confirmed', scheduledAt: '2099-08-12T09:00:00', createdAt: '2099-08-12T11:20:00' },
-      { ...appointmentCardItem('unpaid'), _id: 'completed-08', status: 'completed', scheduledAt: '2099-08-08T09:00:00', createdAt: '2099-08-12T11:10:00' },
-      { ...appointmentCardItem('unpaid'), _id: 'past-07', status: 'pending', scheduledAt: '2099-08-07T09:00:00', createdAt: '2099-08-12T11:00:00' },
+      {
+        ...appointmentCardItem('unpaid'),
+        _id: 'past-01',
+        status: 'completed',
+        scheduledAt: '2099-08-01T09:00:00',
+        createdAt: '2099-08-12T12:31:00',
+      },
+      {
+        ...appointmentCardItem('unpaid'),
+        _id: 'future-18',
+        scheduledAt: '2099-08-18T09:00:00',
+        createdAt: '2099-08-12T12:02:00',
+      },
+      {
+        ...appointmentCardItem('unpaid'),
+        _id: 'past-10',
+        status: 'completed',
+        scheduledAt: '2099-08-10T09:00:00',
+        createdAt: '2099-08-12T11:50:00',
+      },
+      {
+        ...appointmentCardItem('unpaid'),
+        _id: 'future-19',
+        scheduledAt: '2099-08-19T09:00:00',
+        createdAt: '2099-08-12T11:40:00',
+      },
+      {
+        ...appointmentCardItem('unpaid'),
+        _id: 'cancelled-09',
+        status: 'cancelled',
+        scheduledAt: '2099-08-09T09:00:00',
+        createdAt: '2099-08-12T11:30:00',
+      },
+      {
+        ...appointmentCardItem('unpaid'),
+        _id: 'today',
+        status: 'confirmed',
+        scheduledAt: '2099-08-12T09:00:00',
+        createdAt: '2099-08-12T11:20:00',
+      },
+      {
+        ...appointmentCardItem('unpaid'),
+        _id: 'completed-08',
+        status: 'completed',
+        scheduledAt: '2099-08-08T09:00:00',
+        createdAt: '2099-08-12T11:10:00',
+      },
+      {
+        ...appointmentCardItem('unpaid'),
+        _id: 'past-07',
+        status: 'pending',
+        scheduledAt: '2099-08-07T09:00:00',
+        createdAt: '2099-08-12T11:00:00',
+      },
     ];
 
     render(<CustomerAppointmentsPage />);
@@ -480,10 +566,32 @@ describe('customer journey UI', () => {
 
   it('shows every appointment without expansion when fewer than six exist', () => {
     pageAppointments = [
-      { ...appointmentCardItem('unpaid'), _id: 'past', status: 'completed', scheduledAt: '2099-08-10T09:00:00', createdAt: '2099-08-12T12:03:00' },
-      { ...appointmentCardItem('unpaid'), _id: 'future', scheduledAt: '2099-08-14T09:00:00', createdAt: '2099-08-12T12:04:00' },
-      { ...appointmentCardItem('unpaid'), _id: 'today', scheduledAt: '2099-08-12T09:00:00', createdAt: '2099-08-12T12:02:00' },
-      { ...appointmentCardItem('unpaid'), _id: 'cancelled', status: 'cancelled', scheduledAt: '2099-08-11T09:00:00', createdAt: '2099-08-12T12:01:00' },
+      {
+        ...appointmentCardItem('unpaid'),
+        _id: 'past',
+        status: 'completed',
+        scheduledAt: '2099-08-10T09:00:00',
+        createdAt: '2099-08-12T12:03:00',
+      },
+      {
+        ...appointmentCardItem('unpaid'),
+        _id: 'future',
+        scheduledAt: '2099-08-14T09:00:00',
+        createdAt: '2099-08-12T12:04:00',
+      },
+      {
+        ...appointmentCardItem('unpaid'),
+        _id: 'today',
+        scheduledAt: '2099-08-12T09:00:00',
+        createdAt: '2099-08-12T12:02:00',
+      },
+      {
+        ...appointmentCardItem('unpaid'),
+        _id: 'cancelled',
+        status: 'cancelled',
+        scheduledAt: '2099-08-11T09:00:00',
+        createdAt: '2099-08-12T12:01:00',
+      },
     ];
 
     render(<CustomerAppointmentsPage />);
@@ -500,7 +608,9 @@ describe('customer journey UI', () => {
       scheduledAt: `2099-08-${String(13 + index).padStart(2, '0')}T09:00:00`,
     }));
     const { unmount } = render(<CustomerAppointmentsPage />);
-    expect((screen.getByTestId('appointment-list').textContent?.match(/appointment-/g) ?? [])).toHaveLength(6);
+    expect(
+      screen.getByTestId('appointment-list').textContent?.match(/appointment-/g) ?? []
+    ).toHaveLength(6);
     expect(screen.getByText('6 lịch hẹn đang hiển thị')).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Xem thêm' })).toBeNull();
 

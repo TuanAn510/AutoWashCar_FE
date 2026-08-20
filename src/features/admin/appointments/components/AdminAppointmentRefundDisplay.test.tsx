@@ -67,9 +67,7 @@ describe('admin appointment refund-required display', () => {
       status: 'completed' as const,
       refundRequired: false,
     };
-    render(
-      <AdminAppointmentsTable appointments={[normalCancelled, completed]} {...tableProps} />
-    );
+    render(<AdminAppointmentsTable appointments={[normalCancelled, completed]} {...tableProps} />);
 
     expect(screen.getByText('Đã hủy')).toBeTruthy();
     expect(screen.getByText('Hoàn thành')).toBeTruthy();
@@ -77,19 +75,11 @@ describe('admin appointment refund-required display', () => {
   });
 
   it('shows the refund obligation consistently in admin detail', () => {
-    render(
-      <AdminAppointmentDetailDialog
-        appointment={appointment}
-        open
-        onOpenChange={vi.fn()}
-      />
-    );
+    render(<AdminAppointmentDetailDialog appointment={appointment} open onOpenChange={vi.fn()} />);
 
     expect(screen.getByText('Đã hủy')).toBeTruthy();
     expect(screen.getAllByText('Cần hoàn tiền')).toHaveLength(2);
-    expect(
-      screen.getByText('Lịch hẹn đã bị hủy do cửa hàng chưa xác nhận đúng hạn.')
-    ).toBeTruthy();
+    expect(screen.getByText('Lịch hẹn đã bị hủy do cửa hàng chưa xác nhận đúng hạn.')).toBeTruthy();
     expect(screen.getByText('Trạng thái hoàn tiền')).toBeTruthy();
     expect(screen.queryByText(/Đã hoàn tiền|Hoàn tiền thành công/)).toBeNull();
   });

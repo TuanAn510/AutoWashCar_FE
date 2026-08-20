@@ -102,9 +102,7 @@ export function AppointmentDetailDialog({
         <h3 className="text-lg font-black text-[#15243a]">
           {appointment.services.map((service) => service.nameSnapshot).join(', ')}
         </h3>
-        <p className="mt-2 text-sm text-[#64748b]">
-          Lịch hẹn được tạo cho xe {licensePlate}.
-        </p>
+        <p className="mt-2 text-sm text-[#64748b]">Lịch hẹn được tạo cho xe {licensePlate}.</p>
       </section>
 
       <AppointmentTimeMilestones appointment={appointment} />

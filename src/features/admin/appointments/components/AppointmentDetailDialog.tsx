@@ -152,11 +152,7 @@ export function AdminAppointmentDetailDialog({
           value={paymentStatusLabels[appointment.paymentStatus]}
         />
         {requiresRefund ? (
-          <DetailTile
-            icon={CreditCard}
-            label="Trạng thái hoàn tiền"
-            value="Cần hoàn tiền"
-          />
+          <DetailTile icon={CreditCard} label="Trạng thái hoàn tiền" value="Cần hoàn tiền" />
         ) : null}
         <DetailTile
           icon={CreditCard}

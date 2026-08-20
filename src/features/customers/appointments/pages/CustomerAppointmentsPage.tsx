@@ -113,9 +113,7 @@ export default function CustomerAppointmentsPage() {
     ? defaultOrderedAppointments
     : filteredAppointments;
   const collapsedAppointments = orderedAppointments.slice(0, 6);
-  const displayedAppointments = showAllAppointments
-    ? orderedAppointments
-    : collapsedAppointments;
+  const displayedAppointments = showAllAppointments ? orderedAppointments : collapsedAppointments;
   const hasAdditionalAppointments = orderedAppointments.length > 6;
   const clearFilters = () => {
     setActiveFilter('all');
