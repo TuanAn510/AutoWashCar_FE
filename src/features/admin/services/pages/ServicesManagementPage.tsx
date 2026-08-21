@@ -26,17 +26,30 @@ import {
   useCreateServiceMutation,
   useUpdateServiceMutation,
 } from '@/features/admin/services/hooks/use-service-mutations';
-import { useAllServices, useServices } from '@/features/admin/services/hooks/useServices';
+import { useAllServices } from '@/features/admin/services/hooks/useServices';
 import { useServiceManagementStore } from '@/features/admin/services/store/useServiceManagementStore';
+import {
+  buildServiceFilterCategories,
+  filterAndSortServices,
+  type ServiceNameSortOrder,
+  type ServiceStatusFilter,
+} from '@/features/admin/services/utils/service-list';
 import { cn, formatTime } from '@/lib/utils';
+import {
+  calculateBaseServiceRewardPoints,
+  formatServiceRewardMultiplier,
+} from '@/lib/service-reward-points';
 import { useCurrentUser } from '@/features/auth/hooks/use-auth-queries';
 import {
   type CreateServicePayload,
   type Service,
   type UpdateServicePayload,
 } from '@/types/service';
+import type { ServiceCategory } from '@/types/serviceCategory';
 
-type StatusFilter = 'all' | 'active' | 'inactive';
+const SERVICE_PAGE_SIZE = 10;
+const EMPTY_SERVICES: Service[] = [];
+const EMPTY_CATEGORIES: ServiceCategory[] = [];
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat('vi-VN', {
@@ -137,6 +150,15 @@ function ServiceDetailDialog({
             <div className="grid gap-3 sm:grid-cols-2">
               <Info label="Giá" value={formatCurrency(service.price)} />
               <Info label="Thời lượng" value={formatTime(service.estimatedDuration)} />
+              <Info
+                label="Điểm cơ bản"
+                value={`${service.baseRewardPoints ?? calculateBaseServiceRewardPoints(service.price)} điểm`}
+              />
+              <Info
+                label="Hệ số nhân"
+                value={formatServiceRewardMultiplier(service.rewardMultiplier)}
+              />
+              <Info label="Điểm nhận được" value={`${service.rewardPoints} điểm`} />
               <Info label="Trạng thái" value={service.isActive ? 'Đang hoạt động' : 'Tạm ẩn'} />
             </div>
             <div className="rounded-lg border border-slate-200 p-3">
@@ -169,29 +191,46 @@ export default function ServicesManagementPage() {
   const closeCreateDialog = useServiceManagementStore((state) => state.closeCreateDialog);
   const [keyword, setKeyword] = useState('');
   const [categoryId, setCategoryId] = useState('all');
-  const [status, setStatus] = useState<StatusFilter>('all');
+  const [status, setStatus] = useState<ServiceStatusFilter>('all');
   const [page, setPage] = useState(1);
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [sortOrder, setSortOrder] = useState<ServiceNameSortOrder>('asc');
   const [detailService, setDetailService] = useState<Service | null>(null);
   const [editingService, setEditingService] = useState<Service | null>(null);
 
-  const servicesQuery = useServices({
-    page,
-    limit: 10,
-    ...(keyword.trim() ? { search: keyword.trim() } : {}),
-    ...(categoryId !== 'all' ? { categoryId } : {}),
-    ...(status !== 'all' ? { isActive: status === 'active' } : {}),
-    sortBy: 'name',
-    sortOrder,
-  });
   const allServicesQuery = useAllServices();
   const categoriesQuery = useActiveServiceCategories();
   const createServiceMutation = useCreateServiceMutation();
   const updateServiceMutation = useUpdateServiceMutation();
 
-  const services = servicesQuery.data?.items ?? [];
-  const categories = categoriesQuery.data ?? [];
-  const stats = useMemo(() => buildStats(allServicesQuery.data ?? []), [allServicesQuery.data]);
+  const allServices = allServicesQuery.data ?? EMPTY_SERVICES;
+  const categories = categoriesQuery.data ?? EMPTY_CATEGORIES;
+  const stats = useMemo(() => buildStats(allServices), [allServices]);
+  const filterCategories = useMemo(
+    () => buildServiceFilterCategories(categories, allServices),
+    [allServices, categories]
+  );
+  const filteredServices = useMemo(
+    () =>
+      filterAndSortServices(allServices, {
+        keyword,
+        categoryId,
+        status,
+        sortOrder,
+      }),
+    [allServices, categoryId, keyword, sortOrder, status]
+  );
+  const totalPages = Math.max(1, Math.ceil(filteredServices.length / SERVICE_PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const services = filteredServices.slice(
+    (currentPage - 1) * SERVICE_PAGE_SIZE,
+    currentPage * SERVICE_PAGE_SIZE
+  );
+  const pagination = {
+    page: currentPage,
+    limit: SERVICE_PAGE_SIZE,
+    total: filteredServices.length,
+    totalPages,
+  };
 
   const handleCreateService = (payload: CreateServicePayload) => {
     createServiceMutation.mutate(payload);
@@ -251,7 +290,7 @@ export default function ServicesManagementPage() {
         </section>
 
         <section className="rounded-lg border border-border/80 bg-white p-4">
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_220px_190px]">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-[minmax(280px,1fr)_150px_220px_190px]">
             <div className="relative">
               <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
               <Input
@@ -263,18 +302,19 @@ export default function ServicesManagementPage() {
                   setPage(1);
                 }}
               />
-              <select
-                className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm outline-none focus:border-slate-700 focus:ring-2 focus:ring-slate-700/10"
-                value={sortOrder}
-                onChange={(event) => {
-                  setSortOrder(event.target.value as 'asc' | 'desc');
-                  setPage(1);
-                }}
-              >
-                <option value="asc">Tên A-Z</option>
-                <option value="desc">Tên Z-A</option>
-              </select>
             </div>
+            <select
+              aria-label="Sắp xếp theo tên"
+              className="h-10 rounded-md border border-input bg-white px-3 text-sm outline-none focus:border-slate-700 focus:ring-2 focus:ring-slate-700/10"
+              value={sortOrder}
+              onChange={(event) => {
+                setSortOrder(event.target.value as ServiceNameSortOrder);
+                setPage(1);
+              }}
+            >
+              <option value="asc">Tên A-Z</option>
+              <option value="desc">Tên Z-A</option>
+            </select>
             <select
               aria-label="Danh mục"
               className="h-10 rounded-md border border-input bg-white px-3 text-sm outline-none focus:border-slate-700 focus:ring-2 focus:ring-slate-700/10"
@@ -285,7 +325,7 @@ export default function ServicesManagementPage() {
               }}
             >
               <option value="all">Tất cả danh mục</option>
-              {categories.map((category) => (
+              {filterCategories.map((category) => (
                 <option key={category._id} value={category._id}>
                   {category.name}
                 </option>
@@ -296,7 +336,7 @@ export default function ServicesManagementPage() {
               className="h-10 rounded-md border border-input bg-white px-3 text-sm outline-none focus:border-slate-700 focus:ring-2 focus:ring-slate-700/10"
               value={status}
               onChange={(event) => {
-                setStatus(event.target.value as StatusFilter);
+                setStatus(event.target.value as ServiceStatusFilter);
                 setPage(1);
               }}
             >
@@ -312,14 +352,14 @@ export default function ServicesManagementPage() {
             <h2 className="text-xl font-semibold tracking-normal text-slate-950">
               Danh sách dịch vụ
             </h2>
-            {(servicesQuery.isError || allServicesQuery.isError) && (
+            {allServicesQuery.isError && (
               <p className="text-sm text-destructive">
                 Không thể tải dữ liệu dịch vụ. Vui lòng kiểm tra đăng nhập hoặc thử lại.
               </p>
             )}
           </div>
           <div className="mt-5 overflow-x-auto">
-            <table className="w-full min-w-[880px] table-fixed border-collapse text-left text-sm">
+            <table className="w-full min-w-[1000px] table-fixed border-collapse text-left text-sm">
               <thead>
                 <tr className="border-b border-border text-slate-900">
                   <th className="w-[220px] px-2 py-3 font-semibold">Tên dịch vụ</th>
@@ -327,21 +367,22 @@ export default function ServicesManagementPage() {
                   <th className="w-[150px] px-2 py-3 font-semibold">Danh mục</th>
                   <th className="w-[130px] px-2 py-3 text-right font-semibold">Giá</th>
                   <th className="w-[110px] px-2 py-3 font-semibold">Thời lượng</th>
+                  <th className="w-[100px] px-2 py-3 font-semibold">Điểm nhận</th>
                   <th className="w-[130px] px-2 py-3 font-semibold">Trạng thái</th>
                   <th className="w-[80px] px-2 py-3 text-right font-semibold">Thao tác</th>
                 </tr>
               </thead>
               <tbody>
-                {servicesQuery.isLoading && (
+                {allServicesQuery.isLoading && (
                   <tr>
-                    <td colSpan={7} className="px-2 py-8 text-center text-slate-500">
+                    <td colSpan={8} className="px-2 py-8 text-center text-slate-500">
                       Đang tải dữ liệu dịch vụ...
                     </td>
                   </tr>
                 )}
-                {!servicesQuery.isLoading && !servicesQuery.isError && !services.length && (
+                {!allServicesQuery.isLoading && !allServicesQuery.isError && !services.length && (
                   <tr>
-                    <td colSpan={7} className="px-2 py-8 text-center text-slate-500">
+                    <td colSpan={8} className="px-2 py-8 text-center text-slate-500">
                       Không có dịch vụ phù hợp.
                     </td>
                   </tr>
@@ -374,6 +415,9 @@ export default function ServicesManagementPage() {
                     <td className="px-2 py-3 text-slate-900">
                       {formatTime(service.estimatedDuration)}
                     </td>
+                    <td className="px-2 py-3 font-semibold text-emerald-700">
+                      {service.rewardPoints}
+                    </td>
                     <td className="px-2 py-3">
                       <span
                         className={cn(
@@ -399,7 +443,7 @@ export default function ServicesManagementPage() {
             </table>
           </div>
           <PaginationControls
-            pagination={servicesQuery.data?.pagination}
+            pagination={pagination}
             itemCount={services.length}
             onPageChange={setPage}
           />

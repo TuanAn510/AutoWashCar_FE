@@ -1,6 +1,7 @@
 export type RewardDiscountType = 'percentage' | 'fixed_amount';
 export type RewardRedemptionStatus = 'available' | 'used' | 'expired' | 'cancelled';
 export type LoyaltyTransactionType = 'earn' | 'redeem' | 'adjust' | 'expire';
+export type LoyaltyTransactionStatus = 'pending' | 'posted' | 'reversed';
 
 export interface MembershipTier {
   _id: string;
@@ -48,6 +49,7 @@ export interface LoyaltyAccount {
 export interface LoyaltyTransaction {
   _id: string;
   type: LoyaltyTransactionType;
+  status?: LoyaltyTransactionStatus;
   points: number;
   remainingPoints?: number | null;
   description?: string | null;

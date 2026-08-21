@@ -6,7 +6,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { toast } from 'sonner';
 
 import { ApiError } from '@/api/errors';
-import { useUpdateServiceMutation } from '@/features/admin/services/hooks/use-service-mutations';
+import {
+  useCreateServiceMutation,
+  useUpdateServiceMutation,
+} from '@/features/admin/services/hooks/use-service-mutations';
 import { serviceQueryKeys } from '@/features/admin/services/hooks/useServices';
 import { serviceApi } from '@/services/serviceService';
 
@@ -27,6 +30,15 @@ const renderUpdateServiceHook = () => {
   );
 
   return { client, ...renderHook(() => useUpdateServiceMutation(), { wrapper }) };
+};
+
+const renderCreateServiceHook = () => {
+  const client = new QueryClient({ defaultOptions: { mutations: { retry: false } } });
+  const wrapper = ({ children }: PropsWithChildren) => (
+    <QueryClientProvider client={client}>{children}</QueryClientProvider>
+  );
+
+  return { client, ...renderHook(() => useCreateServiceMutation(), { wrapper }) };
 };
 
 afterEach(() => {
@@ -73,6 +85,29 @@ describe('useUpdateServiceMutation', () => {
     await waitFor(() => {
       expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: serviceQueryKeys.all });
       expect(toast.success).toHaveBeenCalledWith('Cập nhật dịch vụ thành công.');
+    });
+  });
+});
+
+describe('useCreateServiceMutation', () => {
+  it('invalidates dynamic service data immediately after creation', async () => {
+    vi.spyOn(serviceApi, 'createService').mockResolvedValue({ _id: '11' } as never);
+    const { client, result } = renderCreateServiceHook();
+    const invalidateQueries = vi.spyOn(client, 'invalidateQueries');
+
+    await act(async () => {
+      await result.current.mutateAsync({
+        name: 'Dịch vụ mới',
+        categoryId: '1',
+        price: 250_000,
+        estimatedDuration: 45,
+        rewardMultiplier: 1,
+      });
+    });
+
+    await waitFor(() => {
+      expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: serviceQueryKeys.all });
+      expect(toast.success).toHaveBeenCalledWith('Tạo dịch vụ thành công.');
     });
   });
 });

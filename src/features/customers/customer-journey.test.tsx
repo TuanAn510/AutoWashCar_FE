@@ -27,6 +27,21 @@ const defaultSlots: Array<{ startAt: string; available: boolean; reason: string 
 
 let availability = { slots: defaultSlots, vehicleAvailabilityReason: null as string | null };
 let pageAppointments: AppointmentItem[] = [];
+const defaultActiveServices = [
+  {
+    _id: 'service-1',
+    name: 'Rửa xe',
+    description: 'Rửa xe tiêu chuẩn',
+    price: 150000,
+    estimatedDuration: 45,
+    baseRewardPoints: 15,
+    rewardMultiplier: 2,
+    rewardPoints: 30,
+    version: 0,
+    categoryId: { _id: 'category-1', name: 'Chăm sóc xe' },
+  },
+];
+let activeServices = defaultActiveServices;
 
 const appointmentCardItem = (paymentStatus: AppointmentItem['paymentStatus']): AppointmentItem => ({
   _id: 'appointment-1',
@@ -127,16 +142,7 @@ vi.mock('@/features/shared/service-categories/hooks/useActiveServiceCategories',
 
 vi.mock('@/features/admin/services/hooks/useServices', () => ({
   useActiveServices: () => ({
-    data: [
-      {
-        _id: 'service-1',
-        name: 'Rửa xe',
-        description: 'Rửa xe tiêu chuẩn',
-        price: 150000,
-        estimatedDuration: 45,
-        categoryId: { _id: 'category-1', name: 'Chăm sóc xe' },
-      },
-    ],
+    data: activeServices,
     isLoading: false,
     isError: false,
   }),
@@ -248,6 +254,7 @@ beforeEach(() => {
   vi.spyOn(Date, 'now').mockReturnValue(new Date('2099-08-12T08:00:00').getTime());
   availability = { slots: defaultSlots, vehicleAvailabilityReason: null };
   pageAppointments = [];
+  activeServices = defaultActiveServices;
 });
 
 describe('customer journey UI', () => {
@@ -297,6 +304,7 @@ describe('customer journey UI', () => {
     await expectCurrentStep(2);
 
     expect(screen.getByText('Chọn gói dịch vụ')).toBeTruthy();
+    expect(screen.getAllByText('+30 điểm (×2)').length).toBeGreaterThan(0);
     const primaryServiceRadio = container.querySelector('input[type="radio"]') as HTMLInputElement;
     fireEvent.click(primaryServiceRadio);
     fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));
@@ -350,6 +358,31 @@ describe('customer journey UI', () => {
     expect(screen.getByText('08:05')).toBeTruthy();
     fireEvent.change(select, { target: { value: '08:05' } });
     expect((select as HTMLSelectElement).value).toBe('08:05');
+  });
+
+  it('removes a selected service when the live catalog deactivates it', async () => {
+    const { container } = renderWithQueryClient(
+      <CreateAppointmentModal
+        isOpen
+        isSubmitting={false}
+        onOpenChange={vi.fn()}
+        onSubmit={vi.fn()}
+      />
+    );
+
+    fireEvent.change(container.querySelector('select[name="vehicleId"]')!, {
+      target: { value: 'vehicle-1' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));
+    fireEvent.click(container.querySelector('input[type="radio"]')!);
+
+    activeServices = [];
+    fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));
+
+    expect(
+      await screen.findByText('Dịch vụ đã chọn vừa ngừng hoạt động. Vui lòng chọn dịch vụ khác.')
+    ).toBeTruthy();
+    expect(container.querySelector('input[type="radio"]')).toBeNull();
   });
 
   it('keeps capacity-full suggestions visible but disabled with the customer-facing label', async () => {

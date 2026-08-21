@@ -48,6 +48,7 @@ import {
   formatRewardDiscount,
   getRewardRemainingQuantity,
   redemptionStatusLabels,
+  transactionStatusLabels,
   transactionTypeLabels,
 } from '@/features/shared/loyalty/utils/loyalty-formatters';
 import {
@@ -390,6 +391,7 @@ function TransactionHistory({ transactions }: { transactions: LoyaltyTransaction
             <thead>
               <tr className="border-b text-slate-900">
                 <th className="px-2 py-3 font-semibold">Hoạt động</th>
+                <th className="px-2 py-3 font-semibold">Trạng thái</th>
                 <th className="px-2 py-3 font-semibold">Điểm</th>
                 <th className="px-2 py-3 font-semibold">Nội dung</th>
                 <th className="px-2 py-3 font-semibold">Thời gian</th>
@@ -397,33 +399,49 @@ function TransactionHistory({ transactions }: { transactions: LoyaltyTransaction
               </tr>
             </thead>
             <tbody>
-              {transactions.map((transaction) => (
-                <tr key={transaction._id} className="border-b last:border-0">
-                  <td className="px-2 py-4">
-                    <Badge variant="neutral" className="rounded-full">
-                      {transactionTypeLabels[transaction.type] ?? transaction.type}
-                    </Badge>
-                  </td>
-                  <td
-                    className={cn(
-                      'px-2 py-4 font-semibold',
-                      transaction.points >= 0 ? 'text-emerald-600' : 'text-amber-600'
-                    )}
-                  >
-                    {transaction.points > 0 ? '+' : ''}
-                    {formatPoints(transaction.points)}
-                  </td>
-                  <td className="px-2 py-4 text-slate-600">
-                    {transaction.description || 'Không có ghi chú'}
-                  </td>
-                  <td className="px-2 py-4">
-                    {transaction.createdAt ? formatDateTime(transaction.createdAt) : 'Chưa có'}
-                  </td>
-                  <td className="px-2 py-4">
-                    {transaction.expiresAt ? formatDate(transaction.expiresAt) : 'Không áp dụng'}
-                  </td>
-                </tr>
-              ))}
+              {transactions.map((transaction) => {
+                const transactionStatus = transaction.status ?? 'posted';
+                return (
+                  <tr key={transaction._id} className="border-b last:border-0">
+                    <td className="px-2 py-4">
+                      <Badge variant="neutral" className="rounded-full">
+                        {transactionTypeLabels[transaction.type] ?? transaction.type}
+                      </Badge>
+                    </td>
+                    <td className="px-2 py-4">
+                      <Badge variant="neutral" className="rounded-full">
+                        {transactionStatusLabels[transactionStatus]}
+                      </Badge>
+                    </td>
+                    <td
+                      className={cn(
+                        'px-2 py-4 font-semibold',
+                        transactionStatus !== 'posted'
+                          ? 'text-slate-500 line-through'
+                          : transaction.points >= 0
+                            ? 'text-emerald-600'
+                            : 'text-amber-600'
+                      )}
+                    >
+                      {transaction.points > 0 ? '+' : ''}
+                      {formatPoints(transaction.points)}
+                    </td>
+                    <td className="px-2 py-4 text-slate-600">
+                      {transaction.description || 'Không có ghi chú'}
+                    </td>
+                    <td className="px-2 py-4">
+                      {transaction.createdAt ? formatDateTime(transaction.createdAt) : 'Chưa có'}
+                    </td>
+                    <td className="px-2 py-4">
+                      {transaction.expiresAt
+                        ? formatDate(transaction.expiresAt)
+                        : transactionStatus === 'pending'
+                          ? 'Bắt đầu khi hoàn thành'
+                          : 'Không áp dụng'}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -502,12 +520,13 @@ export default function CustomerLoyaltyPage() {
 
               <div className="grid gap-3 px-5 pb-2 sm:grid-cols-2">
                 <PolicyItem icon={Coins} title="Cách tích điểm">
-                  Với mỗi 10.000đ thanh toán, bạn nhận được 1 điểm. Điểm được tự động cộng sau khi
-                  dịch vụ hoàn tất và thanh toán thành công.
+                  Cứ mỗi 10.000₫ giá dịch vụ được 1 điểm cơ bản (phần lẻ được làm tròn xuống), sau
+                  đó áp dụng hệ số riêng của dịch vụ. Tổng điểm được hiển thị khi đặt lịch và tự
+                  động cộng sau khi dịch vụ hoàn tất.
                 </PolicyItem>
                 <PolicyItem icon={CalendarClock} title="Điểm có thời hạn bao lâu?">
-                  Điểm chưa sử dụng có hiệu lực đến đầu quý tiếp theo. Các kỳ điểm mới bắt đầu vào
-                  ngày 01/01, 01/04, 01/07 và 01/10 theo giờ Việt Nam.
+                  Điểm chưa sử dụng có hiệu lực trong 12 tháng. Kỳ xét hạng mới bắt đầu vào ngày
+                  01/01, 01/04, 01/07 và 01/10 theo giờ Việt Nam.
                 </PolicyItem>
                 <PolicyItem icon={Award} title="Cách nâng hạng">
                   Hạng thành viên dựa trên điểm bạn nhận được trong quý. Đổi ưu đãi không làm giảm

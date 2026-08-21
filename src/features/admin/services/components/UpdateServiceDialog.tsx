@@ -15,16 +15,31 @@ import {
 } from '@/components/ui/dialog';
 import { Field, FieldError, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+import { VndCurrencyInput } from '@/features/admin/services/components/VndCurrencyInput';
+import { MAX_SERVICE_PRICE } from '@/features/admin/services/utils/vnd-currency';
 import { cn } from '@/lib/utils';
+import {
+  formatServiceRewardMultiplier,
+  SERVICE_REWARD_MULTIPLIER_OPTIONS,
+} from '@/lib/service-reward-points';
 import type { Service, UpdateServicePayload } from '@/types/service';
 import type { ServiceCategory } from '@/types/serviceCategory';
 
 const updateServiceSchema = z.object({
-  name: z.string().trim().min(1, 'Vui lòng nhập tên dịch vụ.').max(160),
+  name: z.string().trim().min(1, 'Vui lòng nhập tên dịch vụ.').max(120),
   description: z.string().trim().max(2000).optional(),
   categoryId: z.string().min(1, 'Vui lòng chọn danh mục.'),
-  price: z.number().min(0, 'Giá dịch vụ phải lớn hơn hoặc bằng 0.'),
+  price: z
+    .number()
+    .int('Giá dịch vụ phải là số nguyên.')
+    .min(0, 'Giá dịch vụ phải lớn hơn hoặc bằng 0.')
+    .max(MAX_SERVICE_PRICE, 'Giá dịch vụ vượt quá giới hạn cho phép.'),
   estimatedDuration: z.number().int().min(1, 'Thời lượng phải từ 1 phút.'),
+  rewardMultiplier: z
+    .number()
+    .int('Hệ số điểm phải là số nguyên.')
+    .min(1, 'Hệ số điểm tối thiểu là ×1.')
+    .max(5, 'Hệ số điểm tối đa là ×5.'),
   isActive: z.boolean(),
 });
 
@@ -60,7 +75,6 @@ export function UpdateServiceDialog({
     setError,
     formState: { errors },
   } = useForm<FormValues>({ resolver: zodResolver(updateServiceSchema) });
-
   useEffect(() => {
     if (!service) return;
     reset({
@@ -69,6 +83,7 @@ export function UpdateServiceDialog({
       categoryId: service.categoryId._id,
       price: service.price,
       estimatedDuration: service.estimatedDuration,
+      rewardMultiplier: service.rewardMultiplier ?? 1,
       isActive: service.isActive,
     });
   }, [reset, service]);
@@ -107,6 +122,7 @@ export function UpdateServiceDialog({
               categoryId: values.categoryId,
               price: values.price,
               estimatedDuration: values.estimatedDuration,
+              rewardMultiplier: values.rewardMultiplier,
               isActive: values.isActive,
               version: service.version,
             };
@@ -142,17 +158,25 @@ export function UpdateServiceDialog({
               </select>
               <FieldError>{errors.categoryId?.message}</FieldError>
             </Field>
-            <Field>
-              <FieldLabel>Giá dịch vụ</FieldLabel>
-              <Input
-                type="number"
-                min={0}
-                className={cn('h-10 rounded-md bg-white px-3', fieldFocusClassName)}
-                disabled={isSubmitting}
-                {...register('price', { valueAsNumber: true })}
-              />
-              <FieldError>{errors.price?.message}</FieldError>
-            </Field>
+            <Controller
+              control={control}
+              name="price"
+              render={({ field }) => (
+                <Field>
+                  <FieldLabel htmlFor="update-service-price">Giá dịch vụ</FieldLabel>
+                  <VndCurrencyInput
+                    id="update-service-price"
+                    aria-invalid={!!errors.price}
+                    className={cn('h-10 rounded-md bg-white px-3', fieldFocusClassName)}
+                    disabled={isSubmitting}
+                    value={field.value}
+                    onBlur={field.onBlur}
+                    onValueChange={field.onChange}
+                  />
+                  <FieldError>{errors.price?.message}</FieldError>
+                </Field>
+              )}
+            />
             <Field>
               <FieldLabel>Thời lượng ước tính (phút)</FieldLabel>
               <Input
@@ -163,6 +187,24 @@ export function UpdateServiceDialog({
                 {...register('estimatedDuration', { valueAsNumber: true })}
               />
               <FieldError>{errors.estimatedDuration?.message}</FieldError>
+            </Field>
+            <Field>
+              <FieldLabel>Hệ số nhân điểm</FieldLabel>
+              <select
+                className={cn(
+                  'h-10 rounded-md border border-input bg-white px-3 text-sm outline-none disabled:cursor-not-allowed disabled:bg-slate-100',
+                  fieldFocusClassName
+                )}
+                disabled={isSubmitting}
+                {...register('rewardMultiplier', { valueAsNumber: true })}
+              >
+                {SERVICE_REWARD_MULTIPLIER_OPTIONS.map((multiplier) => (
+                  <option key={multiplier} value={multiplier}>
+                    {formatServiceRewardMultiplier(multiplier)}
+                  </option>
+                ))}
+              </select>
+              <FieldError>{errors.rewardMultiplier?.message}</FieldError>
             </Field>
           </div>
           <Field>
