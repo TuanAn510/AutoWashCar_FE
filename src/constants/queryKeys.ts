@@ -49,6 +49,11 @@ export const queryKeys = {
     admin: () => ['payments', 'admin'] as const,
     status: (reference: string) => ['payments', 'status', reference] as const,
   },
+  notifications: {
+    all: ['notifications'] as const,
+    list: () => ['notifications', 'list'] as const,
+    unreadCount: () => ['notifications', 'unread-count'] as const,
+  },
   services: {
     all: ['services'] as const,
     list: (params?: object) => keyed(['services', 'list', params ?? {}] as const),
