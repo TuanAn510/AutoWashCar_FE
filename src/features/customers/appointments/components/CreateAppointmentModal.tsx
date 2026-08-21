@@ -272,7 +272,6 @@ export function CreateAppointmentModal({
       ),
     [appointmentsQuery.data?.appointments]
   );
-  const categories = categoriesQuery.data ?? [];
   const allServices = useMemo(() => servicesQuery.data ?? [], [servicesQuery.data]);
   const services = useMemo(
     () =>
