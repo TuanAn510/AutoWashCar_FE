@@ -146,6 +146,14 @@ export const adminAppointmentsApi = {
     return response.data.data;
   },
 
+  async getRescheduleAvailability(appointmentId: string, date: string, signal?: AbortSignal) {
+    const response = await api.get<ApiEnvelope<BookingAvailability>>(
+      `/appointments/${appointmentId}/reschedule-availability`,
+      { params: { date }, signal }
+    );
+    return response.data.data;
+  },
+
   async cancelAppointmentByAdmin(appointmentId: string, payload?: CancelAppointmentByAdminPayload) {
     const response = await api.patch<ApiEnvelope<AppointmentItem>>(
       `/appointments/${appointmentId}/cancel`,

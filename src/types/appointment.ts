@@ -179,13 +179,14 @@ export interface CreateAppointmentPayload {
 
 export interface BookingAvailabilitySlot {
   startAt: string;
+  endAt: string;
   available: boolean;
   reason: string | null;
 }
 
 export interface BookingAvailability {
   date: string;
-  bookingWindowDays: number;
+  bookingWindowDays: number | null;
   slots: BookingAvailabilitySlot[];
   vehicleAvailabilityReason?: string | null;
 }
