@@ -27,24 +27,31 @@ export function useStaffWorkload() {
 
 export function useUpdateCustomer() {
   const queryClient = useQueryClient();
+  const customerListQueryKey = [...queryKeys.users.customers.all, 'list'] as const;
 
   return useMutation({
     mutationFn: ({ userId, payload }: { userId: string; payload: UpdateUserByAdminPayload }) =>
       customersApi.updateByAdmin(userId, payload),
     onMutate: async ({ userId, payload }) => {
-      await queryClient.cancelQueries({ queryKey: queryKeys.users.customers.all });
+      await queryClient.cancelQueries({ queryKey: customerListQueryKey });
       const snapshots = queryClient.getQueriesData<CustomerListResult>({
-        queryKey: queryKeys.users.customers.all,
+        queryKey: customerListQueryKey,
       });
 
       queryClient.setQueriesData<CustomerListResult>(
-        { queryKey: queryKeys.users.customers.all },
+        { queryKey: customerListQueryKey },
         (current) =>
           current
             ? {
                 ...current,
                 customers: current.customers.map((customer) =>
-                  customer._id === userId ? { ...customer, ...payload } : customer
+                  customer._id === userId
+                    ? {
+                        ...customer,
+                        ...payload,
+                        ...(payload.isActive === undefined ? {} : { active: payload.isActive }),
+                      }
+                    : customer
                 ),
               }
             : current

@@ -25,44 +25,44 @@ export function AppointmentTimeMilestones({ appointment }: { appointment: Appoin
       : null;
   const milestones = [
     {
-      label: 'Th\u1eddi gian \u0111\u1eb7t l\u1ecbch',
+      label: 'Thời gian đặt lịch',
       value: appointment.createdAt
         ? formatDateTime(appointment.createdAt, { weekday: 'long' })
-        : 'Ch\u01b0a c\u00f3 d\u1eef li\u1ec7u',
+        : 'Chưa có dữ liệu',
       icon: CalendarPlus2,
     },
     {
-      label: 'Th\u1eddi gian h\u1eb9n',
+      label: 'Thời gian hẹn',
       value: formatDateTime(appointment.scheduledAt, { weekday: 'long' }),
       icon: CalendarClock,
     },
     {
-      label: 'Th\u1eddi gian check-in',
+      label: 'Thời gian check-in',
       value: appointment.checkInAt
         ? formatDateTime(appointment.checkInAt, { weekday: 'long' })
-        : 'Ch\u01b0a check-in',
+        : 'Chưa check-in',
       icon: LogIn,
     },
     {
-      label: 'B\u1eaft \u0111\u1ea7u th\u1ef1c hi\u1ec7n',
+      label: 'Bắt đầu thực hiện',
       value: appointment.serviceStartedAt
         ? formatDateTime(appointment.serviceStartedAt, { weekday: 'long' })
-        : 'Ch\u01b0a b\u1eaft \u0111\u1ea7u',
+        : 'Chưa bắt đầu',
       icon: PlayCircle,
     },
     {
-      label: 'Th\u1eddi gian x\u1eed l\u00fd',
+      label: 'Thời gian xử lý',
       value:
         processingMinutes == null
-          ? 'Ch\u01b0a c\u00f3 d\u1eef li\u1ec7u'
-          : `${processingMinutes} ph\u00fat`,
+          ? 'Chưa có dữ liệu'
+          : `${processingMinutes} phút`,
       icon: Clock3,
     },
     {
-      label: 'Th\u1eddi gian ho\u00e0n th\u00e0nh',
+      label: 'Thời gian hoàn thành',
       value: appointment.completedAt
         ? formatDateTime(appointment.completedAt, { weekday: 'long' })
-        : 'Ch\u01b0a ho\u00e0n th\u00e0nh',
+        : 'Chưa hoàn thành',
       icon: CalendarCheck2,
     },
   ];
@@ -73,7 +73,7 @@ export function AppointmentTimeMilestones({ appointment }: { appointment: Appoin
   return (
     <section className="rounded-xl border border-[#e5edf6] bg-white p-4">
       <h3 className="text-sm font-black uppercase tracking-[0.12em] text-[#0b67c2]">
-        C\u00e1c m\u1ed1c th\u1eddi gian
+        Các mốc thời gian
       </h3>
       <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         {milestones.map(({ icon: Icon, label, value }) => (
@@ -91,7 +91,7 @@ export function AppointmentTimeMilestones({ appointment }: { appointment: Appoin
       {statusHistory.length ? (
         <div className="mt-4 border-t border-[#e5edf6] pt-4">
           <h4 className="text-xs font-black uppercase tracking-[0.12em] text-[#64748b]">
-            L\u1ecbch s\u1eed tr\u1ea1ng th\u00e1i
+            Lịch sử trạng thái
           </h4>
           <div className="mt-3 space-y-2">
             {statusHistory.map((item) => (
@@ -105,8 +105,8 @@ export function AppointmentTimeMilestones({ appointment }: { appointment: Appoin
                   </p>
                   <p className="mt-0.5 text-xs text-[#64748b]">
                     {item.actorName
-                      ? `C\u1eadp nh\u1eadt b\u1edfi ${item.actorName}`
-                      : 'H\u1ec7 th\u1ed1ng c\u1eadp nh\u1eadt'}
+                      ? `Cập nhật bởi ${item.actorName}`
+                      : 'Hệ thống cập nhật'}
                   </p>
                 </div>
                 <div className="shrink-0 text-xs font-semibold text-[#64748b]">

@@ -111,6 +111,20 @@ vi.mock('@/features/customers/vehicles/hooks/useMyVehicles', () => ({
           year: 2024,
           licensePlate: '30A12345',
         },
+        {
+          _id: 'vehicle-2',
+          brand: 'Honda',
+          model: 'City',
+          year: 2023,
+          licensePlate: '51B67890',
+        },
+        {
+          _id: 'vehicle-3',
+          brand: 'Mazda',
+          model: '3',
+          year: 2022,
+          licensePlate: '61A99999',
+        },
       ],
     },
     isLoading: false,
@@ -765,5 +779,32 @@ describe('customer journey UI', () => {
 
     expect(await screen.findByText('Xe này đã có lịch hẹn chưa hoàn thành.')).toBeTruthy();
     expect((screen.getByLabelText('Chọn khung giờ') as HTMLSelectElement).disabled).toBe(true);
+  });
+
+  it('keeps unfinished vehicles visible but disabled while terminal vehicles remain selectable', () => {
+    pageAppointments = [
+      { ...appointmentCardItem('unpaid'), vehicleId: { ...appointmentCardItem('unpaid').vehicleId, _id: 'vehicle-1' }, status: 'in_progress' },
+      { ...appointmentCardItem('unpaid'), _id: 'appointment-2', vehicleId: { ...appointmentCardItem('unpaid').vehicleId, _id: 'vehicle-2' }, status: 'completed' },
+      { ...appointmentCardItem('unpaid'), _id: 'appointment-3', vehicleId: { ...appointmentCardItem('unpaid').vehicleId, _id: 'vehicle-3' }, status: 'cancelled' },
+    ];
+    const { container } = render(
+      <CreateAppointmentModal
+        isOpen
+        isSubmitting={false}
+        onOpenChange={vi.fn()}
+        onSubmit={vi.fn()}
+      />
+    );
+
+    const select = container.querySelector('select[name="vehicleId"]') as HTMLSelectElement;
+    const unfinished = select.querySelector('option[value="vehicle-1"]') as HTMLOptionElement;
+    const completed = select.querySelector('option[value="vehicle-2"]') as HTMLOptionElement;
+    const cancelled = select.querySelector('option[value="vehicle-3"]') as HTMLOptionElement;
+
+    expect(unfinished.disabled).toBe(true);
+    expect(unfinished.textContent).toContain('30A-12345');
+    expect(unfinished.textContent).toContain('Đã có lịch hẹn chưa hoàn thành');
+    expect(completed.disabled).toBe(false);
+    expect(cancelled.disabled).toBe(false);
   });
 });
