@@ -57,6 +57,18 @@ describe('customer appointment license plate display', () => {
     expect(screen.queryByText(/50A12345/)).toBeNull();
   });
 
+  it('shows the joined service summary with price once and removes the duplicate service section', () => {
+    render(
+      <MemoryRouter>
+        <AppointmentDetailDialog appointment={appointment} open onOpenChange={vi.fn()} />
+      </MemoryRouter>
+    );
+
+    expect(screen.getAllByText('Basic Wash')).toHaveLength(1);
+    expect(screen.getAllByText(/100[.,]000/).length).toBeGreaterThan(0);
+    expect(screen.queryByText('Dịch vụ đã chọn')).toBeNull();
+  });
+
   it('shows the same pending-refund state in appointment card and detail', () => {
     const refundAppointment: AppointmentItem = {
       ...appointment,

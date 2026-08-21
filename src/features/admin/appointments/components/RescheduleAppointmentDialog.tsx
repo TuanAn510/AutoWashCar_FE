@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { DatePicker } from '@/components/ui/date-picker';
-import type { AppointmentItem } from '@/types/appointment';
 import { CustomerModalShell } from '@/features/customers/components/CustomerModalShell';
+import { adminAppointmentsApi } from '@/services/appointmentService';
+import type { AppointmentItem, BookingAvailabilitySlot } from '@/types/appointment';
 
 interface RescheduleAppointmentDialogProps {
   appointment: AppointmentItem | null;
@@ -26,6 +27,23 @@ const toTimeInputValue = (date: Date) => {
   return `${hours}:${minutes}`;
 };
 
+const unavailableReasonLabel: Record<string, string> = {
+  PAST: 'Đã qua',
+  LEAD_TIME: 'Cần đặt trước 30 phút',
+  CAPACITY_FULL: 'Hết vị trí rửa',
+  VEHICLE_OVERLAP: 'Trùng lịch của xe',
+  NO_STAFF: 'Chưa có nhân viên',
+};
+
+const timePart = (dateTime: string) => dateTime.slice(11, 16);
+
+const slotLabel = (slot: BookingAvailabilitySlot) => {
+  const interval = `${timePart(slot.startAt)} - ${timePart(slot.endAt)}`;
+  return slot.available
+    ? interval
+    : `${interval} - ${unavailableReasonLabel[slot.reason ?? ''] ?? slot.reason ?? 'Không khả dụng'}`;
+};
+
 export function RescheduleAppointmentDialog({
   appointment,
   open,
@@ -33,9 +51,7 @@ export function RescheduleAppointmentDialog({
   onOpenChange,
   onConfirm,
 }: RescheduleAppointmentDialogProps) {
-  if (!appointment) {
-    return null;
-  }
+  if (!appointment) return null;
 
   return (
     <RescheduleAppointmentDialogContent
@@ -59,13 +75,35 @@ function RescheduleAppointmentDialogContent({
   const currentDate = new Date(appointment.scheduledAt);
   const [scheduledDate, setScheduledDate] = useState(() => toDateInputValue(currentDate));
   const [scheduledTime, setScheduledTime] = useState(() => toTimeInputValue(currentDate));
-  const [minimumScheduledAt] = useState(() => new Date(Date.now() + 30 * 60 * 1000));
   const [minimumDate] = useState(() => new Date());
+  const [slots, setSlots] = useState<BookingAvailabilitySlot[]>([]);
+  const [isLoadingSlots, setIsLoadingSlots] = useState(false);
+  const [availabilityError, setAvailabilityError] = useState<string | null>(null);
 
-  const nextDateTime =
-    scheduledDate && scheduledTime ? new Date(`${scheduledDate}T${scheduledTime}`) : null;
-  const isInvalidDateTime =
-    !nextDateTime || Number.isNaN(nextDateTime.getTime()) || nextDateTime < minimumScheduledAt;
+  useEffect(() => {
+    if (!open || !scheduledDate) {
+      setSlots([]);
+      return;
+    }
+    const controller = new AbortController();
+    setIsLoadingSlots(true);
+    setAvailabilityError(null);
+    adminAppointmentsApi
+      .getRescheduleAvailability(appointment._id, scheduledDate, controller.signal)
+      .then((availability) => setSlots(availability.slots))
+      .catch((error: unknown) => {
+        if (!controller.signal.aborted) {
+          setSlots([]);
+          setAvailabilityError(error instanceof Error ? error.message : 'Không thể tải khung giờ.');
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setIsLoadingSlots(false);
+      });
+    return () => controller.abort();
+  }, [appointment._id, open, scheduledDate]);
+
+  const selectedSlot = slots.find((slot) => timePart(slot.startAt) === scheduledTime);
 
   return (
     <CustomerModalShell
@@ -83,7 +121,7 @@ function RescheduleAppointmentDialogContent({
           <Button
             type="button"
             onClick={() => onConfirm(`${scheduledDate}T${scheduledTime}:00`)}
-            disabled={isSubmitting || isInvalidDateTime}
+            disabled={isSubmitting || isLoadingSlots || !selectedSlot?.available}
           >
             {isSubmitting ? 'Đang đổi lịch...' : 'Cập nhật lịch'}
           </Button>
@@ -104,7 +142,10 @@ function RescheduleAppointmentDialogContent({
           <DatePicker
             className="h-11 rounded-xl"
             value={scheduledDate}
-            onChange={setScheduledDate}
+            onChange={(value) => {
+              setScheduledDate(value);
+              setScheduledTime('');
+            }}
             disabled={isSubmitting}
             disabledDates={{ before: minimumDate }}
             placeholder="Chọn ngày hẹn mới"
@@ -113,21 +154,24 @@ function RescheduleAppointmentDialogContent({
 
         <label className="grid gap-2">
           <span className="text-sm font-medium text-slate-900">Giờ hẹn mới</span>
-          <input
-            type="time"
+          <select
+            aria-label="Giờ hẹn mới"
             className="h-11 rounded-xl border border-input bg-white px-3 text-sm outline-none focus:border-primary/40"
             value={scheduledTime}
             onChange={(event) => setScheduledTime(event.target.value)}
-            disabled={isSubmitting}
-          />
+            disabled={isSubmitting || isLoadingSlots || !scheduledDate}
+          >
+            <option value="">{isLoadingSlots ? 'Đang tải khung giờ...' : 'Chọn khung giờ'}</option>
+            {slots.map((slot) => (
+              <option key={slot.startAt} value={timePart(slot.startAt)} disabled={!slot.available}>
+                {slotLabel(slot)}
+              </option>
+            ))}
+          </select>
         </label>
       </div>
 
-      {isInvalidDateTime ? (
-        <p className="text-sm text-rose-600">
-          Thời gian hẹn mới phải cách hiện tại ít nhất 30 phút.
-        </p>
-      ) : null}
+      {availabilityError ? <p className="text-sm text-rose-600">{availabilityError}</p> : null}
     </CustomerModalShell>
   );
 }

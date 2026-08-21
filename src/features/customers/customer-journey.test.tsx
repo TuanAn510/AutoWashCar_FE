@@ -13,7 +13,12 @@ import { CustomerEmptyState } from '@/features/customers/components/CustomerEmpt
 import { formatDateTime } from '@/lib/utils';
 import type { AppointmentItem } from '@/types/appointment';
 
-const defaultSlots: Array<{ startAt: string; available: boolean; reason: string | null }> = [
+const defaultSlots: Array<{
+  startAt: string;
+  endAt: string;
+  available: boolean;
+  reason: string | null;
+}> = [
   '08:00',
   '08:05',
   '08:10',
@@ -21,6 +26,7 @@ const defaultSlots: Array<{ startAt: string; available: boolean; reason: string 
   '08:20',
 ].map((time) => ({
   startAt: `2099-08-13T${time}:00`,
+  endAt: `2099-08-13T${time}:00`,
   available: true,
   reason: null,
 }));
@@ -174,6 +180,7 @@ vi.mock('@/services/appointmentService', () => ({
         slots: [
           {
             startAt: `${date}T09:00:00`,
+            endAt: `${date}T09:30:00`,
             available: true,
             reason: null,
           },
@@ -389,7 +396,12 @@ describe('customer journey UI', () => {
     availability = {
       slots: [
         ...defaultSlots,
-        { startAt: '2099-08-13T08:25:00', available: false, reason: 'CAPACITY_FULL' },
+        {
+          startAt: '2099-08-13T08:25:00',
+          endAt: '2099-08-13T08:55:00',
+          available: false,
+          reason: 'CAPACITY_FULL',
+        },
       ],
       vehicleAvailabilityReason: null,
     };
@@ -416,8 +428,18 @@ describe('customer journey UI', () => {
   it('shows different labels for past and lead-time availability reasons', async () => {
     availability = {
       slots: [
-        { startAt: '2099-08-13T08:00:00', available: false, reason: 'PAST' },
-        { startAt: '2099-08-13T08:05:00', available: false, reason: 'LEAD_TIME' },
+        {
+          startAt: '2099-08-13T08:00:00',
+          endAt: '2099-08-13T08:30:00',
+          available: false,
+          reason: 'PAST',
+        },
+        {
+          startAt: '2099-08-13T08:05:00',
+          endAt: '2099-08-13T08:35:00',
+          available: false,
+          reason: 'LEAD_TIME',
+        },
       ],
       vehicleAvailabilityReason: null,
     };
@@ -735,7 +757,14 @@ describe('customer journey UI', () => {
 
   it('does not render structurally impossible end-of-day options', async () => {
     availability = {
-      slots: [{ startAt: '2099-08-13T16:15:00', available: true, reason: null }],
+      slots: [
+        {
+          startAt: '2099-08-13T16:15:00',
+          endAt: '2099-08-13T17:00:00',
+          available: true,
+          reason: null,
+        },
+      ],
       vehicleAvailabilityReason: null,
     };
     const { container } = render(

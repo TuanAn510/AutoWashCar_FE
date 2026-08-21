@@ -1,10 +1,11 @@
 // @vitest-environment jsdom
 import type { PropsWithChildren, ReactNode } from 'react';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { RescheduleAppointmentDialog } from '@/features/admin/appointments/components/RescheduleAppointmentDialog';
-import type { AppointmentItem } from '@/types/appointment';
+import { adminAppointmentsApi } from '@/services/appointmentService';
+import type { AppointmentItem, BookingAvailability } from '@/types/appointment';
 
 vi.mock('@/features/customers/components/CustomerModalShell', () => ({
   CustomerModalShell: ({ children, footer }: PropsWithChildren<{ footer?: ReactNode }>) => (
@@ -26,6 +27,12 @@ vi.mock('@/components/ui/date-picker', () => ({
   ),
 }));
 
+vi.mock('@/services/appointmentService', () => ({
+  adminAppointmentsApi: {
+    getRescheduleAvailability: vi.fn(),
+  },
+}));
+
 const appointment: AppointmentItem = {
   _id: 'appointment-1',
   customerId: { _id: 'customer-1', displayName: 'Customer', phone: '0900000000' },
@@ -40,23 +47,59 @@ const appointment: AppointmentItem = {
   cancelledBy: null,
   services: [],
   scheduledAt: '2099-08-13T09:00:00',
-  status: 'confirmed',
-  totalEstimatedDuration: 30,
+  status: 'pending',
+  totalEstimatedDuration: 45,
   totalPrice: 100000,
   paymentMethod: 'cash',
   paymentStatus: 'unpaid',
 };
 
+const availability: BookingAvailability = {
+  date: '2099-08-13',
+  bookingWindowDays: null,
+  slots: [
+    {
+      startAt: '2099-08-13T09:00:00',
+      endAt: '2099-08-13T09:45:00',
+      available: true,
+      reason: null,
+    },
+    {
+      startAt: '2099-08-13T09:05:00',
+      endAt: '2099-08-13T09:50:00',
+      available: false,
+      reason: 'CAPACITY_FULL',
+    },
+    {
+      startAt: '2099-08-13T09:10:00',
+      endAt: '2099-08-13T09:55:00',
+      available: false,
+      reason: 'NO_STAFF',
+    },
+    {
+      startAt: '2099-08-13T08:00:00',
+      endAt: '2099-08-13T08:45:00',
+      available: false,
+      reason: 'PAST',
+    },
+    {
+      startAt: '2099-08-13T08:05:00',
+      endAt: '2099-08-13T08:50:00',
+      available: false,
+      reason: 'LEAD_TIME',
+    },
+  ],
+  vehicleAvailabilityReason: null,
+};
+
 afterEach(() => {
   cleanup();
-  vi.useRealTimers();
   vi.clearAllMocks();
 });
 
 describe('RescheduleAppointmentDialog', () => {
-  it('submits a timezone-free local datetime', () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date('2099-08-13T08:00:00'));
+  it('loads backend intervals and submits a timezone-free selected slot', async () => {
+    vi.mocked(adminAppointmentsApi.getRescheduleAvailability).mockResolvedValue(availability);
     const onConfirm = vi.fn();
     const { container } = render(
       <RescheduleAppointmentDialog
@@ -68,19 +111,22 @@ describe('RescheduleAppointmentDialog', () => {
       />
     );
 
-    fireEvent.change(container.querySelector('input[type="time"]')!, {
-      target: { value: '14:30' },
-    });
+    expect(await screen.findByRole('option', { name: '09:00 - 09:45' })).toBeTruthy();
+    expect(container.querySelector('input[type="time"]')).toBeNull();
+    expect(adminAppointmentsApi.getRescheduleAvailability).toHaveBeenCalledWith(
+      'appointment-1',
+      '2099-08-13',
+      expect.any(AbortSignal)
+    );
     fireEvent.click(screen.getByRole('button', { name: 'Cập nhật lịch' }));
 
-    expect(onConfirm).toHaveBeenCalledWith('2099-08-13T14:30:00');
+    expect(onConfirm).toHaveBeenCalledWith('2099-08-13T09:00:00');
     expect(onConfirm.mock.calls[0][0]).not.toContain('Z');
   });
 
-  it('disables confirmation for a time less than 30 minutes ahead', () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date('2099-08-13T08:00:00'));
-    const { container } = render(
+  it('keeps unavailable slots visible and disabled with backend reasons', async () => {
+    vi.mocked(adminAppointmentsApi.getRescheduleAvailability).mockResolvedValue(availability);
+    render(
       <RescheduleAppointmentDialog
         appointment={appointment}
         open
@@ -90,13 +136,42 @@ describe('RescheduleAppointmentDialog', () => {
       />
     );
 
-    fireEvent.change(container.querySelector('input[type="time"]')!, {
-      target: { value: '08:29' },
+    const full = await screen.findByRole('option', { name: '09:05 - 09:50 - Hết vị trí rửa' });
+    const noStaff = screen.getByRole('option', { name: '09:10 - 09:55 - Chưa có nhân viên' });
+    const past = screen.getByRole('option', { name: '08:00 - 08:45 - Đã qua' });
+    const leadTime = screen.getByRole('option', {
+      name: '08:05 - 08:50 - Cần đặt trước 30 phút',
     });
+    expect((full as HTMLOptionElement).disabled).toBe(true);
+    expect((noStaff as HTMLOptionElement).disabled).toBe(true);
+    expect((past as HTMLOptionElement).disabled).toBe(true);
+    expect((leadTime as HTMLOptionElement).disabled).toBe(true);
+  });
 
-    expect(
-      (screen.getByRole('button', { name: 'Cập nhật lịch' }) as HTMLButtonElement).disabled
-    ).toBe(true);
-    expect(screen.getByText('Thời gian hẹn mới phải cách hiện tại ít nhất 30 phút.')).toBeTruthy();
+  it('clears the selected time and refetches when the date changes', async () => {
+    vi.mocked(adminAppointmentsApi.getRescheduleAvailability).mockResolvedValue(availability);
+    render(
+      <RescheduleAppointmentDialog
+        appointment={appointment}
+        open
+        isSubmitting={false}
+        onOpenChange={vi.fn()}
+        onConfirm={vi.fn()}
+      />
+    );
+    await screen.findByRole('option', { name: '09:00 - 09:45' });
+
+    fireEvent.change(screen.getByLabelText('Ngày hẹn mới'), { target: { value: '2099-08-14' } });
+
+    await waitFor(() =>
+      expect(adminAppointmentsApi.getRescheduleAvailability).toHaveBeenLastCalledWith(
+        'appointment-1',
+        '2099-08-14',
+        expect.any(AbortSignal)
+      )
+    );
+    expect((screen.getByLabelText('Giờ hẹn mới') as HTMLSelectElement).value).toBe('');
+    expect((screen.getByRole('button', { name: 'Cập nhật lịch' }) as HTMLButtonElement).disabled)
+      .toBe(true);
   });
 });
