@@ -533,14 +533,20 @@ export default function MyVehiclesPage() {
           }
           // Customer chỉ upload minh chứng biển số; hãng/dòng khác nếu có sẽ để admin kiểm tra sau.
           // CHỈ gửi tên hãng/dòng đề xuất khi khách chọn "Khác" (luồng 4, kèm biển trùng →
-          // admin xem mục "biển + hãng/dòng"). Luồng 3 (hãng/dòng chọn từ hệ thống, biển trùng)
-          // KHÔNG gửi suggested → admin xem mục "xác minh biển/quyền sử dụng".
+          // admin xem mục "biển + hãng/dòng"). Luồng 2 (hãng/dòng chọn từ catalog, biển trùng)
+          // gửi catalogBrandName/catalogModelName để backend buildKeeper() tạo xe đúng hãng/dòng.
           await createAccessRequest.mutateAsync({
             licensePlate: verificationPlate.licensePlate,
             suggestedBrandName: verificationPlate.needsBrandModelVerification
               ? verificationPlate.brand || undefined
               : undefined,
             suggestedModelName: verificationPlate.needsBrandModelVerification
+              ? verificationPlate.model || undefined
+              : undefined,
+            catalogBrandName: !verificationPlate.needsBrandModelVerification
+              ? verificationPlate.brand || undefined
+              : undefined,
+            catalogModelName: !verificationPlate.needsBrandModelVerification
               ? verificationPlate.model || undefined
               : undefined,
             ...value,

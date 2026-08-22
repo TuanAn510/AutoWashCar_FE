@@ -94,6 +94,10 @@ export interface VehicleAccessRequest {
   suggestedBrandName?: string;
   /** Suggested model name when the vehicle was submitted with a custom (OTHER) model. */
   suggestedModelName?: string;
+  /** Brand name selected from the catalog (Flow 2: catalog + duplicate plate). */
+  catalogBrandName?: string;
+  /** Model name selected from the catalog (Flow 2: catalog + duplicate plate). */
+  catalogModelName?: string;
   status: VehicleAccessRequestStatus;
   reviewNote?: string;
   createdAt: string;
@@ -122,4 +126,7 @@ export interface CreateVehicleAccessRequestPayload {
   /** Tên hãng/dòng đề xuất (trường hợp trùng biển số + chọn "Khác"). */
   suggestedBrandName?: string;
   suggestedModelName?: string;
+  /** Hãng/dòng chọn từ catalog (luồng 2: catalog + trùng biển). */
+  catalogBrandName?: string;
+  catalogModelName?: string;
 }
