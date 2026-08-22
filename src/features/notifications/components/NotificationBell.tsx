@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 
-import { Bell, CheckCheck } from 'lucide-react';
+import { Bell, CheckCheck, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router';
 
 import { Button } from '@/components/ui/button';
@@ -13,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
+  COLLAPSED_INITIAL_COUNT,
   useNotificationMutations,
   useNotifications,
   useUnreadNotificationCount,
@@ -31,6 +32,12 @@ const targetPath = (notification: NotificationItem, role: User['role']) => {
   if (notification.targetType === 'VEHICLE_REQUEST') {
     return role === 'customer' ? '/customer/vehicles' : '/admin/vehicle-access';
   }
+  if (notification.targetType === 'VEHICLE') {
+    return role === 'customer' ? '/customer/vehicles' : '/admin/vehicles';
+  }
+  if (notification.targetType === 'PROMOTION') {
+    return role === 'customer' ? '/customer/appointments' : '/admin/promotions';
+  }
   if (notification.targetType === 'BOOKING') {
     if (role === 'staff') return '/staff/appointments';
     if (role === 'admin') return '/admin/appointments';
@@ -41,50 +48,50 @@ const targetPath = (notification: NotificationItem, role: User['role']) => {
 
 export function NotificationBell({ user }: { user: User }) {
   const navigate = useNavigate();
-  const notificationsQuery = useNotifications();
+  const [page, setPage] = useState(0);
+  const [expanded, setExpanded] = useState(false);
+  const notificationsQuery = useNotifications(page);
   const unreadCountQuery = useUnreadNotificationCount();
   const { markRead, markAllRead } = useNotificationMutations();
-  const notifications = notificationsQuery.data ?? [];
+
+  const pageData = notificationsQuery.data;
+  const allNotifications = pageData?.content ?? [];
+  const totalElements = pageData?.totalElements ?? 0;
+  const totalPages = pageData?.totalPages ?? 0;
   const unreadCount = unreadCountQuery.data?.count ?? 0;
+
+  const visibleNotifications = expanded
+    ? allNotifications
+    : allNotifications.slice(0, COLLAPSED_INITIAL_COUNT);
+  const hasMoreCollapsed = !expanded && allNotifications.length > COLLAPSED_INITIAL_COUNT;
+
   const knownNotificationIdsRef = useRef<Set<number> | null>(null);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [previewNotification, setPreviewNotification] = useState<NotificationItem | null>(null);
 
   useEffect(() => {
     if (!notificationsQuery.isSuccess) return;
-
-    const currentIds = new Set(notifications.map((notification) => notification.id));
-
+    const currentIds = new Set(allNotifications.map((n) => n.id));
     if (!knownNotificationIdsRef.current) {
       knownNotificationIdsRef.current = currentIds;
       return;
     }
-
-    const newNotification = notifications.find(
-      (notification) => !knownNotificationIdsRef.current?.has(notification.id)
+    const newNotification = allNotifications.find(
+      (n) => !knownNotificationIdsRef.current?.has(n.id),
     );
-
     knownNotificationIdsRef.current = currentIds;
-
     if (!newNotification) return;
-
     setPreviewNotification(newNotification);
-
-    if (toastTimerRef.current) {
-      clearTimeout(toastTimerRef.current);
-    }
-
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
     toastTimerRef.current = setTimeout(() => {
       setPreviewNotification(null);
       toastTimerRef.current = null;
     }, 3000);
-  }, [notifications, notificationsQuery.isSuccess]);
+  }, [allNotifications, notificationsQuery.isSuccess]);
 
   useEffect(() => {
     return () => {
-      if (toastTimerRef.current) {
-        clearTimeout(toastTimerRef.current);
-      }
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
     };
   }, []);
 
@@ -95,6 +102,11 @@ export function NotificationBell({ user }: { user: User }) {
     navigate(targetPath(notification, user.role));
   };
 
+  const handleToggleExpand = () => {
+    setExpanded((prev) => !prev);
+    if (expanded) setPage(0);
+  };
+
   return (
     <div className="relative">
       {previewNotification ? (
@@ -103,11 +115,23 @@ export function NotificationBell({ user }: { user: User }) {
             <span className="size-2 rounded-full bg-blue-600" />
             Thông báo mới
           </div>
-          <p className="line-clamp-1 text-sm font-semibold text-slate-950">{previewNotification.title}</p>
-          <p className="mt-1 line-clamp-2 text-sm text-slate-600">{previewNotification.message}</p>
+          <p className="line-clamp-1 text-sm font-semibold text-slate-950">
+            {previewNotification.title}
+          </p>
+          <p className="mt-1 line-clamp-2 text-sm text-slate-600">
+            {previewNotification.message}
+          </p>
         </div>
       ) : null}
-      <DropdownMenu onOpenChange={(open) => open && setPreviewNotification(null)}>
+      <DropdownMenu
+        onOpenChange={(open) => {
+          if (open) {
+            setPreviewNotification(null);
+            setPage(0);
+            setExpanded(false);
+          }
+        }}
+      >
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" size="icon" className="relative rounded-xl" aria-label="Thông báo">
             <Bell className="size-5" />
@@ -127,6 +151,11 @@ export function NotificationBell({ user }: { user: User }) {
           <div className="flex items-center justify-between gap-3 bg-slate-50/80 px-5 py-4">
             <DropdownMenuLabel className="p-0 text-sm font-semibold text-slate-950">
               Thông báo
+              {totalElements > 0 ? (
+                <span className="ml-2 text-xs font-normal text-slate-400">
+                  ({totalElements})
+                </span>
+              ) : null}
             </DropdownMenuLabel>
             <Button
               variant="ghost"
@@ -135,47 +164,112 @@ export function NotificationBell({ user }: { user: User }) {
               disabled={unreadCount === 0 || markAllRead.isPending}
               onClick={() => markAllRead.mutate()}
             >
-              <CheckCheck className="size-3.5" />
+              {markAllRead.isPending ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : (
+                <CheckCheck className="size-3.5" />
+              )}
               Đọc tất cả
             </Button>
           </div>
           <DropdownMenuSeparator className="m-0" />
           <div className="max-h-[620px] overflow-y-auto p-2">
             {notificationsQuery.isLoading ? (
-              <p className="px-3 py-8 text-center text-sm text-slate-500">Đang tải thông báo...</p>
-            ) : notifications.length === 0 ? (
-              <p className="px-3 py-8 text-center text-sm text-slate-500">Chưa có thông báo.</p>
+              <p className="px-3 py-8 text-center text-sm text-slate-500">
+                Đang tải thông báo...
+              </p>
+            ) : allNotifications.length === 0 ? (
+              <p className="px-3 py-8 text-center text-sm text-slate-500">
+                Chưa có thông báo.
+              </p>
             ) : (
-              notifications.slice(0, 10).map((notification) => (
-                <DropdownMenuItem
-                  key={notification.id}
-                  className="items-start gap-3 rounded-xl px-4 py-4"
-                  onSelect={(event) => {
-                    event.preventDefault();
-                    void handleOpenNotification(notification);
-                  }}
-                >
-                  <span
-                    className={cn(
-                      'mt-1 size-2 shrink-0 rounded-full',
-                      notification.read ? 'bg-slate-300' : 'bg-blue-600'
-                    )}
-                  />
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-sm font-semibold text-slate-950">
-                      {notification.title}
+              <>
+                {visibleNotifications.map((notification) => (
+                  <DropdownMenuItem
+                    key={notification.id}
+                    className="items-start gap-3 rounded-xl px-4 py-4"
+                    onSelect={(event) => {
+                      event.preventDefault();
+                      void handleOpenNotification(notification);
+                    }}
+                  >
+                    <span
+                      className={cn(
+                        'mt-1 size-2 shrink-0 rounded-full',
+                        notification.read ? 'bg-slate-300' : 'bg-blue-600',
+                      )}
+                    />
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-sm font-semibold text-slate-950">
+                        {notification.title}
+                      </span>
+                      <span className="mt-1 line-clamp-3 block text-sm leading-5 text-slate-600">
+                        {notification.message}
+                      </span>
+                      <span className="mt-1 block text-[11px] text-slate-400">
+                        {formatDateTimeVi(notification.createdAt)}
+                      </span>
                     </span>
-                    <span className="mt-1 line-clamp-3 block text-sm leading-5 text-slate-600">
-                      {notification.message}
-                    </span>
-                    <span className="mt-1 block text-[11px] text-slate-400">
-                      {formatDateTimeVi(notification.createdAt)}
-                    </span>
-                  </span>
-                </DropdownMenuItem>
-              ))
+                  </DropdownMenuItem>
+                ))}
+                {hasMoreCollapsed || expanded ? (
+                  <div className="px-2 pt-1">
+                    <button
+                      type="button"
+                      className="w-full rounded-lg py-2 text-center text-xs font-medium text-blue-600 hover:bg-blue-50 transition-colors"
+                      onPointerDown={(e) => e.preventDefault()}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleToggleExpand();
+                      }}
+                    >
+                      {expanded
+                        ? 'Thu gọn'
+                        : `Xem thêm (${allNotifications.length - COLLAPSED_INITIAL_COUNT}+)`}
+                    </button>
+                  </div>
+                ) : null}
+              </>
             )}
           </div>
+          {expanded && totalPages > 1 ? (
+            <>
+              <DropdownMenuSeparator className="m-0" />
+              <div className="flex items-center justify-between px-4 py-2.5">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 gap-1 text-xs"
+                  disabled={page === 0}
+                  onPointerDown={(e) => e.preventDefault()}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setPage((p) => Math.max(0, p - 1));
+                  }}
+                >
+                  <ChevronLeft className="size-3.5" />
+                  Trước
+                </Button>
+                <span className="text-xs text-slate-500">
+                  {page + 1} / {totalPages}
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 gap-1 text-xs"
+                  disabled={page >= totalPages - 1}
+                  onPointerDown={(e) => e.preventDefault()}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setPage((p) => Math.min(totalPages - 1, p + 1));
+                  }}
+                >
+                  Sau
+                  <ChevronRight className="size-3.5" />
+                </Button>
+              </div>
+            </>
+          ) : null}
         </DropdownMenuContent>
       </DropdownMenu>
     </div>

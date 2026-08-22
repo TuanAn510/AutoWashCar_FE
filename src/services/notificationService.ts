@@ -1,5 +1,5 @@
 import api from '@/api/client';
-import type { ApiEnvelope, PaginatedEnvelope } from '@/types/api';
+import type { ApiEnvelope } from '@/types/api';
 
 export interface NotificationItem {
   id: number;
@@ -16,9 +16,20 @@ export interface UnreadCountResponse {
   count: number;
 }
 
+export interface NotificationPage {
+  content: NotificationItem[];
+  totalElements: number;
+  totalPages: number;
+  number: number;
+  size: number;
+}
+
 export const notificationApi = {
-  async getNotifications(signal?: AbortSignal) {
-    const response = await api.get<PaginatedEnvelope<NotificationItem>>('/notifications', { signal });
+  async getNotifications(page = 0, size = 10, signal?: AbortSignal) {
+    const response = await api.get<ApiEnvelope<NotificationPage>>(
+      `/notifications?page=${page}&size=${size}`,
+      { signal },
+    );
     return response.data.data;
   },
 

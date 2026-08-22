@@ -8,8 +8,13 @@ export const vehicleAccessRequestKeys = {
   all: ['vehicle-access-requests'] as const,
   mine: ['vehicle-access-requests', 'mine'] as const,
 };
+const VEHICLE_ACCESS_REQUEST_REFETCH_INTERVAL_MS = 5_000;
 export const useMyVehicleAccessRequests = () =>
-  useQuery({ queryKey: vehicleAccessRequestKeys.mine, queryFn: vehicleAccessRequestApi.listMine });
+  useQuery({
+    queryKey: vehicleAccessRequestKeys.mine,
+    queryFn: vehicleAccessRequestApi.listMine,
+    refetchInterval: VEHICLE_ACCESS_REQUEST_REFETCH_INTERVAL_MS,
+  });
 export const useCreateVehicleAccessRequest = () => {
   const client = useQueryClient();
   return useMutation({
