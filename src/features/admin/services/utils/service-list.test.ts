@@ -1,9 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import {
-  buildServiceFilterCategories,
-  filterAndSortServices,
-} from '@/features/admin/services/utils/service-list';
+import { filterAndSortServices } from '@/features/admin/services/utils/service-list';
 import type { Service } from '@/types/service';
 import type { ServiceCategory } from '@/types/serviceCategory';
 
@@ -51,7 +48,6 @@ describe('service management list', () => {
   it('searches service names without depending on case or Vietnamese accents', () => {
     const result = filterAndSortServices(services, {
       keyword: 'rua co ban',
-      categoryId: 'all',
       status: 'all',
       sortOrder: 'asc',
     });
@@ -59,10 +55,9 @@ describe('service management list', () => {
     expect(result.map((item) => item._id)).toEqual(['basic']);
   });
 
-  it('combines category and status filters', () => {
+  it('filters services by status', () => {
     const result = filterAndSortServices(services, {
       keyword: '',
-      categoryId: 'washing',
       status: 'inactive',
       sortOrder: 'asc',
     });
@@ -74,13 +69,11 @@ describe('service management list', () => {
     const originalOrder = services.map((item) => item._id);
     const ascending = filterAndSortServices(services, {
       keyword: '',
-      categoryId: 'all',
       status: 'all',
       sortOrder: 'asc',
     });
     const descending = filterAndSortServices(services, {
       keyword: '',
-      categoryId: 'all',
       status: 'all',
       sortOrder: 'desc',
     });
@@ -89,11 +82,5 @@ describe('service management list', () => {
       ascending.map((item) => item.name).reverse()
     );
     expect(services.map((item) => item._id)).toEqual(originalOrder);
-  });
-
-  it('keeps categories used by existing services available in the filter', () => {
-    const categories = buildServiceFilterCategories([washingCategory], services);
-
-    expect(categories.map((category) => category._id)).toEqual(['detailing', 'washing']);
   });
 });
