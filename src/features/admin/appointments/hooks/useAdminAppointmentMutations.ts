@@ -9,14 +9,12 @@ import type {
   UpdateAppointmentStatusPayload,
   UpdateAppointmentPaymentStatusPayload,
 } from '@/types/appointment';
-import { adminAppointmentsQueryKey } from '@/features/admin/appointments/hooks/useAppointments';
 
 const getErrorMessage = getApiErrorMessage;
 
 const invalidateAdminAppointments = async (queryClient: ReturnType<typeof useQueryClient>) => {
   await Promise.all([
-    queryClient.invalidateQueries({ queryKey: adminAppointmentsQueryKey }),
-    queryClient.invalidateQueries({ queryKey: queryKeys.appointments.admin.all }),
+    queryClient.invalidateQueries({ queryKey: queryKeys.appointments.all }),
     queryClient.invalidateQueries({ queryKey: queryKeys.users.staffs.workload() }),
     queryClient.invalidateQueries({ queryKey: queryKeys.payments.all }),
   ]);
