@@ -5,6 +5,7 @@ import { AppSidebar } from '@/app/sidebar/app-sidebar';
 import { sidebarNav } from '@/app/sidebar/sidebar-nav';
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
 import { useCurrentUser } from '@/features/auth/hooks/use-auth-queries';
+import { DraggableNotificationDock } from '@/features/notifications/components/DraggableNotificationDock';
 import { NotificationBell } from '@/features/notifications/components/NotificationBell';
 
 export function AppLayout() {
@@ -22,11 +23,9 @@ export function AppLayout() {
     <SidebarProvider>
       <AppSidebar items={navItems} user={user} homeHref={getRoleHomePath(role)} />
       <SidebarInset className="min-h-screen min-w-0 overflow-x-hidden bg-white text-slate-900">
-        <div className="pointer-events-none fixed right-4 top-4 z-50 flex justify-end sm:right-6 sm:top-5">
-          <div className="pointer-events-auto rounded-2xl border border-white/70 bg-white/90 p-1 shadow-lg shadow-slate-900/10 backdrop-blur-md">
-            <NotificationBell user={user} />
-          </div>
-        </div>
+        <DraggableNotificationDock>
+          <NotificationBell user={user} />
+        </DraggableNotificationDock>
         <Outlet />
       </SidebarInset>
     </SidebarProvider>

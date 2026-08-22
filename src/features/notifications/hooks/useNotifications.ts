@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/constants/queryKeys';
 import { notificationApi } from '@/services/notificationService';
 
-const POLLING_INTERVAL_MS = 10_000;
+const POLLING_INTERVAL_MS = 5_000;
 
 export function useNotifications() {
   return useQuery({
