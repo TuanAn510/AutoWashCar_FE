@@ -21,6 +21,8 @@ export const vehicleAccessRequestApi = {
     const isCombined = Boolean(payload.suggestedBrandName || payload.suggestedModelName);
     if (payload.suggestedBrandName) form.append('suggestedBrandName', payload.suggestedBrandName);
     if (payload.suggestedModelName) form.append('suggestedModelName', payload.suggestedModelName);
+    if (payload.catalogBrandName) form.append('catalogBrandName', payload.catalogBrandName);
+    if (payload.catalogModelName) form.append('catalogModelName', payload.catalogModelName);
     if (isCombined) {
       payload.brandModelDocuments?.forEach((file) => form.append('brandModelDocuments', file));
       payload.documents?.forEach((file) => form.append('plateDocuments', file));
