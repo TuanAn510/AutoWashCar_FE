@@ -8,13 +8,12 @@ import type {
   UpdateAppointmentPaymentStatusPayload,
   UpdateAppointmentStatusPayload,
 } from '@/types/appointment';
-import { staffAppointmentsQueryKey } from '@/features/staff/appointments/hooks/useMyStaffAppointments';
 
 const getErrorMessage = getApiErrorMessage;
 
 const invalidateStaffOperations = async (queryClient: ReturnType<typeof useQueryClient>) => {
   await Promise.all([
-    queryClient.invalidateQueries({ queryKey: staffAppointmentsQueryKey }),
+    queryClient.invalidateQueries({ queryKey: queryKeys.appointments.all }),
     queryClient.invalidateQueries({ queryKey: queryKeys.serviceHistories.staff() }),
   ]);
 };
