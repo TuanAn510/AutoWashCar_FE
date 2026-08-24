@@ -15,6 +15,12 @@ const invalidateStaffOperations = async (queryClient: ReturnType<typeof useQuery
   await Promise.all([
     queryClient.invalidateQueries({ queryKey: queryKeys.appointments.all }),
     queryClient.invalidateQueries({ queryKey: queryKeys.serviceHistories.staff() }),
+    queryClient.invalidateQueries({ queryKey: queryKeys.appointments.admin.all }),
+    queryClient.invalidateQueries({ queryKey: queryKeys.appointments.mine() }),
+    queryClient.invalidateQueries({ queryKey: queryKeys.payments.all }),
+    queryClient.invalidateQueries({ queryKey: queryKeys.serviceHistories.all }),
+    queryClient.invalidateQueries({ queryKey: queryKeys.loyalty.all }),
+    queryClient.invalidateQueries({ queryKey: queryKeys.reports.all }),
   ]);
 };
 
