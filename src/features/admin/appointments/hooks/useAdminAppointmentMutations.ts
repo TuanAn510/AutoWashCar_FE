@@ -19,6 +19,11 @@ const invalidateAdminAppointments = async (queryClient: ReturnType<typeof useQue
     queryClient.invalidateQueries({ queryKey: queryKeys.appointments.admin.all }),
     queryClient.invalidateQueries({ queryKey: queryKeys.users.staffs.workload() }),
     queryClient.invalidateQueries({ queryKey: queryKeys.payments.all }),
+    queryClient.invalidateQueries({ queryKey: queryKeys.appointments.mine() }),
+    queryClient.invalidateQueries({ queryKey: queryKeys.appointments.staff.all }),
+    queryClient.invalidateQueries({ queryKey: queryKeys.serviceHistories.all }),
+    queryClient.invalidateQueries({ queryKey: queryKeys.loyalty.all }),
+    queryClient.invalidateQueries({ queryKey: queryKeys.reports.all }),
   ]);
 };
 

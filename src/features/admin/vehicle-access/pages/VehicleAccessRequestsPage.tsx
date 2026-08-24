@@ -19,6 +19,7 @@ import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { resolveImageUrl } from '@/lib/image-url';
 import { vehicleAccessRequestApi } from '@/services/vehicleAccessRequestService';
+import { queryKeys } from '@/constants/queryKeys';
 import type { VehicleAccessRequest, VehicleAccessRequestStatus } from '@/types/vehicle';
 
 const queryKey = ['vehicle-access-requests', 'admin'];
@@ -99,6 +100,8 @@ export default function VehicleAccessRequestsPage() {
     }) => vehicleAccessRequestApi[action](request._id, notes[request._id]?.trim() ?? ''),
     onSuccess: (_, variables) => {
       client.invalidateQueries({ queryKey });
+      client.invalidateQueries({ queryKey: queryKeys.vehicles.admin.all });
+      client.invalidateQueries({ queryKey: queryKeys.vehicles.mine() });
       setNotes((current) => ({ ...current, [variables.request._id]: '' }));
       toast.success(
         variables.action === 'approve'

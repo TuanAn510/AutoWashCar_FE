@@ -521,7 +521,7 @@ export default function ReportsAnalyticsPage() {
                 icon={Users}
                 label="Khách hàng"
                 value={formatNumberVi(
-                  isMonthMode ? reports.customers.activeCustomers : reports.customers.totalCustomers
+                  isMonthMode ? reports.customers.newCustomersInRange : reports.customers.totalCustomers
                 )}
               />
               <SummaryCard

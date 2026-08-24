@@ -14,6 +14,9 @@ export function useCancelAppointment() {
     mutationFn: (payload: CancelAppointmentPayload) => appointmentApi.cancelMyAppointment(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: myAppointmentsQueryKey });
+      queryClient.invalidateQueries({ queryKey: queryKeys.payments.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.promotions.active() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.reports.all });
       toast.success('Hủy lịch hẹn thành công.');
     },
     onError: (error) => {
@@ -22,3 +25,4 @@ export function useCancelAppointment() {
   });
 }
 import { getApiErrorMessage } from '@/api/errors';
+import { queryKeys } from '@/constants/queryKeys';

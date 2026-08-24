@@ -11,14 +11,16 @@ import {
   Wrench,
   XCircle,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router';
+import { useQueryClient } from '@tanstack/react-query';
 
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAppointmentDetail } from '@/features/customers/appointments/hooks/useAppointmentDetail';
 import { paymentService } from '@/services/paymentService';
+import { queryKeys } from '@/constants/queryKeys';
 import { cn, formatDateTime, formatPrice, formatTime } from '@/lib/utils';
 import type { AppointmentPaymentMethod } from '@/types/appointment';
 
@@ -141,6 +143,19 @@ export default function PaymentPage() {
   const { data: appointment, isLoading, isError } = useAppointmentDetail(appointmentId ?? null);
 
   const paymentStatus = searchParams.get('status');
+
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (paymentStatus !== 'success') return;
+    void queryClient.invalidateQueries({ queryKey: queryKeys.appointments.mine() });
+    void queryClient.invalidateQueries({
+      queryKey: queryKeys.appointments.admin.detail(String(appointmentId)),
+    });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.payments.all });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.loyalty.all });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.reports.all });
+  }, [paymentStatus, appointmentId, queryClient]);
 
   const handlePayment = async () => {
     if (!selectedMethod || !appointmentId) {
