@@ -27,7 +27,6 @@ import {
 } from '@/features/shared/loyalty/hooks/use-loyalty';
 import type { Reward, RewardRedemption } from '@/features/shared/loyalty/types/loyalty.types';
 import { useActivePromotions } from '@/features/admin/promotions/hooks/usePromotions';
-import { useActiveServiceCategories } from '@/features/shared/service-categories/hooks/useActiveServiceCategories';
 import { useActiveServices } from '@/features/admin/services/hooks/useServices';
 import {
   calculatePromotionDiscount,
@@ -67,7 +66,6 @@ const schedulingErrorMessages = new Set([
 const createAppointmentSchema = z
   .object({
     vehicleId: z.string().min(1, 'Vui lòng chọn xe của bạn.'),
-    categoryId: z.string().min(1, 'Vui lòng chọn danh mục dịch vụ.'),
     serviceIds: z.array(z.string()).length(1, 'Vui lòng chọn đúng một gói dịch vụ.'),
     scheduledDate: z.string().min(1, 'Vui lòng chọn ngày hẹn.'),
     scheduledTime: z.string().min(1, 'Vui lòng chọn giờ hẹn.'),
@@ -109,7 +107,7 @@ type StepField = keyof CreateAppointmentFormValues;
 const formId = 'customer-create-appointment-form';
 const steps = [
   { label: 'Xe', icon: CarFront, fields: ['vehicleId'] },
-  { label: 'Dịch vụ', icon: Wrench, fields: ['categoryId', 'serviceIds'] },
+  { label: 'Dịch vụ', icon: Wrench, fields: ['serviceIds'] },
   { label: 'Lịch hẹn', icon: CalendarDays, fields: ['scheduledDate', 'scheduledTime', 'note'] },
   { label: 'Ưu đãi', icon: Gift, fields: [] },
   { label: 'Xem lại', icon: ClipboardCheck, fields: [] },
@@ -127,7 +125,6 @@ const createDefaultValues = (): CreateAppointmentFormValues => {
 
   return {
     vehicleId: '',
-    categoryId: 'all',
     serviceIds: [],
     scheduledDate: `${yyyy}-${mm}-${dd}`,
     scheduledTime: '09:00',
@@ -250,7 +247,6 @@ export function CreateAppointmentModal({
   });
 
   const values = useWatch({ control }) as CreateAppointmentFormValues;
-  const categoriesQuery = useActiveServiceCategories({ enabled: isOpen });
   const servicesQuery = useActiveServices({ limit: 100 }, { enabled: isOpen });
   const promotionsQuery = useActivePromotions({ enabled: isOpen });
   const redemptionsQuery = useMyRewardRedemptions();
@@ -263,7 +259,6 @@ export function CreateAppointmentModal({
   const bookableVehicles = vehicles.filter(
     (vehicle) => !vehicle.verificationStatus || vehicle.verificationStatus === 'approved'
   );
-  const categories = useMemo(() => categoriesQuery.data ?? [], [categoriesQuery.data]);
   const unfinishedVehicleIds = useMemo(
     () =>
       new Set(
@@ -276,13 +271,7 @@ export function CreateAppointmentModal({
     [appointmentsQuery.data?.appointments]
   );
   const allServices = useMemo(() => servicesQuery.data ?? [], [servicesQuery.data]);
-  const services = useMemo(
-    () =>
-      values.categoryId === 'all'
-        ? allServices
-        : allServices.filter((service) => service.categoryId?._id === values.categoryId),
-    [allServices, values.categoryId]
-  );
+  const services = allServices;
   const selectedVehicle = vehicles.find((vehicle) => vehicle._id === values.vehicleId);
   const selectedServices = useMemo(
     () => allServices.filter((service) => values.serviceIds.includes(service._id)),
@@ -461,23 +450,6 @@ export function CreateAppointmentModal({
   ]);
 
   useEffect(() => {
-    if (!isOpen || categoriesQuery.isLoading || categoriesQuery.isError) return;
-    if (
-      values.categoryId !== 'all' &&
-      !categories.some((category) => category._id === values.categoryId)
-    ) {
-      setValue('categoryId', 'all', { shouldDirty: true, shouldValidate: true });
-    }
-  }, [
-    categories,
-    categoriesQuery.isError,
-    categoriesQuery.isLoading,
-    isOpen,
-    setValue,
-    values.categoryId,
-  ]);
-
-  useEffect(() => {
     if (
       values.promotionId &&
       !promotionsQuery.isLoading &&
@@ -575,9 +547,9 @@ export function CreateAppointmentModal({
   };
 
   const hasFormOptionsError =
-    vehiclesQuery.isError || appointmentsQuery.isError || categoriesQuery.isError || servicesQuery.isError;
+    vehiclesQuery.isError || appointmentsQuery.isError || servicesQuery.isError;
   const isInitialOptionsLoading =
-    vehiclesQuery.isLoading || appointmentsQuery.isLoading || categoriesQuery.isLoading || servicesQuery.isLoading;
+    vehiclesQuery.isLoading || appointmentsQuery.isLoading || servicesQuery.isLoading;
 
   const submitAppointment = handleSubmit(async (formValues) => {
     try {
@@ -861,23 +833,6 @@ export function CreateAppointmentModal({
               )}
             >
               <Field>
-                <FieldLabel>Danh mục dịch vụ</FieldLabel>
-                <select
-                  className="h-[46px] rounded-md border border-[#d8e2ef] bg-white px-3 text-sm font-semibold text-[#64748b] outline-none focus:border-[#0b67c2]"
-                  disabled={isSubmitting || categoriesQuery.isLoading || !categories.length}
-                  {...register('categoryId')}
-                >
-                  <option value="all">Tất cả danh mục</option>
-                  {categories.map((category) => (
-                    <option key={category._id} value={category._id}>
-                      {category.name}
-                    </option>
-                  ))}
-                </select>
-                <FieldError>{errors.categoryId?.message}</FieldError>
-              </Field>
-
-              <Field className="mt-4">
                 <FieldLabel>Chọn gói dịch vụ</FieldLabel>
                 <div className="grid gap-3 sm:grid-cols-2">
                   {servicesQuery.isLoading &&

@@ -99,9 +99,12 @@ export function AppointmentDetailDialog({
       }
     >
       <section className="rounded-xl border border-[#e5edf6] bg-slate-50 p-4 sm:p-5">
-        <h3 className="text-lg font-black text-[#15243a]">
-          {appointment.services.map((service) => service.nameSnapshot).join(', ')}
-        </h3>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <h3 className="text-lg font-black text-[#15243a]">
+            {appointment.services.map((service) => service.nameSnapshot).join(', ')}
+          </h3>
+          <PriceDisplay appointment={appointment} />
+        </div>
         <p className="mt-2 text-sm text-[#64748b]">Lịch hẹn được tạo cho xe {licensePlate}.</p>
       </section>
 
@@ -179,29 +182,6 @@ export function AppointmentDetailDialog({
         </p>
       </section>
 
-      <section className="rounded-xl border border-[#e5edf6] bg-white p-4 sm:p-5">
-        <h3 className="text-sm font-black uppercase tracking-[0.12em] text-[#0b67c2]">
-          Dịch vụ đã chọn
-        </h3>
-        <div className="mt-4 space-y-3">
-          {appointment.services.map((service) => (
-            <div
-              key={service.serviceId}
-              className="flex flex-col gap-2 rounded-lg bg-slate-50 p-4 sm:flex-row sm:items-center sm:justify-between"
-            >
-              <div>
-                <p className="font-semibold text-slate-900">{service.nameSnapshot}</p>
-                <p className="mt-1 text-sm text-slate-500">
-                  {formatTime(service.estimatedDurationSnapshot)}
-                </p>
-              </div>
-              <p className="text-sm font-semibold text-slate-900">
-                {formatPrice(service.priceSnapshot)}
-              </p>
-            </div>
-          ))}
-        </div>
-      </section>
     </CustomerModalShell>
   );
 }
