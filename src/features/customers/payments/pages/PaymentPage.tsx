@@ -11,10 +11,12 @@ import {
   Wrench,
   XCircle,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams, useSearchParams } from 'react-router';
 
 import { Button } from '@/components/ui/button';
+import { queryKeys } from '@/constants/queryKeys';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAppointmentDetail } from '@/features/customers/appointments/hooks/useAppointmentDetail';
@@ -133,6 +135,7 @@ export default function PaymentPage() {
   const { appointmentId } = useParams<{ appointmentId: string }>();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [selectedMethod, setSelectedMethod] = useState<AppointmentPaymentMethod | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
@@ -141,6 +144,14 @@ export default function PaymentPage() {
   const { data: appointment, isLoading, isError } = useAppointmentDetail(appointmentId ?? null);
 
   const paymentStatus = searchParams.get('status');
+
+  useEffect(() => {
+    if (paymentStatus !== 'success' && paymentStatus !== 'failure') return;
+    void Promise.all([
+      queryClient.invalidateQueries({ queryKey: queryKeys.appointments.all }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.payments.all }),
+    ]);
+  }, [paymentStatus, queryClient]);
 
   const handlePayment = async () => {
     if (!selectedMethod || !appointmentId) {
@@ -206,16 +217,16 @@ export default function PaymentPage() {
           <div className="mx-auto flex size-16 items-center justify-center rounded-full bg-rose-50">
             <XCircle className="size-8 text-rose-600" />
           </div>
-          <h2 className="mt-5 text-2xl font-black text-[#15243a]">Thanh toán thất bại</h2>
+          <h2 className="mt-5 text-2xl font-black text-[#15243a]">Chưa thanh toán</h2>
           <p className="mt-2 text-sm text-[#64748b]">
             Giao dịch không thành công. Vui lòng thử lại hoặc chọn phương thức thanh toán khác.
           </p>
           {appointmentId && appointmentId !== 'result' ? (
             <Button
               className="mt-6 h-[42px] rounded-md shadow-[0_12px_26px_rgba(11,103,194,0.24)]"
-              onClick={() => (window.location.href = `/customer/payment/${appointmentId}`)}
+              onClick={() => navigate(`/customer/payment/${appointmentId}`, { replace: true })}
             >
-              Thử lại
+              Thanh toán
             </Button>
           ) : (
             <Button

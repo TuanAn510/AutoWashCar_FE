@@ -7,7 +7,7 @@ import type { AppointmentPaymentStatus } from '@/types/appointment';
 const paymentStatusLabels: Record<AppointmentPaymentStatus, string> = {
   unpaid: 'Chưa thanh toán',
   paid: 'Đã thanh toán',
-  cancelled: 'Đã hủy thanh toán',
+  cancelled: 'Chưa thanh toán',
   pending: 'Đang xử lý',
 };
 
