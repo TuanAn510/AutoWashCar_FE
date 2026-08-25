@@ -18,7 +18,7 @@ describe('staff appointment cache refresh', () => {
     const wrapper = ({ children }: PropsWithChildren) => <QueryClientProvider client={client}>{children}</QueryClientProvider>;
     const { result } = renderHook(useUpdateAppointmentStatus, { wrapper });
     await act(async () => { await result.current.mutateAsync({ appointmentId: '1', payload: {} } as never); });
-    for (const queryKey of [queryKeys.appointments.all, queryKeys.users.staffs.workload(), queryKeys.reports.all, queryKeys.serviceHistories.admin.all, queryKeys.serviceHistories.staff(), ['booking-availability']]) {
+    for (const queryKey of [queryKeys.appointments.staff.all, queryKeys.users.staffs.workload(), queryKeys.reports.all, queryKeys.serviceHistories.admin.all, queryKeys.serviceHistories.staff(), ['booking-availability']]) {
       expect(invalidate).toHaveBeenCalledWith({ queryKey });
     }
   });

@@ -7,7 +7,6 @@ import { rewardKeys } from '@/features/shared/loyalty/constants/query-keys';
 import { appointmentApi } from '@/services/appointmentService';
 import type { CreateAppointmentPayload } from '@/types/appointment';
 import { myAppointmentsQueryKey } from '@/features/customers/appointments/hooks/useMyAppointments';
-import { rewardKeys } from '@/features/shared/loyalty/constants/query-keys';
 
 const getErrorMessage = getApiErrorMessage;
 
@@ -29,5 +28,3 @@ export function useCreateAppointment() {
     },
   });
 }
-import { getApiErrorMessage } from '@/api/errors';
-import { queryKeys } from '@/constants/queryKeys';

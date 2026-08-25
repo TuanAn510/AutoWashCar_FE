@@ -30,7 +30,7 @@ describe('admin appointment cache refresh', () => {
     vi.spyOn(adminAppointmentsApi, apiMethod).mockResolvedValue({} as never);
     const { result, invalidate } = setup(hook as typeof useUpdateAppointmentStatus);
     await act(async () => { await result.current.mutateAsync({ appointmentId: '1', payload: {} } as never); });
-    expect(invalidate).toHaveBeenCalledWith({ queryKey: queryKeys.appointments.all });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: queryKeys.appointments.admin.all });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: queryKeys.users.staffs.workload() });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: queryKeys.reports.all });
   });

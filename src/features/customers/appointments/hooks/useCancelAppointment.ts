@@ -26,4 +26,3 @@ export function useCancelAppointment() {
     },
   });
 }
-import { getApiErrorMessage } from '@/api/errors';
