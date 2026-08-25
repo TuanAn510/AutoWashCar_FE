@@ -1,6 +1,7 @@
 import { CalendarClock, CarFront, Eye, UserRound, Wrench } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import { formatLicensePlateDisplay } from '@/features/customers/vehicles/utils/license-plate';
 import type { ServiceHistoryItem } from '@/types/serviceHistory';
 import {
   formatServiceHistoryDate,
@@ -28,7 +29,8 @@ export function StaffServiceHistoryCard({
             {serviceHistory.customerId.displayName}
           </h3>
           <p className="mt-2 text-sm text-slate-500">
-            {serviceHistory.vehicleId.licensePlate} · {getServiceHistoryTitle(serviceNames)}
+            {formatLicensePlateDisplay(serviceHistory.vehicleId.licensePlate)} ·{' '}
+            {getServiceHistoryTitle(serviceNames)}
           </p>
         </div>
 

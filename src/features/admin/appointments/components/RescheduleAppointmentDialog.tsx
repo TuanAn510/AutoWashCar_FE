@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { DatePicker } from '@/components/ui/date-picker';
 import { CustomerModalShell } from '@/features/customers/components/CustomerModalShell';
+import { formatLicensePlateDisplay } from '@/features/customers/vehicles/utils/license-plate';
 import { adminAppointmentsApi } from '@/services/appointmentService';
 import type { AppointmentItem, BookingAvailabilitySlot } from '@/types/appointment';
 
@@ -132,7 +133,7 @@ function RescheduleAppointmentDialogContent({
         <p className="font-semibold text-slate-950">{appointment.customerId.displayName}</p>
         <p className="mt-1 text-sm text-slate-500">
           {appointment.vehicleId.brand} {appointment.vehicleId.model} -{' '}
-          {appointment.vehicleId.licensePlate}
+          {formatLicensePlateDisplay(appointment.vehicleId.licensePlate)}
         </p>
       </div>
 

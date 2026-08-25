@@ -67,6 +67,10 @@ export function useUpdateCustomer() {
       queryClient.setQueryData(queryKeys.users.customers.detail(updatedUser._id), updatedUser);
       toast.success('Cập nhật khách hàng thành công.');
     },
-    onSettled: () => queryClient.invalidateQueries({ queryKey: queryKeys.users.customers.all }),
+    onSettled: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: queryKeys.users.customers.all }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.reports.all }),
+      ]),
   });
 }

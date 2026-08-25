@@ -1,6 +1,9 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
+import { getApiErrorMessage } from '@/api/errors';
+import { queryKeys } from '@/constants/queryKeys';
+import { rewardKeys } from '@/features/shared/loyalty/constants/query-keys';
 import { appointmentApi } from '@/services/appointmentService';
 import type { CreateAppointmentPayload } from '@/types/appointment';
 import { myAppointmentsQueryKey } from '@/features/customers/appointments/hooks/useMyAppointments';
@@ -14,6 +17,8 @@ export function useCreateAppointment() {
   return useMutation({
     mutationFn: (payload: CreateAppointmentPayload) => appointmentApi.createAppointment(payload),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.appointments.all });
+      queryClient.invalidateQueries({ queryKey: ['booking-availability'] });
       queryClient.invalidateQueries({ queryKey: myAppointmentsQueryKey });
       queryClient.invalidateQueries({ queryKey: rewardKeys.myRedemptions });
       queryClient.invalidateQueries({ queryKey: queryKeys.promotions.active() });

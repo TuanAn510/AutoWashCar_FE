@@ -16,6 +16,8 @@ const invalidateStaffOperations = async (queryClient: ReturnType<typeof useQuery
   await Promise.all([
     queryClient.invalidateQueries({ queryKey: staffAppointmentsQueryKey }),
     queryClient.invalidateQueries({ queryKey: queryKeys.serviceHistories.staff() }),
+    queryClient.invalidateQueries({ queryKey: queryKeys.users.staffs.workload() }),
+    queryClient.invalidateQueries({ queryKey: queryKeys.reports.all }),
   ]);
 };
 
@@ -32,6 +34,10 @@ export function useUpdateAppointmentStatus() {
     }) => staffAppointmentsApi.updateAppointmentStatus(appointmentId, payload),
     onSuccess: async () => {
       await invalidateStaffOperations(queryClient);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: queryKeys.serviceHistories.admin.all }),
+        queryClient.invalidateQueries({ queryKey: ['booking-availability'] }),
+      ]);
       toast.success('Cap nhat trang thai lich hen thanh cong.');
     },
     onError: (error) => {
@@ -54,6 +60,7 @@ export function useConfirmStaffAppointmentPayment() {
     }) => staffAppointmentsApi.confirmPayment(appointmentId, payload),
     onSuccess: async () => {
       await invalidateStaffOperations(queryClient);
+      await queryClient.invalidateQueries({ queryKey: queryKeys.payments.all });
       toast.success('Da xac nhan thanh toan thanh cong.');
     },
     onError: (error) => toast.error(getErrorMessage(error, 'Khong the xac nhan thanh toan.')),

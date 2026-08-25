@@ -8,6 +8,7 @@ import {
 } from '@/features/customers/appointments/components/AppointmentStatusBadge';
 import type { AppointmentItem, AppointmentStatus } from '@/types/appointment';
 import { formatDateTime, formatTime } from '@/lib/utils';
+import { formatLicensePlateDisplay } from '@/features/customers/vehicles/utils/license-plate';
 
 const getQuickAction = (status: AppointmentStatus) => {
   if (status === 'confirmed') {
@@ -71,7 +72,7 @@ export function StaffAppointmentCard({
             icon={CarFront}
             label="Xe"
             value={`${appointment.vehicleId.brand} ${appointment.vehicleId.model}`}
-            subValue={appointment.vehicleId.licensePlate}
+            subValue={formatLicensePlateDisplay(appointment.vehicleId.licensePlate)}
           />
           <InfoTile
             icon={CalendarClock}

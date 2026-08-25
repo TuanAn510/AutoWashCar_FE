@@ -6,6 +6,7 @@ import { AppointmentEvidenceImages } from '@/features/customers/appointments/com
 import { AppointmentStatusBadge } from '@/features/customers/appointments/components/AppointmentStatusBadge';
 import { AppointmentTimeMilestones } from '@/features/customers/appointments/components/AppointmentTimeMilestones';
 import {
+  canCustomerPayAppointment,
   CUSTOMER_REFUND_REQUIRED_MESSAGE,
   isCustomerRefundRequired,
 } from '@/features/customers/appointments/utils/appointmentDisplay';
@@ -53,7 +54,7 @@ export function AppointmentDetailDialog({
     return null;
   }
 
-  const canPay = appointment.paymentStatus === 'unpaid' || appointment.paymentStatus === 'pending';
+  const canPay = canCustomerPayAppointment(appointment.status, appointment.paymentStatus);
   const assignedStaffs = appointment.assignedStaffIds?.length
     ? appointment.assignedStaffIds
     : appointment.assignedStaffId

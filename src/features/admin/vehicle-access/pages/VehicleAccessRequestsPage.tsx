@@ -16,6 +16,7 @@ import { toast } from 'sonner';
 import { StatCard } from '@/components/dashboard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { formatLicensePlateDisplay } from '@/features/customers/vehicles/utils/license-plate';
 import { cn } from '@/lib/utils';
 import { resolveImageUrl } from '@/lib/image-url';
 import { vehicleAccessRequestApi } from '@/services/vehicleAccessRequestService';
@@ -290,7 +291,9 @@ export default function VehicleAccessRequestsPage() {
               {filtered.map((request) => (
                 <tr key={request._id} className="border-b border-border/70 align-top last:border-0">
                   <td className="px-2 py-4">
-                    <p className="font-semibold text-slate-950">{request.licensePlate}</p>
+                    <p className="font-semibold text-slate-950">
+                      {formatLicensePlateDisplay(request.licensePlate)}
+                    </p>
                     {suggestedVehicleText(request) ? (
                       <p className="mt-1 max-w-56 text-xs text-slate-500">
                         Hãng/Dòng đề xuất: {suggestedVehicleText(request)}

@@ -27,6 +27,14 @@ export const canCustomerCancelAppointment = (
   paymentStatus !== 'paid' &&
   now < new Date(scheduledAt).getTime() - 30 * 60 * 1000;
 
+export const canCustomerPayAppointment = (
+  status: AppointmentStatus | string,
+  paymentStatus: AppointmentPaymentStatus | string
+) =>
+  status !== 'cancelled' &&
+  paymentStatus !== 'paid' &&
+  ['unpaid', 'pending', 'cancelled'].includes(paymentStatus);
+
 export const getAppointmentNote = (note?: string | null) =>
   note?.trim() ? note.trim() : 'Không có ghi chú';
 

@@ -2,6 +2,7 @@ import { CalendarClock, CarFront, Clock3, NotebookPen, UserRound, Wrench } from 
 
 import { Button } from '@/components/ui/button';
 import { CustomerModalShell } from '@/features/customers/components/CustomerModalShell';
+import { formatLicensePlateDisplay } from '@/features/customers/vehicles/utils/license-plate';
 import { useAdminServiceHistoryDetail } from '@/features/admin/service-histories/hooks/useAdminServiceHistoryDetail';
 import { formatServiceHistoryDate, formatServiceHistoryPrice, formatTime } from '@/lib/utils';
 
@@ -60,7 +61,7 @@ export function AdminServiceHistoryDetailDialog({
               icon={CarFront}
               label="Xe"
               value={`${serviceHistory.vehicleId.brand} ${serviceHistory.vehicleId.model}`}
-              subValue={serviceHistory.vehicleId.licensePlate}
+              subValue={formatLicensePlateDisplay(serviceHistory.vehicleId.licensePlate)}
             />
             <DetailTile
               icon={CalendarClock}

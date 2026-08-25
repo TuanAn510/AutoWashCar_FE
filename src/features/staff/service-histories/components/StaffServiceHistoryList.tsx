@@ -8,6 +8,7 @@ import {
 } from '@/lib/utils';
 import type { AppointmentStatus } from '@/types/appointment';
 import type { ServiceHistoryItem } from '@/types/serviceHistory';
+import { formatLicensePlateDisplay } from '@/features/customers/vehicles/utils/license-plate';
 
 export type DateSort = 'asc' | 'desc';
 
@@ -130,7 +131,7 @@ export function StaffServiceHistoryList({
                       {vehicleName}
                     </p>
                     <p className="mt-1 truncate text-slate-500">
-                      {serviceHistory.vehicleId.licensePlate}
+                      {formatLicensePlateDisplay(serviceHistory.vehicleId.licensePlate)}
                     </p>
                   </td>
                   <td className="px-3 py-4">

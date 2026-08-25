@@ -7,6 +7,7 @@ import { AppointmentTimeMilestones } from '@/features/customers/appointments/com
 import type { AppointmentItem } from '@/types/appointment';
 import { CustomerModalShell } from '@/features/customers/components/CustomerModalShell';
 import { formatPrice, formatTime } from '@/lib/utils';
+import { formatLicensePlateDisplay } from '@/features/customers/vehicles/utils/license-plate';
 
 export function StaffAppointmentDetailDialog({
   appointment,
@@ -70,7 +71,7 @@ export function StaffAppointmentDetailDialog({
           icon={CarFront}
           label="Xe"
           value={`${appointment.vehicleId.brand} ${appointment.vehicleId.model}`}
-          subValue={appointment.vehicleId.licensePlate}
+          subValue={formatLicensePlateDisplay(appointment.vehicleId.licensePlate)}
         />
       </section>
 

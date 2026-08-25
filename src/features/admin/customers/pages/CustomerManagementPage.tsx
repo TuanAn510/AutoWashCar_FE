@@ -22,6 +22,7 @@ import {
   UserPlus,
   Users,
 } from 'lucide-react';
+import { formatLicensePlateDisplay } from '@/features/customers/vehicles/utils/license-plate';
 import { useMemo, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -532,7 +533,7 @@ function AppointmentHistoryTab({
                 {appointment.vehicleId.brand} {appointment.vehicleId.model}
               </p>
               <p className="mt-1 text-slate-500">
-                {appointment.vehicleId.licensePlate} ·{' '}
+                {formatLicensePlateDisplay(appointment.vehicleId.licensePlate)} ·{' '}
                 {formatPrice(appointment.finalAmount ?? appointment.totalPrice)}
               </p>
             </div>

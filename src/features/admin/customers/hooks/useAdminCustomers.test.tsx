@@ -13,6 +13,7 @@ import type { User } from '@/types/user';
 describe('useUpdateCustomer', () => {
   it('updates list caches without treating customer detail caches as lists', async () => {
     const client = new QueryClient({ defaultOptions: { mutations: { retry: false } } });
+    const invalidateSpy = vi.spyOn(client, 'invalidateQueries');
     const listKey = queryKeys.users.customers.list({ page: 1 });
     const detailKey = queryKeys.users.customers.detail('customer-1');
     const customer = {
@@ -68,6 +69,7 @@ describe('useUpdateCustomer', () => {
     });
 
     expect(client.getQueryData<{ customers: User[] }>(listKey)?.customers[0].isActive).toBe(true);
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: queryKeys.reports.all });
   });
 
   it('rolls back an optimistic status update when the request fails', async () => {

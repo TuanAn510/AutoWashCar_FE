@@ -11,6 +11,7 @@ import {
   XCircle,
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import { formatLicensePlateDisplay } from '@/features/customers/vehicles/utils/license-plate';
 
 import { PaginationControls } from '@/components/shared/PaginationControls';
 import { StatCard } from '@/components/dashboard';
@@ -417,7 +418,7 @@ export default function PaymentsPage() {
                                 </p>
                               </td>
                               <td className="px-2 py-3 text-slate-900">
-                                {appointment.vehicleId.licensePlate}
+                                {formatLicensePlateDisplay(appointment.vehicleId.licensePlate)}
                               </td>
                               <td className="px-2 py-3 text-slate-900">
                                 <span className="line-clamp-2">{getServiceTitle(appointment)}</span>

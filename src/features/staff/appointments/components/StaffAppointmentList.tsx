@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { AppointmentStatusBadge } from '@/features/customers/appointments/components/AppointmentStatusBadge';
 import { formatDateTime, formatTime } from '@/lib/utils';
 import type { AppointmentItem, AppointmentStatus } from '@/types/appointment';
+import { formatLicensePlateDisplay } from '@/features/customers/vehicles/utils/license-plate';
 
 export type DateSort = 'asc' | 'desc';
 
@@ -152,7 +153,7 @@ export function StaffAppointmentList({
                       {vehicleName}
                     </p>
                     <p className="mt-1 truncate text-slate-500">
-                      {appointment.vehicleId.licensePlate}
+                      {formatLicensePlateDisplay(appointment.vehicleId.licensePlate)}
                     </p>
                   </td>
                   <td className="px-3 py-4">
