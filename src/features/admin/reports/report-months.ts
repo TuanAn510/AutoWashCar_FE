@@ -2,6 +2,44 @@ import type { RevenueReportItem } from '@/services/reportService';
 
 const REPORT_TIMEZONE = 'Asia/Ho_Chi_Minh';
 
+const getLocalDateKey = (date: Date) => {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: REPORT_TIMEZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(date);
+  const value = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((part) => part.type === type)?.value ?? '';
+  return `${value('year')}-${value('month')}-${value('day')}`;
+};
+
+export const doesDateRangeContainToday = (
+  fromDate: string,
+  toDate: string,
+  now = new Date()
+) => {
+  const today = getLocalDateKey(now);
+  return /^\d{4}-\d{2}-\d{2}$/.test(fromDate) &&
+    /^\d{4}-\d{2}-\d{2}$/.test(toDate) &&
+    fromDate <= today && today <= toDate;
+};
+
+export const doesReportSelectionContainToday = (
+  selection: ReportTimeSelection,
+  now = new Date()
+) => {
+  if (selection.mode === 'all-time') return true;
+  const [year, month] = selection.month.split('-').map(Number);
+  if (!year || !month || month < 1 || month > 12) return false;
+  const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  return doesDateRangeContainToday(
+    `${selection.month}-01`,
+    `${selection.month}-${String(lastDay).padStart(2, '0')}`,
+    now
+  );
+};
+
 export type MonthRange = {
   startMonth: string;
   endMonth: string;
