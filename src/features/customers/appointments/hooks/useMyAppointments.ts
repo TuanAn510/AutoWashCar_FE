@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 
+import { liveAppointmentQueryOptions } from '@/constants/appointment-query-options';
 import { queryKeys } from '@/constants/queryKeys';
 import { appointmentApi } from '@/services/appointmentService';
 import type { PaginationParams } from '@/types/api';
@@ -10,5 +11,6 @@ export function useMyAppointments(params?: PaginationParams) {
   return useQuery({
     queryKey: queryKeys.appointments.mine(params),
     queryFn: ({ signal }) => appointmentApi.getMyAppointments(params, signal),
+    ...liveAppointmentQueryOptions,
   });
 }

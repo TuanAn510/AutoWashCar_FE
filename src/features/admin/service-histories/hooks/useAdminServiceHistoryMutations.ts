@@ -23,6 +23,8 @@ export function useUpdateServiceHistory() {
       queryClient.invalidateQueries({
         queryKey: queryKeys.serviceHistories.admin.detail(variables.serviceHistoryId),
       });
+      queryClient.invalidateQueries({ queryKey: queryKeys.serviceHistories.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.reports.all });
       toast.success('Cập nhật lịch sử dịch vụ thành công.');
     },
     onError: (error) => {
@@ -39,6 +41,8 @@ export function useDeleteServiceHistory() {
       adminServiceHistoryApi.deleteServiceHistory(serviceHistoryId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: adminServiceHistoriesQueryKey });
+      queryClient.invalidateQueries({ queryKey: queryKeys.serviceHistories.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.reports.all });
       toast.success('Xóa lịch sử dịch vụ thành công.');
     },
     onError: (error) => {

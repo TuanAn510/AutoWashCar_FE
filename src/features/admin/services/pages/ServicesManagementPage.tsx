@@ -29,7 +29,6 @@ import {
 import { useAllServices } from '@/features/admin/services/hooks/useServices';
 import { useServiceManagementStore } from '@/features/admin/services/store/useServiceManagementStore';
 import {
-  buildServiceFilterCategories,
   filterAndSortServices,
   type ServiceNameSortOrder,
   type ServiceStatusFilter,
@@ -190,7 +189,6 @@ export default function ServicesManagementPage() {
   const openCreateDialog = useServiceManagementStore((state) => state.openCreateDialog);
   const closeCreateDialog = useServiceManagementStore((state) => state.closeCreateDialog);
   const [keyword, setKeyword] = useState('');
-  const [categoryId, setCategoryId] = useState('all');
   const [status, setStatus] = useState<ServiceStatusFilter>('all');
   const [page, setPage] = useState(1);
   const [sortOrder, setSortOrder] = useState<ServiceNameSortOrder>('asc');
@@ -205,19 +203,14 @@ export default function ServicesManagementPage() {
   const allServices = allServicesQuery.data ?? EMPTY_SERVICES;
   const categories = categoriesQuery.data ?? EMPTY_CATEGORIES;
   const stats = useMemo(() => buildStats(allServices), [allServices]);
-  const filterCategories = useMemo(
-    () => buildServiceFilterCategories(categories, allServices),
-    [allServices, categories]
-  );
   const filteredServices = useMemo(
     () =>
       filterAndSortServices(allServices, {
         keyword,
-        categoryId,
         status,
         sortOrder,
       }),
-    [allServices, categoryId, keyword, sortOrder, status]
+    [allServices, keyword, sortOrder, status]
   );
   const totalPages = Math.max(1, Math.ceil(filteredServices.length / SERVICE_PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
@@ -290,7 +283,7 @@ export default function ServicesManagementPage() {
         </section>
 
         <section className="rounded-lg border border-border/80 bg-white p-4">
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-[minmax(280px,1fr)_150px_220px_190px]">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-[minmax(280px,1fr)_150px_190px]">
             <div className="relative">
               <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
               <Input
@@ -314,22 +307,6 @@ export default function ServicesManagementPage() {
             >
               <option value="asc">Tên A-Z</option>
               <option value="desc">Tên Z-A</option>
-            </select>
-            <select
-              aria-label="Danh mục"
-              className="h-10 rounded-md border border-input bg-white px-3 text-sm outline-none focus:border-slate-700 focus:ring-2 focus:ring-slate-700/10"
-              value={categoryId}
-              onChange={(event) => {
-                setCategoryId(event.target.value);
-                setPage(1);
-              }}
-            >
-              <option value="all">Tất cả danh mục</option>
-              {filterCategories.map((category) => (
-                <option key={category._id} value={category._id}>
-                  {category.name}
-                </option>
-              ))}
             </select>
             <select
               aria-label="Trạng thái"
@@ -359,12 +336,11 @@ export default function ServicesManagementPage() {
             )}
           </div>
           <div className="mt-5 overflow-x-auto">
-            <table className="w-full min-w-[1000px] table-fixed border-collapse text-left text-sm">
+            <table className="w-full min-w-[850px] table-fixed border-collapse text-left text-sm">
               <thead>
                 <tr className="border-b border-border text-slate-900">
                   <th className="w-[220px] px-2 py-3 font-semibold">Tên dịch vụ</th>
                   <th className="w-[240px] px-2 py-3 font-semibold">Mô tả</th>
-                  <th className="w-[150px] px-2 py-3 font-semibold">Danh mục</th>
                   <th className="w-[130px] px-2 py-3 text-right font-semibold">Giá</th>
                   <th className="w-[110px] px-2 py-3 font-semibold">Thời lượng</th>
                   <th className="w-[100px] px-2 py-3 font-semibold">Điểm nhận</th>
@@ -375,14 +351,14 @@ export default function ServicesManagementPage() {
               <tbody>
                 {allServicesQuery.isLoading && (
                   <tr>
-                    <td colSpan={8} className="px-2 py-8 text-center text-slate-500">
+                    <td colSpan={7} className="px-2 py-8 text-center text-slate-500">
                       Đang tải dữ liệu dịch vụ...
                     </td>
                   </tr>
                 )}
                 {!allServicesQuery.isLoading && !allServicesQuery.isError && !services.length && (
                   <tr>
-                    <td colSpan={8} className="px-2 py-8 text-center text-slate-500">
+                    <td colSpan={7} className="px-2 py-8 text-center text-slate-500">
                       Không có dịch vụ phù hợp.
                     </td>
                   </tr>
@@ -403,11 +379,6 @@ export default function ServicesManagementPage() {
                       <p className="line-clamp-2 text-slate-600" title={service.description}>
                         {service.description?.trim() || 'Chưa có mô tả'}
                       </p>
-                    </td>
-                    <td className="px-2 py-3">
-                      <span className="inline-flex max-w-[140px] rounded-md border border-border bg-white px-3 py-1 text-xs font-semibold text-slate-900">
-                        <span className="truncate">{service.categoryId.name}</span>
-                      </span>
                     </td>
                     <td className="whitespace-nowrap px-2 py-3 text-right font-semibold text-slate-900">
                       {formatCurrency(service.price)}

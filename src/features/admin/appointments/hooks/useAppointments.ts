@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 
+import { liveAppointmentQueryOptions } from '@/constants/appointment-query-options';
 import { queryKeys } from '@/constants/queryKeys';
 import { adminAppointmentsApi } from '@/services/appointmentService';
 import type { AdminAppointmentFilters } from '@/types/appointment';
@@ -11,5 +12,6 @@ export function useAppointments(filters?: AdminAppointmentFilters, enabled = tru
     queryKey: queryKeys.appointments.admin.list(filters),
     queryFn: ({ signal }) => adminAppointmentsApi.getAppointments(filters, signal),
     enabled,
+    ...liveAppointmentQueryOptions,
   });
 }

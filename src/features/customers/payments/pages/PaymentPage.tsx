@@ -12,8 +12,8 @@ import {
   XCircle,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams, useSearchParams } from 'react-router';
+import { useQueryClient } from '@tanstack/react-query';
 
 import { Button } from '@/components/ui/button';
 import { queryKeys } from '@/constants/queryKeys';
@@ -21,6 +21,7 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/compone
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAppointmentDetail } from '@/features/customers/appointments/hooks/useAppointmentDetail';
 import { paymentService } from '@/services/paymentService';
+import { queryKeys } from '@/constants/queryKeys';
 import { cn, formatDateTime, formatPrice, formatTime } from '@/lib/utils';
 import type { AppointmentPaymentMethod } from '@/types/appointment';
 
@@ -145,13 +146,34 @@ export default function PaymentPage() {
 
   const paymentStatus = searchParams.get('status');
 
-  useEffect(() => {
-    if (paymentStatus !== 'success' && paymentStatus !== 'failure') return;
-    void Promise.all([
-      queryClient.invalidateQueries({ queryKey: queryKeys.appointments.all }),
-      queryClient.invalidateQueries({ queryKey: queryKeys.payments.all }),
-    ]);
-  }, [paymentStatus, queryClient]);
+const queryClient = useQueryClient();
+
+useEffect(() => {
+  if (paymentStatus !== 'success' && paymentStatus !== 'failure') return;
+
+  const queries = [
+    queryClient.invalidateQueries({ queryKey: queryKeys.appointments.all }),
+    queryClient.invalidateQueries({ queryKey: queryKeys.appointments.mine() }),
+    queryClient.invalidateQueries({ queryKey: queryKeys.payments.all }),
+  ];
+
+  if (appointmentId && appointmentId !== 'result') {
+    queries.push(
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.appointments.admin.detail(String(appointmentId)),
+      })
+    );
+  }
+
+  if (paymentStatus === 'success') {
+    queries.push(
+      queryClient.invalidateQueries({ queryKey: queryKeys.loyalty.all }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.reports.all })
+    );
+  }
+
+  void Promise.all(queries);
+}, [paymentStatus, appointmentId, queryClient]);
 
   const handlePayment = async () => {
     if (!selectedMethod || !appointmentId) {

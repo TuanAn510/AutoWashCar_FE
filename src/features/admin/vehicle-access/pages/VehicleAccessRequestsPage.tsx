@@ -20,10 +20,12 @@ import { formatLicensePlateDisplay } from '@/features/customers/vehicles/utils/l
 import { cn } from '@/lib/utils';
 import { resolveImageUrl } from '@/lib/image-url';
 import { vehicleAccessRequestApi } from '@/services/vehicleAccessRequestService';
+import { queryKeys } from '@/constants/queryKeys';
 import type { VehicleAccessRequest, VehicleAccessRequestStatus } from '@/types/vehicle';
 
 const queryKey = ['vehicle-access-requests', 'admin'];
 const EMPTY_REQUESTS: VehicleAccessRequest[] = [];
+const VEHICLE_ACCESS_REQUEST_REFETCH_INTERVAL_MS = 5_000;
 type RequestType = 'brand_model_verification' | 'access_request' | 'combined';
 const statusMeta = {
   pending: { label: 'Chờ duyệt', className: 'bg-amber-50 text-amber-700' },
@@ -84,7 +86,11 @@ export default function VehicleAccessRequestsPage() {
   const [keyword, setKeyword] = useState(initialKeyword);
   const [notes, setNotes] = useState<Record<string, string>>({});
   const client = useQueryClient();
-  const query = useQuery({ queryKey, queryFn: () => vehicleAccessRequestApi.listAdmin() });
+  const query = useQuery({
+    queryKey,
+    queryFn: () => vehicleAccessRequestApi.listAdmin(),
+    refetchInterval: VEHICLE_ACCESS_REQUEST_REFETCH_INTERVAL_MS,
+  });
   const review = useMutation({
     mutationFn: ({
       request,
@@ -95,6 +101,8 @@ export default function VehicleAccessRequestsPage() {
     }) => vehicleAccessRequestApi[action](request._id, notes[request._id]?.trim() ?? ''),
     onSuccess: (_, variables) => {
       client.invalidateQueries({ queryKey });
+      client.invalidateQueries({ queryKey: queryKeys.vehicles.admin.all });
+      client.invalidateQueries({ queryKey: queryKeys.vehicles.mine() });
       setNotes((current) => ({ ...current, [variables.request._id]: '' }));
       toast.success(
         variables.action === 'approve'

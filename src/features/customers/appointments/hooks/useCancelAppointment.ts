@@ -5,7 +5,6 @@ import { getApiErrorMessage } from '@/api/errors';
 import { queryKeys } from '@/constants/queryKeys';
 import { appointmentApi } from '@/services/appointmentService';
 import type { CancelAppointmentPayload } from '@/types/appointment';
-import { myAppointmentsQueryKey } from '@/features/customers/appointments/hooks/useMyAppointments';
 
 const getErrorMessage = getApiErrorMessage;
 
@@ -19,6 +18,9 @@ export function useCancelAppointment() {
       queryClient.invalidateQueries({ queryKey: ['booking-availability'] });
       queryClient.invalidateQueries({ queryKey: queryKeys.reports.all });
       queryClient.invalidateQueries({ queryKey: myAppointmentsQueryKey });
+      queryClient.invalidateQueries({ queryKey: queryKeys.payments.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.promotions.active() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.reports.all });
       toast.success('Hủy lịch hẹn thành công.');
     },
     onError: (error) => {
