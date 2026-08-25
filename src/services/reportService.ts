@@ -124,6 +124,91 @@ export interface VehicleReport {
   }>;
 }
 
+export interface StaffPerformanceReport {
+  staff: Array<{
+    staffId: string;
+    staffName: string;
+    assignedBookings: number;
+    completedBookings: number;
+    cancelledBookings: number;
+    activeBookings: number;
+    completionRate: number;
+    attributedRevenue: number;
+    averageServiceMinutes: number;
+  }>;
+}
+
+export interface ServiceTimeReport {
+  measuredWaitingBookings: number;
+  measuredServiceBookings: number;
+  averageWaitingMinutes: number;
+  averageServiceMinutes: number;
+  onTimeBookings: number;
+  onTimeRate: number;
+  groupedByMonth: Array<{
+    year: number;
+    month: number;
+    period: string;
+    bookings: number;
+    averageWaitingMinutes: number;
+    averageServiceMinutes: number;
+  }>;
+}
+
+export interface PromotionEffectivenessReport {
+  bookingsWithPromotion: number;
+  bookingsWithoutPromotion: number;
+  totalDiscount: number;
+  promotionRevenue: number;
+  revenueWithoutPromotion: number;
+  averageOrderWithPromotion: number;
+  averageOrderWithoutPromotion: number;
+  promotions: Array<{
+    promotionId: string;
+    code: string;
+    title: string;
+    usageCount: number;
+    uniqueCustomers: number;
+    totalDiscount: number;
+    revenue: number;
+    averageOrderValue: number;
+  }>;
+}
+
+export interface CustomerRetentionReport {
+  customersWithCompletedBookings: number;
+  oneTimeCustomers: number;
+  returningCustomers: number;
+  loyalCustomers: number;
+  atRiskCustomers: number;
+  inactiveCustomers: number;
+  retentionRate: number;
+  segments: Array<{ segment: string; customers: number }>;
+  topCustomers: Array<{
+    customerId: string;
+    customerName: string;
+    completedBookings: number;
+    totalSpent: number;
+    lastCompletedAt: string | null;
+  }>;
+}
+
+export interface OperationalAlertReport {
+  total: number;
+  summary: Record<string, number>;
+  alerts: Array<{
+    type: string;
+    severity: 'HIGH' | 'MEDIUM' | 'LOW';
+    bookingId: string;
+    message: string;
+    occurredAt: string | null;
+    customerName?: string | null;
+    vehicleName?: string | null;
+    licensePlate?: string | null;
+    scheduledAt?: string | null;
+  }>;
+}
+
 export interface ProjectReport {
   architecture: string;
   features: string[];
@@ -141,6 +226,11 @@ export interface ReportsStatistics {
   loyalty: LoyaltyReport;
   promotions: PromotionReport;
   vehicles: VehicleReport;
+  staffPerformance: StaffPerformanceReport;
+  serviceTimes: ServiceTimeReport;
+  promotionEffectiveness: PromotionEffectivenessReport;
+  customerRetention: CustomerRetentionReport;
+  operationalAlerts: OperationalAlertReport;
 }
 
 const getData = async <T>(url: string, params?: object, signal?: AbortSignal) => {
@@ -165,9 +255,32 @@ export const reportApi = {
     getData<PromotionReport>('/reports/promotions', params, signal),
   getVehicles: (params?: DateRangeParams, signal?: AbortSignal) =>
     getData<VehicleReport>('/reports/vehicles', params, signal),
+  getStaffPerformance: (params?: DateRangeParams, signal?: AbortSignal) =>
+    getData<StaffPerformanceReport>('/reports/staff-performance', params, signal),
+  getServiceTimes: (params?: DateRangeParams, signal?: AbortSignal) =>
+    getData<ServiceTimeReport>('/reports/service-times', params, signal),
+  getPromotionEffectiveness: (params?: DateRangeParams, signal?: AbortSignal) =>
+    getData<PromotionEffectivenessReport>('/reports/promotion-effectiveness', params, signal),
+  getCustomerRetention: (params?: DateRangeParams, signal?: AbortSignal) =>
+    getData<CustomerRetentionReport>('/reports/customer-retention', params, signal),
+  getOperationalAlerts: (signal?: AbortSignal) =>
+    getData<OperationalAlertReport>('/reports/operational-alerts', undefined, signal),
 
   exportBookingsCsv: async (params?: DateRangeParams, signal?: AbortSignal) => {
     const response = await api.get<Blob>('/admin/reports/export/bookings.csv', {
+      params,
+      signal,
+      responseType: 'blob',
+    });
+    return response.data;
+  },
+
+  exportAnalytics: async (
+    format: 'xlsx' | 'pdf',
+    params?: DateRangeParams,
+    signal?: AbortSignal
+  ) => {
+    const response = await api.get<Blob>(`/admin/reports/export/analytics.${format}`, {
       params,
       signal,
       responseType: 'blob',
@@ -189,7 +302,20 @@ export const reportApi = {
       endMonth: params?.endMonth,
     };
 
-    const [revenue, appointments, customers, services, loyalty, promotions, vehicles] =
+    const [
+      revenue,
+      appointments,
+      customers,
+      services,
+      loyalty,
+      promotions,
+      vehicles,
+      staffPerformance,
+      serviceTimes,
+      promotionEffectiveness,
+      customerRetention,
+      operationalAlerts,
+    ] =
       await Promise.all([
         reportApi.getRevenue(
           {
@@ -210,6 +336,11 @@ export const reportApi = {
         reportApi.getLoyalty(dateParams, signal),
         reportApi.getPromotions(dateParams, signal),
         reportApi.getVehicles(dateParams, signal),
+        reportApi.getStaffPerformance(dateParams, signal),
+        reportApi.getServiceTimes(dateParams, signal),
+        reportApi.getPromotionEffectiveness(dateParams, signal),
+        reportApi.getCustomerRetention(dateParams, signal),
+        reportApi.getOperationalAlerts(signal),
       ]);
 
     return {
@@ -220,6 +351,11 @@ export const reportApi = {
       loyalty,
       promotions,
       vehicles,
+      staffPerformance,
+      serviceTimes,
+      promotionEffectiveness,
+      customerRetention,
+      operationalAlerts,
     };
   },
 };

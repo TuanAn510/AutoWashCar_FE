@@ -8,6 +8,7 @@ import {
 } from '@/features/customers/appointments/components/AppointmentStatusBadge';
 import type { AppointmentItem, AppointmentStatus } from '@/types/appointment';
 import { CustomerModalShell } from '@/features/customers/components/CustomerModalShell';
+import { formatLicensePlateDisplay } from '@/features/customers/vehicles/utils/license-plate';
 
 const dialogCopy = {
   title: 'C\u1eadp nh\u1eadt tr\u1ea1ng th\u00e1i l\u1ecbch h\u1eb9n',
@@ -82,7 +83,9 @@ export function UpdateAppointmentStatusDialog({
     >
       <div className="rounded-2xl bg-slate-50 p-4">
         <p className="font-semibold text-slate-950">{appointment.customerId.displayName}</p>
-        <p className="mt-1 text-sm text-slate-500">{appointment.vehicleId.licensePlate}</p>
+        <p className="mt-1 text-sm text-slate-500">
+          {formatLicensePlateDisplay(appointment.vehicleId.licensePlate)}
+        </p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">

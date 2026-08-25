@@ -16,9 +16,14 @@ import {
 import { StatCard, type StatCardTrend } from '@/components/dashboard';
 import { Button } from '@/components/ui/button';
 import { TimeFilter, type TimeFilterValue } from '@/features/admin/reports/components/TimeFilter';
+import {
+  AdvancedReportSections,
+  ReportExportActions,
+} from '@/features/admin/reports/components/AdvancedReportSections';
 import { useReports } from '@/features/admin/reports/hooks/useReports';
 import {
   buildRevenueBuckets,
+  doesReportSelectionContainToday,
   getCurrentMonth,
   getPreviousMonth,
   getReportSelectionLabel,
@@ -411,6 +416,7 @@ export default function ReportsAnalyticsPage() {
   const selectedMonth = isMonthMode ? timeSelection.month : undefined;
   const period: ReportPeriod = isMonthMode ? 'daily' : 'monthly';
   const periodLabel = getReportSelectionLabel(timeSelection);
+  const showOperationalAlerts = doesReportSelectionContainToday(timeSelection);
   const comparisonMonth = selectedMonth ? getPreviousMonth(selectedMonth) : undefined;
   const comparisonLabel = comparisonMonth
     ? getReportSelectionLabel({ mode: 'month', month: comparisonMonth })
@@ -478,6 +484,7 @@ export default function ReportsAnalyticsPage() {
               xe.
             </p>
           </div>
+          <ReportExportActions params={reportParams} />
         </section>
 
         <TimeFilter
@@ -696,6 +703,12 @@ export default function ReportsAnalyticsPage() {
                 </div>
               </div>
             </section>
+
+            <AdvancedReportSections
+              reports={reports}
+              periodLabel={periodLabel}
+              showOperationalAlerts={showOperationalAlerts}
+            />
           </>
         ) : null}
       </div>

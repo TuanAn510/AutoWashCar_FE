@@ -6,6 +6,7 @@ import { AppointmentEvidenceImages } from '@/features/customers/appointments/com
 import { AppointmentStatusBadge } from '@/features/customers/appointments/components/AppointmentStatusBadge';
 import { AppointmentTimeMilestones } from '@/features/customers/appointments/components/AppointmentTimeMilestones';
 import { isAppointmentRefundRequired } from '@/features/customers/appointments/utils/appointmentDisplay';
+import { formatLicensePlateDisplay } from '@/features/customers/vehicles/utils/license-plate';
 import type { AppointmentItem } from '@/types/appointment';
 import { CustomerModalShell } from '@/features/customers/components/CustomerModalShell';
 import { formatPrice, formatTime } from '@/lib/utils';
@@ -13,7 +14,7 @@ import { formatPrice, formatTime } from '@/lib/utils';
 const paymentStatusLabels: Record<AppointmentItem['paymentStatus'], string> = {
   unpaid: 'Chưa thanh toán',
   paid: 'Đã thanh toán',
-  cancelled: 'Đã hủy thanh toán',
+  cancelled: 'Chưa thanh toán',
   pending: 'Đang xử lý',
 };
 
@@ -97,7 +98,7 @@ export function AdminAppointmentDetailDialog({
           icon={CarFront}
           label="Xe"
           value={`${appointment.vehicleId.brand} ${appointment.vehicleId.model}`}
-          subValue={appointment.vehicleId.licensePlate}
+          subValue={formatLicensePlateDisplay(appointment.vehicleId.licensePlate)}
         />
       </section>
 

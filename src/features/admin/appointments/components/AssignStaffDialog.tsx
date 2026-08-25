@@ -2,6 +2,7 @@ import { Check, Loader2, Phone, UserRoundCheck, UsersRound } from 'lucide-react'
 
 import { Button } from '@/components/ui/button';
 import { CustomerModalShell } from '@/features/customers/components/CustomerModalShell';
+import { formatLicensePlateDisplay } from '@/features/customers/vehicles/utils/license-plate';
 import { cn } from '@/lib/utils';
 import type { StaffWorkload } from '@/services/userService';
 import type { AppointmentAssignedStaff, AppointmentItem } from '@/types/appointment';
@@ -83,7 +84,7 @@ export function AssignStaffDialog({
         <p className="font-semibold text-slate-950">{appointment.customerId.displayName}</p>
         <p className="mt-1 text-sm text-slate-500">
           {appointment.vehicleId.brand} {appointment.vehicleId.model} -{' '}
-          {appointment.vehicleId.licensePlate}
+          {formatLicensePlateDisplay(appointment.vehicleId.licensePlate)}
         </p>
       </section>
 

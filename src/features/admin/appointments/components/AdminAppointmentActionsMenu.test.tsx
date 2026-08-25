@@ -58,4 +58,21 @@ describe('AdminAppointmentActionsMenu reschedule lifecycle', () => {
       expect(screen.queryByText('Đổi lịch')).toBeNull();
     }
   );
+
+  it.each(['confirmed', 'in_queue', 'in_progress'] as AppointmentStatus[])(
+    'preserves assign and cancel for active %s appointments',
+    (status) => {
+      render(<AdminAppointmentActionsMenu appointment={appointment(status)} {...props} />);
+      expect(screen.getAllByRole('button')).toHaveLength(4);
+    }
+  );
+
+  it.each(['completed', 'cancelled'] as AppointmentStatus[])(
+    'renders detail only for terminal %s appointments',
+    (status) => {
+      render(<AdminAppointmentActionsMenu appointment={appointment(status)} {...props} />);
+      expect(screen.getAllByRole('button')).toHaveLength(2);
+      expect(screen.queryByText(/Thanh toÃ¡n|HoÃ n tiá»n/)).toBeNull();
+    }
+  );
 });

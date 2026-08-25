@@ -38,6 +38,7 @@ import { vehicleAccessRequestApi } from '@/services/vehicleAccessRequestService'
 import { queryKeys } from '@/constants/queryKeys';
 import { cn } from '@/lib/utils';
 import { resolveImageUrl } from '@/lib/image-url';
+import { formatLicensePlateDisplay } from '@/features/customers/vehicles/utils/license-plate';
 import type { ApiVehicle, CarType, VehicleAccessRequest } from '@/types/vehicle';
 
 const CAR_TYPE_LABELS: Record<CarType, string> = {
@@ -315,7 +316,9 @@ export default function AdminVehiclesPage() {
               >
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-bold text-slate-950">{request.licensePlate}</span>
+                    <span className="font-bold text-slate-950">
+                      {formatLicensePlateDisplay(request.licensePlate)}
+                    </span>
                     <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-700">
                       Chờ xác minh
                     </span>
@@ -395,7 +398,9 @@ export default function AdminVehiclesPage() {
                   className="border-b border-border/70 align-middle last:border-0"
                 >
                   <td className="px-2 py-3.5">
-                    <span className="font-bold text-slate-950">{vehicle.licensePlate}</span>
+                    <span className="font-bold text-slate-950">
+                      {formatLicensePlateDisplay(vehicle.licensePlate)}
+                    </span>
                   </td>
                   <td className="px-2 py-3.5">
                     <p className="font-medium text-slate-900">{vehicle.brand}</p>
@@ -550,7 +555,8 @@ export default function AdminVehiclesPage() {
                   {deleteVehicle.brand} {deleteVehicle.model}
                 </p>
                 <p className="mt-1 text-sm text-slate-500">
-                  Biển số: {deleteVehicle.licensePlate} · Đời {deleteVehicle.year}
+                  Biển số: {formatLicensePlateDisplay(deleteVehicle.licensePlate)} · Đời{' '}
+                  {deleteVehicle.year}
                 </p>
                 <p className="mt-1 text-sm text-slate-500">Chủ xe: {ownerName(deleteVehicle)}</p>
               </div>
@@ -615,7 +621,7 @@ function VehicleDetailDialog({
           <div>
             <DialogTitle className="text-lg font-black text-[#15243a]">Chi tiết xe</DialogTitle>
             <DialogDescription className="mt-0.5 text-sm text-[#64748b]">
-              Thông tin chi tiết của xe {vehicle.licensePlate}
+              Thông tin chi tiết của xe {formatLicensePlateDisplay(vehicle.licensePlate)}
             </DialogDescription>
           </div>
           <Button
@@ -656,7 +662,7 @@ function VehicleDetailDialog({
           <div className="grid gap-3 sm:grid-cols-2">
             <InfoBlock label="Hãng xe" value={vehicle.brand} />
             <InfoBlock label="Dòng xe" value={vehicle.model} />
-            <InfoBlock label="Biển số" value={vehicle.licensePlate} />
+            <InfoBlock label="Biển số" value={formatLicensePlateDisplay(vehicle.licensePlate)} />
             <InfoBlock label="Năm sản xuất" value={String(vehicle.year)} />
             <InfoBlock
               label="Loại xe"
@@ -790,7 +796,7 @@ function EditVehicleDialog({
               Sửa thông tin xe
             </DialogTitle>
             <DialogDescription className="mt-0.5 text-sm text-[#64748b]">
-              Cập nhật thông tin xe {vehicle.licensePlate}
+              Cập nhật thông tin xe {formatLicensePlateDisplay(vehicle.licensePlate)}
             </DialogDescription>
           </div>
           <Button

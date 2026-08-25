@@ -1,6 +1,8 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
+import { getApiErrorMessage } from '@/api/errors';
+import { queryKeys } from '@/constants/queryKeys';
 import { adminAppointmentsApi } from '@/services/appointmentService';
 import type {
   AssignStaffPayload,
@@ -38,6 +40,11 @@ export function useUpdateAppointmentStatus() {
     }) => adminAppointmentsApi.updateAppointmentStatus(appointmentId, payload),
     onSuccess: async () => {
       await invalidateAdminAppointments(queryClient);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['booking-availability'] }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.serviceHistories.admin.all }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.serviceHistories.staff() }),
+      ]);
       toast.success('Đã cập nhật trạng thái');
     },
     onError: (error) => {
@@ -100,6 +107,7 @@ export function useRescheduleAppointment() {
     }) => adminAppointmentsApi.rescheduleAppointment(appointmentId, payload),
     onSuccess: async () => {
       await invalidateAdminAppointments(queryClient);
+      await queryClient.invalidateQueries({ queryKey: ['booking-availability'] });
       toast.success('Đổi lịch hẹn thành công.');
     },
     onError: (error) => {
@@ -121,6 +129,7 @@ export function useCancelAppointmentByAdmin() {
     }) => adminAppointmentsApi.cancelAppointmentByAdmin(appointmentId, payload),
     onSuccess: async () => {
       await invalidateAdminAppointments(queryClient);
+      await queryClient.invalidateQueries({ queryKey: ['booking-availability'] });
       toast.success('Hủy lịch hẹn thành công.');
     },
     onError: (error) => {
@@ -128,5 +137,3 @@ export function useCancelAppointmentByAdmin() {
     },
   });
 }
-import { getApiErrorMessage } from '@/api/errors';
-import { queryKeys } from '@/constants/queryKeys';

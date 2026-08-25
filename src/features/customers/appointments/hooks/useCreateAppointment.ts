@@ -6,6 +6,7 @@ import { queryKeys } from '@/constants/queryKeys';
 import { rewardKeys } from '@/features/shared/loyalty/constants/query-keys';
 import { appointmentApi } from '@/services/appointmentService';
 import type { CreateAppointmentPayload } from '@/types/appointment';
+import { myAppointmentsQueryKey } from '@/features/customers/appointments/hooks/useMyAppointments';
 
 const getErrorMessage = getApiErrorMessage;
 
@@ -16,6 +17,8 @@ export function useCreateAppointment() {
     mutationFn: (payload: CreateAppointmentPayload) => appointmentApi.createAppointment(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.appointments.all });
+      queryClient.invalidateQueries({ queryKey: ['booking-availability'] });
+      queryClient.invalidateQueries({ queryKey: myAppointmentsQueryKey });
       queryClient.invalidateQueries({ queryKey: rewardKeys.myRedemptions });
       queryClient.invalidateQueries({ queryKey: queryKeys.promotions.active() });
       toast.success('Đặt lịch thành công.');

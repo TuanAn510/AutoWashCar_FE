@@ -46,6 +46,7 @@ import { useAppointments } from '@/features/admin/appointments/hooks/useAppointm
 import { useStaffWorkload } from '@/features/admin/customers/hooks/useAdminCustomers';
 import type { StaffWorkload } from '@/services/userService';
 import { formatCurrencyVi } from '@/lib/utils';
+import { formatLicensePlateDisplay } from '@/features/customers/vehicles/utils/license-plate';
 
 const getLocalDateRange = (date: string) => {
   const [year, month, day] = date.split('-').map(Number);
@@ -679,7 +680,7 @@ export default function AdminAppointmentsPage() {
               <p className="mt-1 text-slate-500">
                 {timelineStatusChange.appointment.vehicleId.brand}{' '}
                 {timelineStatusChange.appointment.vehicleId.model} ·{' '}
-                {timelineStatusChange.appointment.vehicleId.licensePlate}
+                {formatLicensePlateDisplay(timelineStatusChange.appointment.vehicleId.licensePlate)}
               </p>
             </div>
           ) : null}
@@ -730,7 +731,7 @@ export default function AdminAppointmentsPage() {
               </p>
               <p className="mt-1">
                 {confirmAppointment.vehicleId.brand} {confirmAppointment.vehicleId.model} -{' '}
-                {confirmAppointment.vehicleId.licensePlate}
+                {formatLicensePlateDisplay(confirmAppointment.vehicleId.licensePlate)}
               </p>
             </div>
           ) : null}
@@ -801,7 +802,7 @@ export default function AdminAppointmentsPage() {
               </p>
               <p className="mt-1">
                 {paymentAppointment.vehicleId.brand} {paymentAppointment.vehicleId.model} ·{' '}
-                {paymentAppointment.vehicleId.licensePlate}
+                {formatLicensePlateDisplay(paymentAppointment.vehicleId.licensePlate)}
               </p>
               <p className="mt-2 font-semibold text-slate-900">
                 {formatCurrencyVi(

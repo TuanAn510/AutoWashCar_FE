@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import type { AppointmentItem } from '@/types/appointment';
 import { CustomerModalShell } from '@/features/customers/components/CustomerModalShell';
+import { formatLicensePlateDisplay } from '@/features/customers/vehicles/utils/license-plate';
 
 export function CancelAppointmentDialog({
   appointment,
@@ -59,7 +60,7 @@ export function CancelAppointmentDialog({
         <p className="font-semibold text-slate-950">{appointment.customerId.displayName}</p>
         <p className="mt-1 text-sm text-slate-500">
           {appointment.vehicleId.brand} {appointment.vehicleId.model} -{' '}
-          {appointment.vehicleId.licensePlate}
+          {formatLicensePlateDisplay(appointment.vehicleId.licensePlate)}
         </p>
       </div>
 

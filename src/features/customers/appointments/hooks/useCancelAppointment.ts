@@ -15,6 +15,9 @@ export function useCancelAppointment() {
     mutationFn: (payload: CancelAppointmentPayload) => appointmentApi.cancelMyAppointment(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.appointments.all });
+      queryClient.invalidateQueries({ queryKey: ['booking-availability'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.reports.all });
+      queryClient.invalidateQueries({ queryKey: myAppointmentsQueryKey });
       queryClient.invalidateQueries({ queryKey: queryKeys.payments.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.promotions.active() });
       queryClient.invalidateQueries({ queryKey: queryKeys.reports.all });

@@ -1,5 +1,6 @@
 import { AdminServiceHistoryActionsMenu } from '@/features/admin/service-histories/components/AdminServiceHistoryActionsMenu';
 import type { ServiceHistoryItem } from '@/types/serviceHistory';
+import { formatLicensePlateDisplay } from '@/features/customers/vehicles/utils/license-plate';
 import {
   formatServiceHistoryDateOnly,
   formatServiceHistoryPrice,
@@ -52,7 +53,9 @@ export function AdminServiceHistoriesTable({
                   <p className="font-semibold text-slate-950">
                     {serviceHistory.vehicleId.brand} {serviceHistory.vehicleId.model}
                   </p>
-                  <p className="mt-1 text-slate-500">{serviceHistory.vehicleId.licensePlate}</p>
+                  <p className="mt-1 text-slate-500">
+                    {formatLicensePlateDisplay(serviceHistory.vehicleId.licensePlate)}
+                  </p>
                 </td>
                 <td className="px-2 py-4 text-slate-700">
                   <p className="max-w-[280px]">

@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { AdminAppointmentActionsMenu } from '@/features/admin/appointments/components/AdminAppointmentActionsMenu';
 import { AppointmentStatusBadge } from '@/features/customers/appointments/components/AppointmentStatusBadge';
 import { isAppointmentRefundRequired } from '@/features/customers/appointments/utils/appointmentDisplay';
+import { formatLicensePlateDisplay } from '@/features/customers/vehicles/utils/license-plate';
 import { cn, formatPrice } from '@/lib/utils';
 import type { AppointmentItem } from '@/types/appointment';
 
@@ -173,12 +174,12 @@ export function AdminAppointmentsTable({
                   <td className="px-2 py-3">
                     <p
                       className="line-clamp-2 font-semibold text-slate-950"
-                      title={`${vehicleLabel} - ${appointment.vehicleId.licensePlate}`}
+                      title={`${vehicleLabel} - ${formatLicensePlateDisplay(appointment.vehicleId.licensePlate)}`}
                     >
                       {vehicleLabel}
                     </p>
                     <p className="mt-1 truncate text-xs text-slate-500">
-                      {appointment.vehicleId.licensePlate}
+                      {formatLicensePlateDisplay(appointment.vehicleId.licensePlate)}
                     </p>
                   </td>
                   <td className="px-2 py-3">

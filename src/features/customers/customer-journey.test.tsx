@@ -324,6 +324,10 @@ describe('customer journey UI', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));
     await expectCurrentStep(3);
+    const timeSelect = await screen.findByLabelText('Chọn khung giờ');
+    expect((timeSelect as HTMLSelectElement).value).toBe('');
+    expect(screen.getByText('Vui lòng chọn giờ hẹn.')).toBeTruthy();
+    fireEvent.change(timeSelect, { target: { value: '08:05' } });
     fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));
     await expectCurrentStep(4);
     fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));

@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { CustomerModalShell } from '@/features/customers/components/CustomerModalShell';
 import type { ServiceHistoryItem } from '@/types/serviceHistory';
 import { formatServiceHistoryDate, formatServiceHistoryPrice, formatTime } from '@/lib/utils';
+import { formatLicensePlateDisplay } from '@/features/customers/vehicles/utils/license-plate';
 
 export function StaffServiceHistoryDetailDialog({
   serviceHistory,
@@ -43,7 +44,7 @@ export function StaffServiceHistoryDetailDialog({
           icon={CarFront}
           label="Xe"
           value={`${serviceHistory.vehicleId.brand} ${serviceHistory.vehicleId.model}`}
-          subValue={serviceHistory.vehicleId.licensePlate}
+          subValue={formatLicensePlateDisplay(serviceHistory.vehicleId.licensePlate)}
         />
         <DetailTile
           icon={CalendarClock}

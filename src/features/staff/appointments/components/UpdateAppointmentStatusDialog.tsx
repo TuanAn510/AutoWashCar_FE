@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { AppointmentStatusBadge } from '@/features/customers/appointments/components/AppointmentStatusBadge';
 import type { AppointmentItem, AppointmentStatus } from '@/types/appointment';
 import { CustomerModalShell } from '@/features/customers/components/CustomerModalShell';
+import { formatLicensePlateDisplay } from '@/features/customers/vehicles/utils/license-plate';
 import {
   getAllowedStaffAppointmentStatuses,
   STAFF_APPOINTMENT_STATUS_OPTION_LABELS,
@@ -86,7 +87,7 @@ export function UpdateAppointmentStatusDialog({
         <p className="font-semibold text-slate-950">{appointment.customerId.displayName}</p>
         <p className="mt-1 text-sm text-slate-500">
           {appointment.vehicleId.brand} {appointment.vehicleId.model} -{' '}
-          {appointment.vehicleId.licensePlate}
+          {formatLicensePlateDisplay(appointment.vehicleId.licensePlate)}
         </p>
       </div>
 

@@ -117,7 +117,7 @@ const steps = [
   fields: StepField[];
 }>;
 
-const createDefaultValues = (): CreateAppointmentFormValues => {
+export const createDefaultValues = (): CreateAppointmentFormValues => {
   const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000);
   const yyyy = tomorrow.getFullYear();
   const mm = String(tomorrow.getMonth() + 1).padStart(2, '0');
@@ -127,7 +127,7 @@ const createDefaultValues = (): CreateAppointmentFormValues => {
     vehicleId: '',
     serviceIds: [],
     scheduledDate: `${yyyy}-${mm}-${dd}`,
-    scheduledTime: '09:00',
+    scheduledTime: '',
     note: '',
     promotionId: '',
     rewardRedemptionId: '',
@@ -141,6 +141,17 @@ const toSlotTime = (startAt: string) => {
   if (Number.isNaN(date.getTime())) return startAt.slice(11, 16);
   return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
 };
+
+export const resolveAvailableScheduledTime = (
+  scheduledTime: string,
+  slots: BookingAvailabilitySlot[]
+) =>
+  slots.some((slot) => slot.available && toSlotTime(slot.startAt) === scheduledTime)
+    ? scheduledTime
+    : '';
+
+export const serializeScheduledAt = (scheduledDate: string, scheduledTime: string) =>
+  `${scheduledDate}T${scheduledTime}:00`;
 
 const availabilityReasonLabels: Record<string, string> = {
   PAST: 'Đã qua',
@@ -182,7 +193,7 @@ const getRewardLabel = (reward: Reward) => {
   return `${reward.name} - ${discountLabel}`;
 };
 
-const validateLocalScheduledTime = (
+export const validateLocalScheduledTime = (
   scheduledDate: string,
   scheduledTime: string,
   primaryDurationMinutes: number
@@ -404,15 +415,15 @@ export function CreateAppointmentModal({
     (availabilityQuery.isLoading ||
       availabilityQuery.isError ||
       hasUnfinishedVehicleBooking ||
-      shouldBlockSelectedSlot ||
+      !selectedSlot?.available ||
       availableSlots.length === 0);
 
   useEffect(() => {
     if (!availabilityEnabled || availabilityQuery.isLoading || availabilityQuery.isError) return;
-    if (!availabilitySlots.length) return;
-    if (selectedSlot?.available) return;
+    const validTime = resolveAvailableScheduledTime(values.scheduledTime, availabilitySlots);
+    if (validTime) return;
 
-    setValue('scheduledTime', availableSlots[0] ? toSlotTime(availableSlots[0].startAt) : '', {
+    setValue('scheduledTime', '', {
       shouldDirty: true,
       shouldValidate: true,
     });
@@ -424,6 +435,7 @@ export function CreateAppointmentModal({
     availableSlots,
     selectedSlot?.available,
     setValue,
+    values.scheduledTime,
   ]);
 
   useEffect(() => {
@@ -506,6 +518,7 @@ export function CreateAppointmentModal({
     if (values.serviceIds[0] === serviceId) return;
 
     setValue('serviceIds', [serviceId], { shouldDirty: true, shouldValidate: true });
+    setValue('scheduledTime', '', { shouldDirty: true, shouldValidate: true });
     setValue('promotionId', '', { shouldDirty: true });
     setValue('rewardRedemptionId', '', { shouldDirty: true });
     setCatalogNotice(null);
@@ -556,7 +569,7 @@ export function CreateAppointmentModal({
       await onSubmit({
         vehicleId: formValues.vehicleId,
         services: formValues.serviceIds.map((serviceId) => ({ serviceId })),
-        scheduledAt: `${formValues.scheduledDate}T${formValues.scheduledTime}:00`,
+        scheduledAt: serializeScheduledAt(formValues.scheduledDate, formValues.scheduledTime),
         note: formValues.note?.trim() || undefined,
         promotionId: formValues.promotionId || undefined,
         rewardRedemptionId: formValues.rewardRedemptionId || undefined,
@@ -718,6 +731,16 @@ export function CreateAppointmentModal({
                       !bookableVehicles.length
                     }
                     {...register('vehicleId')}
+                    onChange={(event) => {
+                      setValue('vehicleId', event.target.value, {
+                        shouldDirty: true,
+                        shouldValidate: true,
+                      });
+                      setValue('scheduledTime', '', {
+                        shouldDirty: true,
+                        shouldValidate: true,
+                      });
+                    }}
                   >
                     <option value="">Chọn xe của bạn</option>
                     {bookableVehicles.map((vehicle) => (
@@ -751,12 +774,16 @@ export function CreateAppointmentModal({
                     <DatePicker
                       className="h-11 rounded-xl bg-white"
                       value={values.scheduledDate}
-                      onChange={(value) =>
+                      onChange={(value) => {
                         setValue('scheduledDate', value, {
                           shouldDirty: true,
                           shouldValidate: true,
-                        })
-                      }
+                        });
+                        setValue('scheduledTime', '', {
+                          shouldDirty: true,
+                          shouldValidate: true,
+                        });
+                      }}
                       disabled={isSubmitting}
                       disabledDates={{ before: new Date(), after: maxBookingDate }}
                       placeholder="Chọn ngày hẹn"
@@ -768,7 +795,7 @@ export function CreateAppointmentModal({
                     <select
                       aria-label="Chọn khung giờ"
                       className="h-11 w-full rounded-xl border border-[#d8e2ef] bg-white px-3 text-sm font-semibold text-[#64748b] outline-none focus:border-[#0b67c2]"
-                      defaultValue=""
+                      value={values.scheduledTime}
                       disabled={
                         isSubmitting ||
                         !availabilityEnabled ||
@@ -776,7 +803,6 @@ export function CreateAppointmentModal({
                         hasUnfinishedVehicleBooking
                       }
                       onChange={(event) => {
-                        if (!event.target.value) return;
                         setValue('scheduledTime', event.target.value, {
                           shouldDirty: true,
                           shouldValidate: true,
@@ -816,6 +842,9 @@ export function CreateAppointmentModal({
                     shouldBlockSelectedSlot &&
                     availableSlots.length > 0 ? (
                       <FieldError>Khung giờ đã chọn không còn khả dụng.</FieldError>
+                    ) : null}
+                    {currentStep === 2 && !values.scheduledTime && !errors.scheduledTime ? (
+                      <FieldError>Vui lòng chọn giờ hẹn.</FieldError>
                     ) : null}
                     <FieldError>{errors.scheduledTime?.message}</FieldError>
                   </Field>
