@@ -24,7 +24,7 @@ export { loyaltyKeys, membershipTierKeys, rewardKeys };
 
 const dynamicLoyaltyQueryOptions = {
   staleTime: 0,
-  refetchInterval: 15_000,
+  refetchInterval: 5_000,
   refetchIntervalInBackground: false,
   refetchOnMount: 'always',
   refetchOnWindowFocus: true,
@@ -54,6 +54,7 @@ export function useCustomersWithLoyalty(
     queryKey: loyaltyKeys.customers(params),
     queryFn: ({ signal }) => loyaltyApi.getCustomers(params, signal),
     refetchOnMount: 'always',
+    refetchInterval: 5_000,
   });
 }
 
@@ -72,6 +73,7 @@ export function useCustomerLoyaltyTransactions(customerId: string) {
     queryFn: ({ signal }) => loyaltyApi.getCustomerTransactions(customerId, signal),
     enabled: !!customerId,
     refetchOnMount: 'always',
+    refetchInterval: 5_000,
   });
 }
 
@@ -81,6 +83,7 @@ export function useCustomerRedemptions(customerId: string) {
     queryFn: ({ signal }) => loyaltyApi.getCustomerRedemptions(customerId, signal),
     enabled: !!customerId,
     refetchOnMount: 'always',
+    refetchInterval: 5_000,
   });
 }
 
@@ -89,6 +92,7 @@ export function useMembershipTiers() {
     queryKey: membershipTierKeys.all,
     queryFn: ({ signal }) => membershipTierApi.list(signal),
     refetchOnMount: 'always',
+    refetchInterval: 5_000,
   });
 }
 

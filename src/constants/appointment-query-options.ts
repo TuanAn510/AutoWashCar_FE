@@ -1,4 +1,4 @@
-export const APPOINTMENT_SYNC_INTERVAL = 3_000;
+export const APPOINTMENT_SYNC_INTERVAL = 5_000;
 
 export const liveAppointmentQueryOptions = {
   staleTime: 0,

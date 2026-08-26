@@ -17,6 +17,7 @@ export function usePromotions(params?: PromotionListParams) {
     queryKey: queryKeys.promotions.list(params),
     queryFn: ({ signal }) => promotionApi.list(params, signal),
     refetchOnMount: 'always',
+    refetchInterval: 5_000,
   });
 }
 
@@ -26,6 +27,7 @@ export function useActivePromotions(options: { enabled?: boolean } = {}) {
     queryFn: ({ signal }) => promotionApi.listActive(signal),
     enabled: options.enabled,
     refetchOnMount: 'always',
+    refetchInterval: 5_000,
   });
 }
 

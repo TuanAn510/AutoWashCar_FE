@@ -14,7 +14,7 @@ export function useStaffAccounts() {
   return useQuery({
     queryKey: queryKeys.users.staffs.list({ scope: 'admin', includeInactive: true }),
     queryFn: ({ signal }) => staffsApi.listAccounts(undefined, signal),
-    refetchInterval: 10_000,
+    refetchInterval: 5_000,
     refetchOnWindowFocus: true,
   });
 }
@@ -23,7 +23,7 @@ export function useStaffOperationalMetrics() {
   return useQuery({
     queryKey: queryKeys.users.staffs.workload(),
     queryFn: ({ signal }) => staffsApi.workload(signal),
-    refetchInterval: 10_000,
+    refetchInterval: 5_000,
     refetchOnWindowFocus: true,
   });
 }
