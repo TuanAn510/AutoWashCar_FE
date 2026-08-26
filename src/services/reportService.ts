@@ -193,22 +193,6 @@ export interface CustomerRetentionReport {
   }>;
 }
 
-export interface OperationalAlertReport {
-  total: number;
-  summary: Record<string, number>;
-  alerts: Array<{
-    type: string;
-    severity: 'HIGH' | 'MEDIUM' | 'LOW';
-    bookingId: string;
-    message: string;
-    occurredAt: string | null;
-    customerName?: string | null;
-    vehicleName?: string | null;
-    licensePlate?: string | null;
-    scheduledAt?: string | null;
-  }>;
-}
-
 export interface ProjectReport {
   architecture: string;
   features: string[];
@@ -230,7 +214,6 @@ export interface ReportsStatistics {
   serviceTimes: ServiceTimeReport;
   promotionEffectiveness: PromotionEffectivenessReport;
   customerRetention: CustomerRetentionReport;
-  operationalAlerts: OperationalAlertReport;
 }
 
 const getData = async <T>(url: string, params?: object, signal?: AbortSignal) => {
@@ -263,9 +246,6 @@ export const reportApi = {
     getData<PromotionEffectivenessReport>('/reports/promotion-effectiveness', params, signal),
   getCustomerRetention: (params?: DateRangeParams, signal?: AbortSignal) =>
     getData<CustomerRetentionReport>('/reports/customer-retention', params, signal),
-  getOperationalAlerts: (signal?: AbortSignal) =>
-    getData<OperationalAlertReport>('/reports/operational-alerts', undefined, signal),
-
   exportBookingsCsv: async (params?: DateRangeParams, signal?: AbortSignal) => {
     const response = await api.get<Blob>('/admin/reports/export/bookings.csv', {
       params,
@@ -314,7 +294,6 @@ export const reportApi = {
       serviceTimes,
       promotionEffectiveness,
       customerRetention,
-      operationalAlerts,
     ] =
       await Promise.all([
         reportApi.getRevenue(
@@ -340,7 +319,6 @@ export const reportApi = {
         reportApi.getServiceTimes(dateParams, signal),
         reportApi.getPromotionEffectiveness(dateParams, signal),
         reportApi.getCustomerRetention(dateParams, signal),
-        reportApi.getOperationalAlerts(signal),
       ]);
 
     return {
@@ -355,7 +333,6 @@ export const reportApi = {
       serviceTimes,
       promotionEffectiveness,
       customerRetention,
-      operationalAlerts,
     };
   },
 };

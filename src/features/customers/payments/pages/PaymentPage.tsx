@@ -22,7 +22,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useAppointmentDetail } from '@/features/customers/appointments/hooks/useAppointmentDetail';
 import { canCustomerPayAppointment } from '@/features/customers/appointments/utils/appointmentDisplay';
 import { paymentService } from '@/services/paymentService';
-import { queryKeys } from '@/constants/queryKeys';
 import { cn, formatDateTime, formatPrice, formatTime } from '@/lib/utils';
 import type { AppointmentPaymentMethod } from '@/types/appointment';
 
@@ -146,8 +145,6 @@ export default function PaymentPage() {
   const { data: appointment, isLoading, isError } = useAppointmentDetail(appointmentId ?? null);
 
   const paymentStatus = searchParams.get('status');
-
-const queryClient = useQueryClient();
 
 useEffect(() => {
   if (paymentStatus !== 'success' && paymentStatus !== 'failure') return;
