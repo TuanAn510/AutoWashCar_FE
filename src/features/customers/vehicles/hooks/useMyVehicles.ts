@@ -8,5 +8,6 @@ export function useMyVehicles(includeInactive = false) {
     queryKey: [...queryKeys.vehicles.mine(), { includeInactive }],
     queryFn: ({ signal }) => vehiclesApi.getMyVehicles(undefined, signal, includeInactive),
     refetchOnMount: 'always',
+    refetchInterval: 5_000,
   });
 }

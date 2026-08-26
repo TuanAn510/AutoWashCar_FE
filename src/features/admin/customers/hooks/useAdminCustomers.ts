@@ -13,6 +13,7 @@ export function useCustomers(params?: PaginationParams) {
     queryKey: queryKeys.users.customers.list(params),
     queryFn: ({ signal }) => customersApi.list(params, signal),
     refetchOnMount: 'always',
+    refetchInterval: 5_000,
   });
 }
 
@@ -21,7 +22,7 @@ export function useStaffWorkload() {
     queryKey: queryKeys.users.staffs.workload(),
     queryFn: ({ signal }) => staffsApi.workload(signal),
     staleTime: 0,
-    refetchInterval: 10_000,
+    refetchInterval: 5_000,
     refetchOnWindowFocus: true,
   });
 }

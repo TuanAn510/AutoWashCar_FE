@@ -13,5 +13,7 @@ export function useCustomerServiceHistories(vehicleId: string, params?: Paginati
       vehicleId
         ? customerServiceHistoryApi.getMyVehicleServiceHistories(vehicleId, params, signal)
         : customerServiceHistoryApi.getMyServiceHistories(params, signal),
+    refetchOnMount: 'always',
+    refetchInterval: 5_000,
   });
 }

@@ -1,4 +1,4 @@
-export const DYNAMIC_CATALOG_REFETCH_INTERVAL = 15_000;
+export const DYNAMIC_CATALOG_REFETCH_INTERVAL = 5_000;
 
 export const dynamicCatalogQueryOptions = {
   staleTime: 0,

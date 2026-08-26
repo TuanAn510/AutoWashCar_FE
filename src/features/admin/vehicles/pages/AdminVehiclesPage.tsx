@@ -127,6 +127,7 @@ export default function AdminVehiclesPage() {
     queryKey: ['vehicle-access-requests', 'admin', 'pending'],
     queryFn: () => vehicleAccessRequestApi.listAdmin('pending'),
     refetchOnMount: 'always',
+    refetchInterval: 5_000,
   });
   const pendingRequests = useMemo(
     () => pendingRequestsQuery.data ?? [],

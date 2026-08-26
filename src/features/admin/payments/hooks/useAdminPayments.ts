@@ -10,6 +10,6 @@ export function useAdminPayments() {
     queryKey: adminPaymentsQueryKey,
     queryFn: ({ signal }) =>
       adminAppointmentsApi.getAppointments({ limit: 1000 }, signal).then((res) => res.appointments),
-    refetchInterval: 15_000,
+    refetchInterval: 5_000,
   });
 }

@@ -11,5 +11,6 @@ export function useAdminServiceHistories(filters?: ServiceHistoryListParams) {
     queryKey: queryKeys.serviceHistories.admin.list(filters),
     queryFn: ({ signal }) => adminServiceHistoryApi.getServiceHistories(filters, signal),
     refetchOnMount: 'always',
+    refetchInterval: 5_000,
   });
 }
