@@ -64,7 +64,7 @@ import type { AppointmentItem } from '@/types/appointment';
 import type { User } from '@/types/user';
 
 type CustomerStatusFilter = 'all' | 'active' | 'inactive';
-type CustomerDetailTab = 'overview' | 'appointments' | 'payments' | 'loyalty';
+type CustomerDetailTab = 'overview' | 'appointments' | 'payments';
 type CustomerSortKey = 'name' | 'phone' | 'status' | 'createdAt';
 
 interface CustomerRow {
@@ -275,12 +275,14 @@ function LoyaltyMetric({
 function CustomerDetailDialogBody({
   customer,
   loyalty,
+  transactionsQuery,
   isLoading,
   isError,
   onRetry,
 }: {
   customer: CustomerRow;
   loyalty?: LoyaltyAccount | null;
+  transactionsQuery: ReturnType<typeof useCustomerLoyaltyTransactions>;
   isLoading: boolean;
   isError: boolean;
   onRetry: () => void;
@@ -394,6 +396,10 @@ function CustomerDetailDialogBody({
                     : 'Chưa có dữ liệu'
                 }
               />
+            </div>
+
+            <div className="mt-5">
+              <LoyaltyHistorySection query={transactionsQuery} />
             </div>
           </>
         ) : (
@@ -613,7 +619,7 @@ function PaymentHistoryTab({
   );
 }
 
-function LoyaltyHistoryTab({
+function LoyaltyHistorySection({
   query,
 }: {
   query: ReturnType<typeof useCustomerLoyaltyTransactions>;
@@ -979,17 +985,17 @@ export default function CustomerManagementPage() {
               onValueChange={(value) => setDetailTab(value as CustomerDetailTab)}
               className="min-h-0"
             >
-              <TabsList className="grid h-auto w-full grid-cols-4">
+              <TabsList className="grid h-auto w-full grid-cols-3">
                 <TabsTrigger value="overview">Tổng quan</TabsTrigger>
                 <TabsTrigger value="appointments">Lịch đã đặt</TabsTrigger>
                 <TabsTrigger value="payments">Thanh toán</TabsTrigger>
-                <TabsTrigger value="loyalty">Lịch sử tích điểm</TabsTrigger>
               </TabsList>
               <div className="max-h-[70vh] overflow-y-auto pr-1">
                 <TabsContent value="overview">
                   <CustomerDetailDialogBody
                     customer={detailTarget}
                     loyalty={loyaltyQuery.data}
+                    transactionsQuery={transactionsQuery}
                     isLoading={loyaltyQuery.isLoading}
                     isError={loyaltyQuery.isError}
                     onRetry={() => loyaltyQuery.refetch()}
@@ -1010,9 +1016,6 @@ export default function CustomerManagementPage() {
                     onPageChange={setPaymentPage}
                     onView={setViewAppointment}
                   />
-                </TabsContent>
-                <TabsContent value="loyalty">
-                  <LoyaltyHistoryTab query={transactionsQuery} />
                 </TabsContent>
               </div>
             </Tabs>
