@@ -8,5 +8,6 @@ export function useAdminVehicles(params?: PaginationParams) {
   return useQuery({
     queryKey: queryKeys.vehicles.admin.list(params),
     queryFn: ({ signal }) => vehiclesApi.listAll(params, signal),
+    refetchOnMount: 'always',
   });
 }

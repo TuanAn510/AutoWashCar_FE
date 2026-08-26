@@ -12,6 +12,7 @@ export function useCustomers(params?: PaginationParams) {
   return useQuery({
     queryKey: queryKeys.users.customers.list(params),
     queryFn: ({ signal }) => customersApi.list(params, signal),
+    refetchOnMount: 'always',
   });
 }
 

@@ -11,7 +11,7 @@ export const queryClient = new QueryClient({
         failureCount < 1 && (!(error instanceof ApiError) || error.retryable),
       refetchOnWindowFocus: false,
       refetchOnReconnect: true,
-      refetchOnMount: false,
+      refetchOnMount: 'always',
       networkMode: 'online',
     },
     mutations: {

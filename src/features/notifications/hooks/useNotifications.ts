@@ -36,13 +36,35 @@ export function useNotificationMutations() {
   return {
     markRead: useMutation({
       mutationFn: notificationApi.markRead,
-      onSuccess: invalidate,
+      onMutate: async (id) => {
+        await queryClient.cancelQueries({ queryKey: queryKeys.notifications.all });
+        // Optimistically mark the notification as read in all list caches
+        queryClient.setQueriesData(
+          { queryKey: queryKeys.notifications.list() },
+          (old: NotificationPage | undefined) =>
+            old
+              ? {
+                  ...old,
+                  content: old.content.map((n) =>
+                    n.id === id ? { ...n, read: true } : n,
+                  ),
+                }
+              : old,
+        );
+      },
+      onSuccess: async () => {
+        await invalidate();
+      },
+      onError: () => {
+        // Rollback by refetching on error
+        invalidate();
+      },
     }),
     markAllRead: useMutation({
       mutationFn: notificationApi.markAllRead,
-      onSuccess: async (data) => {
+      onMutate: async () => {
         await queryClient.cancelQueries({ queryKey: queryKeys.notifications.all });
-        queryClient.setQueryData(queryKeys.notifications.unreadCount(), data);
+        queryClient.setQueryData(queryKeys.notifications.unreadCount(), { count: 0 });
         // Mark every notification in every page cache as read
         queryClient.setQueriesData(
           { queryKey: queryKeys.notifications.list() },
@@ -51,7 +73,13 @@ export function useNotificationMutations() {
               ? { ...old, content: old.content.map((n) => ({ ...n, read: true })) }
               : old,
         );
+      },
+      onSuccess: async (data) => {
+        queryClient.setQueryData(queryKeys.notifications.unreadCount(), data);
         await invalidate();
+      },
+      onError: () => {
+        invalidate();
       },
     }),
   };

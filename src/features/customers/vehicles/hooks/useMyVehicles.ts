@@ -7,5 +7,6 @@ export function useMyVehicles(includeInactive = false) {
   return useQuery({
     queryKey: [...queryKeys.vehicles.mine(), { includeInactive }],
     queryFn: ({ signal }) => vehiclesApi.getMyVehicles(undefined, signal, includeInactive),
+    refetchOnMount: 'always',
   });
 }

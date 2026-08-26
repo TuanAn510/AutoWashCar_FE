@@ -221,6 +221,8 @@ export default function MyVehiclesPage() {
     }
     setIsCreateOpen(false);
     clearCreateSearchParam();
+    // Force refetch để đảm bảo danh sách xe được cập nhật ngay sau khi thêm.
+    myVehiclesQuery.refetch();
   };
 
   const handleUpdateVehicle = async (payload: CreateVehiclePayload | UpdateVehiclePayload) => {
