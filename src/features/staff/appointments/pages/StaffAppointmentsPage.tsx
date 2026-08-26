@@ -20,7 +20,10 @@ import { StaffAppointmentSummaryCards } from '@/features/staff/appointments/comp
 import { UpdateAppointmentStatusDialog } from '@/features/staff/appointments/components/UpdateAppointmentStatusDialog';
 import { getAllowedStaffAppointmentStatuses } from '@/features/staff/appointments/constants/appointmentStatus';
 import { useMyStaffAppointments } from '@/features/staff/appointments/hooks/useMyStaffAppointments';
-import { useUpdateAppointmentStatus } from '@/features/staff/appointments/hooks/useUpdateAppointmentStatus';
+import {
+  useConfirmStaffAppointmentPayment,
+  useUpdateAppointmentStatus,
+} from '@/features/staff/appointments/hooks/useUpdateAppointmentStatus';
 
 const getLocalDateRange = (date: string) => {
   const [year, month, day] = date.split('-').map(Number);
@@ -82,6 +85,7 @@ export default function StaffAppointmentsPage() {
 
   const staffAppointmentsQuery = useMyStaffAppointments(appointmentFilters);
   const updateStatusMutation = useUpdateAppointmentStatus();
+  const confirmPaymentMutation = useConfirmStaffAppointmentPayment();
 
   const appointments = useMemo(
     () => staffAppointmentsQuery.data?.appointments ?? [],
@@ -166,6 +170,14 @@ export default function StaffAppointmentsPage() {
     });
     setNextStatus('');
     setStatusAppointment(null);
+  };
+
+  const handleConfirmCashPayment = async (appointment: AppointmentItem) => {
+    await confirmPaymentMutation.mutateAsync({
+      appointmentId: appointment._id,
+      payload: { paymentStatus: 'paid', paymentMethod: 'cash' },
+    });
+    setDetailAppointment(null);
   };
 
   return (
@@ -343,6 +355,7 @@ export default function StaffAppointmentsPage() {
             setDetailAppointment(null);
           }
         }}
+        onConfirmPayment={handleConfirmCashPayment}
       />
 
       <UpdateAppointmentStatusDialog
