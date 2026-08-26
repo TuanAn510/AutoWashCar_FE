@@ -43,7 +43,9 @@ export function useUpdateVehicle() {
       const needsReVerification =
         data?.verificationStatus && data.verificationStatus !== 'approved';
       if (needsReVerification) {
-        toast.success('Xe đã được cập nhật. Thông tin xe cần được xác minh lại, vui lòng chờ admin duyệt.');
+        toast.success(
+          'Xe đã được cập nhật. Thông tin xe cần được xác minh lại, vui lòng chờ admin duyệt.'
+        );
       } else {
         toast.success('Cập nhật xe thành công.');
       }
