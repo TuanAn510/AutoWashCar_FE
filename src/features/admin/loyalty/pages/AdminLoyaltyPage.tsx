@@ -64,10 +64,6 @@ function CustomerActionsMenu({ customerId }: { customerId: string }) {
           <Eye className="size-4" />
           Xem chi tiết
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => navigate(`${detailPath}#transactions`)}>
-          <History className="size-4" />
-          Xem lịch sử giao dịch
-        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );
