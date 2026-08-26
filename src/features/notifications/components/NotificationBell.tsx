@@ -18,9 +18,8 @@ import {
 } from '@/features/notifications/hooks/useNotifications';
 import { cn, formatDateTimeVi } from '@/lib/utils';
 import type { NotificationItem } from '@/services/notificationService';
-import type { User } from '@/types/user';
 
-export function NotificationBell({ user }: { user: User }) {
+export function NotificationBell() {
   const [page, setPage] = useState(0);
   const notificationsQuery = useNotifications(page);
   const unreadCountQuery = useUnreadNotificationCount();
