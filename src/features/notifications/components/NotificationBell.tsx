@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 
 import { Bell, CheckCheck, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
-import { useNavigate } from 'react-router';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -13,7 +12,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
-  COLLAPSED_INITIAL_COUNT,
   useNotificationMutations,
   useNotifications,
   useUnreadNotificationCount,
@@ -22,34 +20,8 @@ import { cn, formatDateTimeVi } from '@/lib/utils';
 import type { NotificationItem } from '@/services/notificationService';
 import type { User } from '@/types/user';
 
-const targetPath = (notification: NotificationItem, role: User['role']) => {
-  if (notification.targetType === 'PAYMENT') {
-    return role === 'customer' ? '/customer/appointments' : '/admin/payments';
-  }
-  if (notification.targetType === 'LOYALTY') {
-    return role === 'customer' ? '/customer/loyalty' : '/admin/loyalty';
-  }
-  if (notification.targetType === 'VEHICLE_REQUEST') {
-    return role === 'customer' ? '/customer/vehicles' : '/admin/vehicle-access';
-  }
-  if (notification.targetType === 'VEHICLE') {
-    return role === 'customer' ? '/customer/vehicles' : '/admin/vehicles';
-  }
-  if (notification.targetType === 'PROMOTION') {
-    return role === 'customer' ? '/customer/appointments' : '/admin/promotions';
-  }
-  if (notification.targetType === 'BOOKING') {
-    if (role === 'staff') return '/staff/appointments';
-    if (role === 'admin') return '/admin/appointments';
-    return '/customer/appointments';
-  }
-  return role === 'admin' ? '/admin/dashboard' : role === 'staff' ? '/staff/dashboard' : '/customer/dashboard';
-};
-
 export function NotificationBell({ user }: { user: User }) {
-  const navigate = useNavigate();
   const [page, setPage] = useState(0);
-  const [expanded, setExpanded] = useState(false);
   const notificationsQuery = useNotifications(page);
   const unreadCountQuery = useUnreadNotificationCount();
   const { markRead, markAllRead } = useNotificationMutations();
@@ -59,11 +31,6 @@ export function NotificationBell({ user }: { user: User }) {
   const totalElements = pageData?.totalElements ?? 0;
   const totalPages = pageData?.totalPages ?? 0;
   const unreadCount = unreadCountQuery.data?.count ?? 0;
-
-  const visibleNotifications = expanded
-    ? allNotifications
-    : allNotifications.slice(0, COLLAPSED_INITIAL_COUNT);
-  const hasMoreCollapsed = !expanded && allNotifications.length > COLLAPSED_INITIAL_COUNT;
 
   const knownNotificationIdsRef = useRef<Set<number> | null>(null);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -95,16 +62,10 @@ export function NotificationBell({ user }: { user: User }) {
     };
   }, []);
 
-  const handleOpenNotification = async (notification: NotificationItem) => {
+  const handleMarkAsRead = (notification: NotificationItem) => {
     if (!notification.read) {
-      await markRead.mutateAsync(notification.id);
+      markRead.mutate(notification.id);
     }
-    navigate(targetPath(notification, user.role));
-  };
-
-  const handleToggleExpand = () => {
-    setExpanded((prev) => !prev);
-    if (expanded) setPage(0);
   };
 
   return (
@@ -128,7 +89,6 @@ export function NotificationBell({ user }: { user: User }) {
           if (open) {
             setPreviewNotification(null);
             setPage(0);
-            setExpanded(false);
           }
         }}
       >
@@ -162,7 +122,10 @@ export function NotificationBell({ user }: { user: User }) {
               size="sm"
               className="h-7 rounded-md px-2 text-xs"
               disabled={unreadCount === 0 || markAllRead.isPending}
-              onClick={() => markAllRead.mutate()}
+              onPointerDown={(e) => {
+                e.preventDefault();
+                markAllRead.mutate();
+              }}
             >
               {markAllRead.isPending ? (
                 <Loader2 className="size-3.5 animate-spin" />
@@ -184,13 +147,13 @@ export function NotificationBell({ user }: { user: User }) {
               </p>
             ) : (
               <>
-                {visibleNotifications.map((notification) => (
+                {allNotifications.map((notification) => (
                   <DropdownMenuItem
                     key={notification.id}
                     className="items-start gap-3 rounded-xl px-4 py-4"
                     onSelect={(event) => {
                       event.preventDefault();
-                      void handleOpenNotification(notification);
+                      handleMarkAsRead(notification);
                     }}
                   >
                     <span
@@ -212,27 +175,10 @@ export function NotificationBell({ user }: { user: User }) {
                     </span>
                   </DropdownMenuItem>
                 ))}
-                {hasMoreCollapsed || expanded ? (
-                  <div className="px-2 pt-1">
-                    <button
-                      type="button"
-                      className="w-full rounded-lg py-2 text-center text-xs font-medium text-blue-600 hover:bg-blue-50 transition-colors"
-                      onPointerDown={(e) => e.preventDefault()}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleToggleExpand();
-                      }}
-                    >
-                      {expanded
-                        ? 'Thu gọn'
-                        : `Xem thêm (${allNotifications.length - COLLAPSED_INITIAL_COUNT}+)`}
-                    </button>
-                  </div>
-                ) : null}
               </>
             )}
           </div>
-          {expanded && totalPages > 1 ? (
+          {totalPages > 1 ? (
             <>
               <DropdownMenuSeparator className="m-0" />
               <div className="flex items-center justify-between px-4 py-2.5">
@@ -241,9 +187,8 @@ export function NotificationBell({ user }: { user: User }) {
                   size="sm"
                   className="h-7 gap-1 text-xs"
                   disabled={page === 0}
-                  onPointerDown={(e) => e.preventDefault()}
-                  onClick={(e) => {
-                    e.stopPropagation();
+                  onPointerDown={(e) => {
+                    e.preventDefault();
                     setPage((p) => Math.max(0, p - 1));
                   }}
                 >
@@ -258,9 +203,8 @@ export function NotificationBell({ user }: { user: User }) {
                   size="sm"
                   className="h-7 gap-1 text-xs"
                   disabled={page >= totalPages - 1}
-                  onPointerDown={(e) => e.preventDefault()}
-                  onClick={(e) => {
-                    e.stopPropagation();
+                  onPointerDown={(e) => {
+                    e.preventDefault();
                     setPage((p) => Math.min(totalPages - 1, p + 1));
                   }}
                 >
