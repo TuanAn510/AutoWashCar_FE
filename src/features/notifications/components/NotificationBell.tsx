@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 
-import { Bell, CheckCheck, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import { Bell, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router';
 
 import { Button } from '@/components/ui/button';
@@ -52,7 +52,7 @@ export function NotificationBell({ user }: { user: User }) {
   const [expanded, setExpanded] = useState(false);
   const notificationsQuery = useNotifications(page);
   const unreadCountQuery = useUnreadNotificationCount();
-  const { markRead, markAllRead } = useNotificationMutations();
+  const { markRead } = useNotificationMutations();
 
   const pageData = notificationsQuery.data;
   const allNotifications = pageData?.content ?? [];
@@ -157,20 +157,6 @@ export function NotificationBell({ user }: { user: User }) {
                 </span>
               ) : null}
             </DropdownMenuLabel>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 rounded-md px-2 text-xs"
-              disabled={unreadCount === 0 || markAllRead.isPending}
-              onClick={() => markAllRead.mutate()}
-            >
-              {markAllRead.isPending ? (
-                <Loader2 className="size-3.5 animate-spin" />
-              ) : (
-                <CheckCheck className="size-3.5" />
-              )}
-              Đọc tất cả
-            </Button>
           </div>
           <DropdownMenuSeparator className="m-0" />
           <div className="max-h-[620px] overflow-y-auto p-2">
