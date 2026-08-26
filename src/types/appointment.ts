@@ -278,13 +278,13 @@ export interface AppointmentListResult {
 
 export interface CreatePaymentPayload {
   appointmentId: string;
-  method: 'vnpay' | 'momo';
+  method: AppointmentPaymentMethod;
 }
 
 export interface PaymentResult {
   paymentUrl: string;
   paymentId: string;
-  method: 'vnpay' | 'momo';
+  method: AppointmentPaymentMethod;
   amount: number;
   expiresAt: string;
   qrCodeUrl?: string;

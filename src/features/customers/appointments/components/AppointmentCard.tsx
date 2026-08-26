@@ -1,10 +1,11 @@
-import { CalendarClock, Clock3, Eye, NotebookPen, XCircle } from 'lucide-react';
+import { CalendarClock, Clock3, CreditCard, Eye, NotebookPen, XCircle } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { AppointmentStatusBadge } from '@/features/customers/appointments/components/AppointmentStatusBadge';
 import {
   canCustomerCancelAppointment,
+  canCustomerPayAppointment,
   CUSTOMER_REFUND_REQUIRED_MESSAGE,
   formatAppointmentServicesTitle,
   formatAppointmentVehicleLine,
@@ -31,16 +32,19 @@ export function AppointmentCard({
   appointment,
   onViewDetail,
   onCancel,
+  onPay,
 }: {
   appointment: AppointmentItem;
   onViewDetail: (appointment: AppointmentItem) => void;
   onCancel: (appointment: AppointmentItem) => void;
+  onPay?: (appointment: AppointmentItem) => void;
 }) {
   const canCancel = canCustomerCancelAppointment(
     appointment.status,
     appointment.paymentStatus,
     appointment.scheduledAt
   );
+  const canPay = canCustomerPayAppointment(appointment.status, appointment.paymentStatus);
   const note = appointment.note?.trim();
   const { discountedPrice, hasDiscount, originalPrice } = getAppointmentPriceDisplay(appointment);
   const createdAt = appointment.createdAt
@@ -134,6 +138,16 @@ export function AppointmentCard({
             <Eye className="size-4" />
             Chi tiết
           </Button>
+          {canPay ? (
+            <Button
+              size="sm"
+              className="flex-1 rounded-md font-semibold sm:flex-none"
+              onClick={() => onPay?.(appointment)}
+            >
+              <CreditCard className="size-4" />
+              Thanh toán
+            </Button>
+          ) : null}
           {canCancel ? (
             <Button
               variant="outline"

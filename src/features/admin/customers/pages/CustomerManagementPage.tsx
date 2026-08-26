@@ -328,7 +328,7 @@ function CustomerDetailDialogBody({
       <section className="rounded-lg border border-slate-200 bg-white p-4">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-xs font-semibold uppercase text-slate-500">Loyalty</p>
+            <p className="text-xs font-semibold uppercase text-slate-500">Điểm thưởng</p>
             <h3 className="mt-1 text-lg font-bold tracking-normal text-slate-950">
               Điểm thưởng và hạng thành viên
             </h3>

@@ -1,12 +1,10 @@
 import { useState } from 'react';
 import {
-  AlertTriangle,
   Clock3,
   Download,
   FileSpreadsheet,
   FileText,
   Loader2,
-  ShieldAlert,
   Tags,
   UserRoundCheck,
   UsersRound,
@@ -14,12 +12,10 @@ import {
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
-import { formatLicensePlateDisplay } from '@/features/customers/vehicles/utils/license-plate';
 import { formatCurrencyVi, formatNumberVi } from '@/lib/utils';
 import {
   reportApi,
   type DateRangeParams,
-  type OperationalAlertReport,
   type ReportsStatistics,
 } from '@/services/reportService';
 
@@ -29,27 +25,6 @@ const segmentLabels: Record<string, string> = {
   loyal: 'Khách trung thành',
   at_risk: 'Có nguy cơ rời bỏ',
   inactive: 'Không hoạt động',
-};
-
-const alertLabels: Record<string, string> = {
-  UNASSIGNED: 'Chưa phân công',
-  OVERDUE_CHECK_IN: 'Quá giờ check-in',
-  LONG_RUNNING: 'Phục vụ quá lâu',
-  COMPLETED_UNPAID: 'Hoàn thành chưa thanh toán',
-  REFUND_REQUIRED: 'Cần hoàn tiền',
-};
-
-const formatAlertSchedule = (value?: string | null) => {
-  if (!value) return null;
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return null;
-  return new Intl.DateTimeFormat('vi-VN', {
-    hour: '2-digit',
-    minute: '2-digit',
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  }).format(date);
 };
 
 function SectionHeader({ icon: Icon, title, subtitle }: {
@@ -85,64 +60,6 @@ function Progress({ value, tone = 'bg-blue-600' }: { value: number; tone?: strin
       <div className={`h-full rounded-full ${tone}`} style={{ width: `${Math.min(100, Math.max(0, value))}%` }} />
     </div>
   );
-}
-
-export function AlertPanel({ report }: { report: OperationalAlertReport }) {
-  return (
-    <section className="rounded-lg border border-amber-200 bg-amber-50/40 p-5">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <SectionHeader
-          icon={ShieldAlert}
-          title="Cảnh báo vận hành"
-          subtitle="Các booking cần Admin kiểm tra và xử lý sớm."
-        />
-        <span className="inline-flex w-fit items-center gap-2 rounded-full bg-amber-100 px-3 py-1 text-sm font-semibold text-amber-800">
-          <AlertTriangle className="size-4" /> {formatNumberVi(report.total)} cảnh báo
-        </span>
-      </div>
-      <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-        {report.alerts.length ? report.alerts.slice(0, 9).map((alert, index) => (
-          <div key={`${alert.type}-${alert.bookingId}-${index}`} className="rounded-lg border border-amber-100 bg-white p-4">
-            <div className="flex items-center gap-3">
-              <span className="rounded-full bg-rose-50 px-2 py-1 text-xs font-semibold text-rose-700">
-                {alertLabels[alert.type] ?? alert.type}
-              </span>
-            </div>
-            <div className="mt-3">
-              <p className="font-semibold text-slate-950">
-                {alert.customerName?.trim() || 'Chưa có thông tin khách hàng'}
-              </p>
-              <p className="mt-1 text-sm text-slate-600">
-                {alert.vehicleName?.trim() || 'Chưa có thông tin xe'}
-                {alert.licensePlate?.trim()
-                  ? ` · ${formatLicensePlateDisplay(alert.licensePlate)}`
-                  : ''}
-              </p>
-              {formatAlertSchedule(alert.scheduledAt) ? (
-                <p className="mt-2 text-sm font-medium text-blue-700">
-                  Hẹn lúc: {formatAlertSchedule(alert.scheduledAt)}
-                </p>
-              ) : null}
-            </div>
-          </div>
-        )) : (
-          <div className="col-span-full rounded-lg border border-dashed border-emerald-200 bg-emerald-50 p-6 text-center text-sm font-medium text-emerald-700">
-            Không có cảnh báo vận hành cần xử lý.
-          </div>
-        )}
-      </div>
-    </section>
-  );
-}
-
-export function OperationalAlertsSection({
-  report,
-  visible,
-}: {
-  report: OperationalAlertReport;
-  visible: boolean;
-}) {
-  return visible ? <AlertPanel report={report} /> : null;
 }
 
 export function ReportExportActions({ params }: { params: DateRangeParams }) {
@@ -182,18 +99,15 @@ export function ReportExportActions({ params }: { params: DateRangeParams }) {
   );
 }
 
-export function AdvancedReportSections({ reports, periodLabel, showOperationalAlerts = true }: {
+export function AdvancedReportSections({ reports, periodLabel }: {
   reports: ReportsStatistics;
   periodLabel: string;
-  showOperationalAlerts?: boolean;
 }) {
   const staff = reports.staffPerformance.staff;
   const maxCompleted = Math.max(1, ...staff.map((item) => item.completedBookings));
 
   return (
     <div className="space-y-5">
-      <OperationalAlertsSection report={reports.operationalAlerts} visible={showOperationalAlerts} />
-
       <section className="grid gap-5 xl:grid-cols-2">
         <div className="rounded-lg border border-border/80 bg-white p-5">
           <SectionHeader icon={UserRoundCheck} title="Hiệu suất nhân viên" subtitle={`Kết quả trong ${periodLabel.toLowerCase()}.`} />
@@ -204,7 +118,7 @@ export function AdvancedReportSections({ reports, periodLabel, showOperationalAl
                   <div>
                     <p className="font-semibold text-slate-900">{item.staffName}</p>
                     <p className="mt-1 text-xs text-slate-500">
-                      {formatNumberVi(item.completedBookings)}/{formatNumberVi(item.assignedBookings)} booking hoàn thành
+                      {formatNumberVi(item.completedBookings)}/{formatNumberVi(item.assignedBookings)} lịch hẹn hoàn thành
                     </p>
                   </div>
                   <strong className="text-sm text-blue-700">{formatNumberVi(item.completionRate)}%</strong>
@@ -212,7 +126,7 @@ export function AdvancedReportSections({ reports, periodLabel, showOperationalAl
                 <div className="mt-3"><Progress value={(item.completedBookings / maxCompleted) * 100} /></div>
                 <div className="mt-3 flex flex-wrap justify-between gap-2 text-xs text-slate-500">
                   <span>Doanh thu quy đổi: {formatCurrencyVi(item.attributedRevenue)}</span>
-                  <span>TB {formatNumberVi(item.averageServiceMinutes)} phút</span>
+                  <span>Trung bình {formatNumberVi(item.averageServiceMinutes)} phút</span>
                 </div>
               </div>
             )) : <p className="rounded-lg bg-slate-50 p-6 text-center text-sm text-slate-500">Chưa có dữ liệu nhân viên.</p>}
@@ -220,16 +134,16 @@ export function AdvancedReportSections({ reports, periodLabel, showOperationalAl
         </div>
 
         <div className="rounded-lg border border-border/80 bg-white p-5">
-          <SectionHeader icon={Clock3} title="Thời gian phục vụ" subtitle="Đúng giờ khi check-in không trễ quá 15 phút." />
+          <SectionHeader icon={Clock3} title="Thời gian thực hiện dịch vụ" subtitle="Tiếp nhận xe đúng giờ khi không trễ quá 15 phút." />
           <div className="mt-5 grid gap-3 sm:grid-cols-2">
             <Metric label="Chờ trung bình" value={`${formatNumberVi(reports.serviceTimes.averageWaitingMinutes)} phút`} />
             <Metric label="Phục vụ trung bình" value={`${formatNumberVi(reports.serviceTimes.averageServiceMinutes)} phút`} />
-            <Metric label="Booking đo thời gian" value={formatNumberVi(reports.serviceTimes.measuredServiceBookings)} />
+            <Metric label="Lịch hẹn được đo thời gian" value={formatNumberVi(reports.serviceTimes.measuredServiceBookings)} />
             <Metric label="Tỷ lệ đúng giờ" value={`${formatNumberVi(reports.serviceTimes.onTimeRate)}%`} />
           </div>
           <div className="mt-5 rounded-lg border border-slate-100 p-4">
             <div className="mb-2 flex justify-between text-sm">
-              <span className="text-slate-600">Booking check-in đúng giờ</span>
+              <span className="text-slate-600">Lịch hẹn tiếp nhận đúng giờ</span>
               <strong>{formatNumberVi(reports.serviceTimes.onTimeBookings)}/{formatNumberVi(reports.serviceTimes.measuredWaitingBookings)}</strong>
             </div>
             <Progress value={reports.serviceTimes.onTimeRate} tone="bg-emerald-500" />
@@ -243,7 +157,7 @@ export function AdvancedReportSections({ reports, periodLabel, showOperationalAl
           <div className="mt-5 grid gap-3 sm:grid-cols-3">
             <Metric label="Doanh thu có mã" value={formatCurrencyVi(reports.promotionEffectiveness.promotionRevenue)} />
             <Metric label="Tổng tiền giảm" value={formatCurrencyVi(reports.promotionEffectiveness.totalDiscount)} />
-            <Metric label="AOV có mã" value={formatCurrencyVi(reports.promotionEffectiveness.averageOrderWithPromotion)} />
+            <Metric label="Giá trị đơn hàng trung bình" value={formatCurrencyVi(reports.promotionEffectiveness.averageOrderWithPromotion)} />
           </div>
           <div className="mt-5 overflow-x-auto">
             <table className="w-full min-w-[560px] text-left text-sm">

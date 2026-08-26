@@ -13,7 +13,7 @@ const getErrorMessage = getApiErrorMessage;
 
 const invalidateStaffOperations = async (queryClient: ReturnType<typeof useQueryClient>) => {
   await Promise.all([
-    queryClient.invalidateQueries({ queryKey: queryKeys.appointments.all }),
+    queryClient.invalidateQueries({ queryKey: queryKeys.appointments.staff.all }),
     queryClient.invalidateQueries({ queryKey: queryKeys.serviceHistories.staff() }),
     queryClient.invalidateQueries({ queryKey: queryKeys.users.staffs.workload() }),
     queryClient.invalidateQueries({ queryKey: queryKeys.appointments.admin.all }),

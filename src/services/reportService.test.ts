@@ -22,15 +22,15 @@ describe('reportApi.getStatistics', () => {
       limit: 8,
     });
 
-    expect(mock.history.get).toHaveLength(12);
-    for (const request of mock.history.get.filter(({ url }) => url !== '/reports/operational-alerts')) {
+    expect(mock.history.get).toHaveLength(11);
+    for (const request of mock.history.get) {
       expect(request.params).toMatchObject({ startMonth: '2026-06', endMonth: '2026-07' });
     }
     expect(mock.history.get.some(({ url }) => url === '/reports/staff-performance')).toBe(true);
     expect(mock.history.get.some(({ url }) => url === '/reports/service-times')).toBe(true);
     expect(mock.history.get.some(({ url }) => url === '/reports/promotion-effectiveness')).toBe(true);
     expect(mock.history.get.some(({ url }) => url === '/reports/customer-retention')).toBe(true);
-    expect(mock.history.get.some(({ url }) => url === '/reports/operational-alerts')).toBe(true);
+    expect(mock.history.get.some(({ url }) => url === '/reports/operational-alerts')).toBe(false);
     expect(mock.history.get.find(({ url }) => url === '/reports/revenue')?.params).toMatchObject({
       period: 'monthly',
     });
@@ -42,7 +42,7 @@ describe('reportApi.getStatistics', () => {
   it('requests unbounded monthly data for the all-time overview', async () => {
     await reportApi.getStatistics({ period: 'monthly', limit: 8 });
 
-    expect(mock.history.get).toHaveLength(12);
+    expect(mock.history.get).toHaveLength(11);
     expect(mock.history.get.find(({ url }) => url === '/reports/revenue')?.params).toMatchObject({
       period: 'monthly',
     });

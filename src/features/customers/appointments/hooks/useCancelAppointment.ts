@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 
 import { getApiErrorMessage } from '@/api/errors';
 import { queryKeys } from '@/constants/queryKeys';
+import { myAppointmentsQueryKey } from '@/features/customers/appointments/hooks/useMyAppointments';
 import { appointmentApi } from '@/services/appointmentService';
 import type { CancelAppointmentPayload } from '@/types/appointment';
 
@@ -20,7 +21,6 @@ export function useCancelAppointment() {
       queryClient.invalidateQueries({ queryKey: myAppointmentsQueryKey });
       queryClient.invalidateQueries({ queryKey: queryKeys.payments.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.promotions.active() });
-      queryClient.invalidateQueries({ queryKey: queryKeys.reports.all });
       toast.success('Hủy lịch hẹn thành công.');
     },
     onError: (error) => {

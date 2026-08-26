@@ -31,7 +31,7 @@ export const canCustomerPayAppointment = (
   status: AppointmentStatus | string,
   paymentStatus: AppointmentPaymentStatus | string
 ) =>
-  status !== 'cancelled' &&
+  status === 'completed' &&
   paymentStatus !== 'paid' &&
   ['unpaid', 'pending', 'cancelled'].includes(paymentStatus);
 
