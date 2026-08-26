@@ -126,6 +126,7 @@ export default function AdminVehiclesPage() {
   const pendingRequestsQuery = useQuery({
     queryKey: ['vehicle-access-requests', 'admin', 'pending'],
     queryFn: () => vehicleAccessRequestApi.listAdmin('pending'),
+    refetchOnMount: 'always',
   });
   const pendingRequests = useMemo(
     () => pendingRequestsQuery.data ?? [],
@@ -185,6 +186,7 @@ export default function AdminVehiclesPage() {
     try {
       await vehiclesApi.deleteVehicle(deleteVehicle._id);
       queryClient.invalidateQueries({ queryKey: queryKeys.vehicles.admin.all });
+      vehiclesQuery.refetch();
       toast.success('Xóa xe thành công.');
       setDeleteVehicle(null);
     } catch {
@@ -206,6 +208,7 @@ export default function AdminVehiclesPage() {
     try {
       await vehiclesApi.updateVehicle(editVehicle._id, payload);
       queryClient.invalidateQueries({ queryKey: queryKeys.vehicles.admin.all });
+      vehiclesQuery.refetch();
       toast.success('Cập nhật xe thành công.');
       setEditVehicle(null);
     } catch {

@@ -199,7 +199,7 @@ export function VehicleForm({
   const submitForm = (values: VehicleFormValues) => {
     const selectedModelOption = modelOptions.find((option) => option.name === values.model) ?? null;
 
-    onSubmit({
+    return onSubmit({
       brand: resolveBrand(values),
       model: resolveModel(values),
       ...(values.brand !== OTHER_VEHICLE_VALUE && selectedBrandOption?.id

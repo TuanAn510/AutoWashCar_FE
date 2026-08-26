@@ -53,6 +53,7 @@ export function useCustomersWithLoyalty(
   return useQuery({
     queryKey: loyaltyKeys.customers(params),
     queryFn: ({ signal }) => loyaltyApi.getCustomers(params, signal),
+    refetchOnMount: 'always',
   });
 }
 
@@ -61,6 +62,7 @@ export function useCustomerLoyaltyAccount(customerId: string) {
     queryKey: loyaltyKeys.customer(customerId),
     queryFn: ({ signal }) => loyaltyApi.getCustomerAccount(customerId, signal),
     enabled: !!customerId,
+    refetchOnMount: 'always',
   });
 }
 
@@ -69,6 +71,7 @@ export function useCustomerLoyaltyTransactions(customerId: string) {
     queryKey: loyaltyKeys.customerTransactions(customerId),
     queryFn: ({ signal }) => loyaltyApi.getCustomerTransactions(customerId, signal),
     enabled: !!customerId,
+    refetchOnMount: 'always',
   });
 }
 
@@ -77,6 +80,7 @@ export function useCustomerRedemptions(customerId: string) {
     queryKey: loyaltyKeys.customerRedemptions(customerId),
     queryFn: ({ signal }) => loyaltyApi.getCustomerRedemptions(customerId, signal),
     enabled: !!customerId,
+    refetchOnMount: 'always',
   });
 }
 
@@ -84,6 +88,7 @@ export function useMembershipTiers() {
   return useQuery({
     queryKey: membershipTierKeys.all,
     queryFn: ({ signal }) => membershipTierApi.list(signal),
+    refetchOnMount: 'always',
   });
 }
 
