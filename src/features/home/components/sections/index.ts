@@ -1,0 +1,12 @@
+export { AboutSection } from './about-section';
+export { BookingFormSection } from './booking-form-section';
+export { BookingProcessSection } from './booking-process-section';
+export { ContactStripSection } from './contact-strip-section';
+export { FeatureCardsSection } from './feature-cards-section';
+export { GallerySection } from './gallery-section';
+export { HeroSection } from './hero-section';
+export { MechanicsSection } from './mechanics-section';
+export { PricingSection } from './pricing-section';
+export { ServicesSection } from './services-section';
+export { StatsSection } from './stats-section';
+export { TestimonialsSection } from './testimonials-section';

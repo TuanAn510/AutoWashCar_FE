@@ -1,0 +1,175 @@
+import { Calendar, CarFront, Eye, ImageIcon, Pencil, Trash2, X } from 'lucide-react';
+
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { resolveImageUrl } from '@/lib/image-url';
+import { type ApiVehicle } from '@/types/vehicle';
+import { formatLicensePlateDisplay } from '@/features/customers/vehicles/utils/license-plate';
+
+const carTypeLabels: Record<string, string> = {
+  sedan: 'Sedan',
+  suv: 'SUV',
+  pickup: 'Bán tải',
+};
+
+const verificationMeta = {
+  approved: {
+    label: 'Đã xác minh',
+    className: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+  },
+  pending: {
+    label: 'Chờ admin xác minh',
+    className: 'border-amber-200 bg-amber-50 text-amber-700',
+  },
+  rejected: { label: 'Bị từ chối', className: 'border-rose-200 bg-rose-50 text-rose-700' },
+} as const;
+
+interface VehicleCardProps {
+  vehicle: ApiVehicle;
+  onView: (vehicle: ApiVehicle) => void;
+  onEdit: (vehicle: ApiVehicle) => void;
+  onDelete: (vehicle: ApiVehicle) => void;
+  /** Chỉ dùng cho xe đã khóa: ẩn xe khỏi tab "Đã khóa". Không xóa dữ liệu. */
+  onDismiss?: (vehicle: ApiVehicle) => void;
+}
+
+export function VehicleCard({ vehicle, onView, onEdit, onDelete, onDismiss }: VehicleCardProps) {
+  const coverImage = vehicle.images?.[0]?.url;
+  const vehicleName = [vehicle.brand, vehicle.model, vehicle.year].filter(Boolean).join(' ');
+  const verification = vehicle.verificationStatus
+    ? verificationMeta[vehicle.verificationStatus]
+    : verificationMeta.approved;
+  // Xe bị KHÓA (biển số đã chuyển quyền qua admin): chủ cũ vẫn thấy nó trên
+  // trang "Xe của tôi" nhưng được đánh dấu "Đã khóa" và không chỉnh sửa/xóa được.
+  const isLocked = vehicle.deletedAt != null;
+
+  return (
+    <Card
+      size="sm"
+      className={`h-full min-w-0 gap-0 overflow-hidden rounded-2xl border py-0 shadow-sm ring-0 transition-shadow ${
+        isLocked ? 'border-slate-300 bg-slate-50' : 'border-slate-200 bg-white hover:shadow-md'
+      }`}
+    >
+      <div className="relative aspect-video overflow-hidden bg-gradient-to-br from-slate-100 via-white to-slate-200">
+        {coverImage ? (
+          <img
+            src={resolveImageUrl(coverImage)}
+            alt={vehicleName}
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          <div className="flex h-full items-center justify-center text-slate-400">
+            <CarFront className="size-12" />
+          </div>
+        )}
+        {isLocked && (
+          <div className="absolute inset-0 flex items-center justify-center bg-slate-900/50">
+            <Badge className="rounded-full bg-slate-900/90 px-3 py-1 text-sm font-semibold text-white">
+              Đã khóa
+            </Badge>
+          </div>
+        )}
+        {isLocked && onDismiss ? (
+          <button
+            type="button"
+            aria-label="Ẩn xe này khỏi danh sách"
+            title="Ẩn xe này khỏi danh sách"
+            onClick={() => onDismiss(vehicle)}
+            className="absolute right-2 top-2 z-10 grid size-8 place-items-center rounded-full bg-slate-900/70 text-white transition-colors hover:bg-rose-600"
+          >
+            <X className="size-4" />
+          </button>
+        ) : null}
+      </div>
+
+      <CardHeader className="gap-3 px-4 pt-4">
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
+          <div className="min-w-0">
+            <CardTitle
+              className={`truncate text-base font-semibold ${isLocked ? 'text-slate-500' : 'text-slate-950'}`}
+              title={vehicleName}
+            >
+              {vehicleName}
+            </CardTitle>
+            <Badge variant="outline" className="mt-1.5 rounded-full text-xs">
+              {carTypeLabels[vehicle.carType] ?? vehicle.carType}
+            </Badge>
+            <Badge
+              variant="outline"
+              className={`mt-1.5 rounded-full text-xs ${verification.className}`}
+            >
+              {verification.label}
+            </Badge>
+          </div>
+          <Badge variant="neutral" className="rounded-full px-2.5 py-1 font-semibold">
+            {formatLicensePlateDisplay(vehicle.licensePlate)}
+          </Badge>
+        </div>
+      </CardHeader>
+
+      <CardContent className="space-y-3 px-4 py-4">
+        <div className="grid grid-cols-2 gap-2">
+          <InfoTile label="Năm sản xuất" value={String(vehicle.year)} icon={Calendar} />
+          <InfoTile
+            label="Hình ảnh"
+            value={`${vehicle.images?.length ?? 0} ảnh`}
+            icon={ImageIcon}
+          />
+        </div>
+        {isLocked && (
+          <p className="text-xs leading-5 text-slate-500">
+            Biển số này đã được cấp lại qua xác minh. Lịch sử dùng xe vẫn được lưu giữ.
+          </p>
+        )}
+      </CardContent>
+
+      <CardFooter className="grid grid-cols-3 gap-2 border-t border-slate-100 bg-slate-50/70 px-4 py-3">
+        <Button variant="outline" className="rounded-xl" onClick={() => onView(vehicle)}>
+          <Eye className="size-4" />
+          Xem
+        </Button>
+        <Button
+          variant="outline"
+          className="rounded-xl"
+          onClick={() => onEdit(vehicle)}
+          disabled={isLocked}
+          title={isLocked ? 'Xe đã khóa, không thể chỉnh sửa' : undefined}
+        >
+          <Pencil className="size-4" />
+          Sửa
+        </Button>
+        <Button
+          variant="destructive"
+          className="rounded-xl"
+          onClick={() => onDelete(vehicle)}
+          disabled={isLocked}
+          title={isLocked ? 'Xe đã khóa, không thể xóa' : undefined}
+        >
+          <Trash2 className="size-4" />
+          Xóa
+        </Button>
+      </CardFooter>
+    </Card>
+  );
+}
+
+function InfoTile({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="min-w-0 rounded-xl bg-slate-50 px-3 py-2.5">
+      <div className="flex items-center gap-2 text-xs font-medium text-slate-500">
+        <Icon className="size-4 shrink-0" />
+        <span className="truncate">{label}</span>
+      </div>
+      <p className="mt-1 truncate text-sm font-semibold text-slate-900">{value}</p>
+    </div>
+  );
+}
