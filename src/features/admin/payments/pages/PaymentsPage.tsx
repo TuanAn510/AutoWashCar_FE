@@ -145,7 +145,10 @@ function PaymentActionsMenu({
   onConfirmPayment: (appointment: AppointmentItem) => void;
   onPrintInvoice: (appointment: AppointmentItem) => void;
 }) {
-  const isUnpaid = appointment.paymentStatus === 'unpaid';
+  const canConfirmCashPayment =
+    appointment.status === 'completed' &&
+    appointment.paymentMethod === 'cash' &&
+    appointment.paymentStatus !== 'paid';
   const isPaid = appointment.paymentStatus === 'paid';
 
   return (
@@ -162,7 +165,7 @@ function PaymentActionsMenu({
           Xem chi tiết
         </DropdownMenuItem>
 
-        {isUnpaid ? (
+        {canConfirmCashPayment ? (
           <DropdownMenuItem disabled={isConfirming} onClick={() => onConfirmPayment(appointment)}>
             <CheckCircle2 className="size-4" />
             Xác nhận thanh toán

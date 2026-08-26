@@ -3,7 +3,11 @@ import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { AppointmentCard } from '@/features/customers/appointments/components/AppointmentCard';
-import type { AppointmentItem, AppointmentPaymentStatus, AppointmentStatus } from '@/types/appointment';
+import type {
+  AppointmentItem,
+  AppointmentPaymentStatus,
+  AppointmentStatus,
+} from '@/types/appointment';
 
 const appointment = (
   status: AppointmentStatus,
@@ -32,12 +36,12 @@ const appointment = (
 afterEach(cleanup);
 
 describe('customer appointment card actions', () => {
-  it.each(['unpaid', 'pending', 'cancelled'] as AppointmentPaymentStatus[])(
-    'shows payment directly for completed %s appointments',
+  it.each(['unpaid', 'cancelled'] as AppointmentPaymentStatus[])(
+    'shows payment directly for confirmed %s appointments',
     (paymentStatus) => {
       render(
         <AppointmentCard
-          appointment={appointment('completed', paymentStatus)}
+          appointment={appointment('confirmed', paymentStatus)}
           onViewDetail={vi.fn()}
           onCancel={vi.fn()}
           onPay={vi.fn()}
@@ -49,10 +53,26 @@ describe('customer appointment card actions', () => {
     }
   );
 
-  it('hides payment after a completed appointment is paid', () => {
+  it.each(['paid', 'pending'] as AppointmentPaymentStatus[])(
+    'hides payment for confirmed %s appointments',
+    (paymentStatus) => {
+      render(
+        <AppointmentCard
+          appointment={appointment('confirmed', paymentStatus)}
+          onViewDetail={vi.fn()}
+          onCancel={vi.fn()}
+          onPay={vi.fn()}
+        />
+      );
+
+      expect(screen.queryByRole('button', { name: 'Thanh toán' })).toBeNull();
+    }
+  );
+
+  it('hides payment after a completed appointment is unpaid', () => {
     render(
       <AppointmentCard
-        appointment={appointment('completed', 'paid')}
+        appointment={appointment('completed', 'unpaid')}
         onViewDetail={vi.fn()}
         onCancel={vi.fn()}
         onPay={vi.fn()}
@@ -62,7 +82,7 @@ describe('customer appointment card actions', () => {
     expect(screen.queryByRole('button', { name: 'Thanh toán' })).toBeNull();
   });
 
-  it.each(['confirmed', 'in_queue', 'in_progress', 'cancelled'] as AppointmentStatus[])(
+  it.each(['in_queue', 'in_progress', 'completed', 'cancelled'] as AppointmentStatus[])(
     'shows detail only for %s appointments',
     (status) => {
       render(

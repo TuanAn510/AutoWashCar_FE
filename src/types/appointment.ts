@@ -282,8 +282,8 @@ export interface CreatePaymentPayload {
 }
 
 export interface PaymentResult {
-  paymentUrl: string;
-  paymentId: string;
+  paymentUrl: string | null;
+  paymentId: string | null;
   method: AppointmentPaymentMethod;
   amount: number;
   expiresAt: string;

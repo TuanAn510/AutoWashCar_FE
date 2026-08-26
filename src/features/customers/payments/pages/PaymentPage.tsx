@@ -91,7 +91,7 @@ function CashConfirmPopup({
               Thanh toán tiền mặt
             </DialogTitle>
             <DialogDescription className="mt-0.5 text-sm text-[#64748b]">
-              Xác nhận sẽ thanh toán tại gara
+              Chọn phương thức tiền mặt tại gara
             </DialogDescription>
           </div>
         </div>
@@ -104,8 +104,8 @@ function CashConfirmPopup({
             </div>
           </div>
           <p className="mt-4 text-sm leading-relaxed text-[#64748b]">
-            Bạn chọn thanh toán bằng tiền mặt tại gara. Admin sẽ xác nhận thanh toán sau khi bạn
-            hoàn tất dịch vụ.
+            Bạn chọn thanh toán bằng tiền mặt tại gara. Sau khi dịch vụ hoàn thành, staff thu tiền
+            thực tế rồi mới xác nhận đã thanh toán.
           </p>
         </div>
 
@@ -124,7 +124,7 @@ function CashConfirmPopup({
             onClick={onConfirm}
           >
             <CheckCircle2 className="size-4" />
-            Xác nhận
+            Chọn tiền mặt
           </Button>
         </div>
       </DialogContent>
@@ -193,6 +193,9 @@ export default function PaymentPage() {
         method: selectedMethod,
       });
 
+      if (!result.paymentUrl) {
+        throw new Error('Không thể tạo liên kết thanh toán. Vui lòng thử lại.');
+      }
       window.location.href = result.paymentUrl;
     } catch (error) {
       setPaymentError(
@@ -311,7 +314,7 @@ export default function PaymentPage() {
           <AlertTriangle className="mx-auto size-12 text-amber-500" />
           <h2 className="mt-4 text-xl font-black text-[#15243a]">Chưa thể thanh toán</h2>
           <p className="mt-2 text-sm text-[#64748b]">
-            Chỉ có thể thanh toán lịch hẹn đã hoàn thành và chưa được thanh toán.
+            Chỉ có thể thanh toán khi lịch hẹn đã được xác nhận và chưa được thanh toán.
           </p>
           <Button className="mt-6" onClick={() => navigate('/customer/appointments')}>
             Quay lại danh sách
@@ -475,7 +478,7 @@ export default function PaymentPage() {
               ) : selectedMethod === 'cash' ? (
                 <>
                   <Banknote className="size-4" />
-                  Xác nhận thanh toán tiền mặt
+                  Chọn thanh toán tiền mặt
                 </>
               ) : (
                 <>

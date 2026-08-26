@@ -8,7 +8,7 @@ const paymentStatusLabels: Record<AppointmentPaymentStatus, string> = {
   unpaid: 'Chưa thanh toán',
   paid: 'Đã thanh toán',
   cancelled: 'Chưa thanh toán',
-  pending: 'Đang xử lý',
+  pending: 'Chờ thanh toán',
 };
 
 const statusVariant: Record<
