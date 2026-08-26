@@ -162,6 +162,13 @@ function validateRewardForm(form: RewardFormState) {
 
   if (typeof parsedExpiredAt === 'undefined') {
     errors.expiredAt = 'Hạn dùng không hợp lệ.';
+  } else if (parsedExpiredAt) {
+    const expiredAtDate = new Date(parsedExpiredAt);
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    if (expiredAtDate < todayStart) {
+      errors.expiredAt = 'Hạn đổi thưởng phải từ hôm nay trở đi.';
+    }
   }
 
   return {
@@ -353,6 +360,7 @@ function RewardDialog({
                       className={cn('h-10 rounded-md bg-white px-3', fieldFocusClassName)}
                       value={form.expiredAt}
                       onChange={(value) => setField('expiredAt', value)}
+                      disabledDates={{ before: new Date() }}
                       placeholder="Chọn hạn đổi thưởng"
                     />
                   </FormField>

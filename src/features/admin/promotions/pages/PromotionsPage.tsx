@@ -110,7 +110,14 @@ function parseVietnameseDate(value: string) {
   if (!match) return '';
 
   const [, day, month, year] = match;
-  return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T00:00:00.000Z`;
+  return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T00:00:00`;
+}
+
+function toLocalDateOrToday(ddmmyyyy: string): Date {
+  const iso = parseVietnameseDate(ddmmyyyy);
+  if (!iso) return new Date();
+  const date = new Date(iso);
+  return Number.isNaN(date.getTime()) ? new Date() : date;
 }
 
 function formatDatePickerValue(value: string) {
@@ -237,6 +244,9 @@ function validatePromotionForm(form: PromotionFormState) {
   const endDate = parseVietnameseDate(form.endDate);
   if (!startDate) return 'Ngày bắt đầu phải có định dạng dd/mm/yyyy.';
   if (!endDate) return 'Ngày kết thúc phải có định dạng dd/mm/yyyy.';
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  if (new Date(startDate) < todayStart) return 'Ngày bắt đầu phải từ hôm nay trở đi.';
   if (new Date(endDate) <= new Date(startDate)) return 'Ngày kết thúc phải sau ngày bắt đầu.';
 
   if (form.type === 'percentage') {
@@ -524,6 +534,7 @@ function PromotionCreateDialog({
                   className={cn('h-10 rounded-md bg-white px-3', fieldFocusClassName)}
                   value={formatDatePickerValue(form.startDate)}
                   onChange={(value) => setField('startDate', formatDateForForm(value))}
+                  disabledDates={{ before: new Date() }}
                   placeholder="Chọn ngày bắt đầu"
                 />
               </label>
@@ -533,6 +544,7 @@ function PromotionCreateDialog({
                   className={cn('h-10 rounded-md bg-white px-3', fieldFocusClassName)}
                   value={formatDatePickerValue(form.endDate)}
                   onChange={(value) => setField('endDate', formatDateForForm(value))}
+                  disabledDates={{ before: toLocalDateOrToday(form.startDate) }}
                   placeholder="Chọn ngày kết thúc"
                 />
               </label>

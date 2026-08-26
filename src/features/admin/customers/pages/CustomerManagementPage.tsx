@@ -53,8 +53,10 @@ import { PaymentStatusBadge } from '@/components/shared/PaymentStatusBadge';
 import { MembershipTierBadge } from '@/features/shared/loyalty/components/MembershipTierBadge';
 import {
   useCustomerLoyaltyAccount,
+  useCustomerLoyaltyTransactions,
   useMembershipTiers,
 } from '@/features/shared/loyalty/hooks/use-loyalty';
+import { LoyaltyTransactionTable } from '@/features/shared/loyalty/components/LoyaltyTransactionTable';
 import type { LoyaltyAccount } from '@/features/shared/loyalty/types/loyalty.types';
 import { getAccountTier } from '@/features/shared/loyalty/utils/tier-progress';
 import { cn, formatDate, formatDateTimeVi, formatPrice } from '@/lib/utils';
@@ -62,7 +64,7 @@ import type { AppointmentItem } from '@/types/appointment';
 import type { User } from '@/types/user';
 
 type CustomerStatusFilter = 'all' | 'active' | 'inactive';
-type CustomerDetailTab = 'overview' | 'appointments' | 'payments';
+type CustomerDetailTab = 'overview' | 'appointments' | 'payments' | 'loyalty';
 type CustomerSortKey = 'name' | 'phone' | 'status' | 'createdAt';
 
 interface CustomerRow {
@@ -611,6 +613,29 @@ function PaymentHistoryTab({
   );
 }
 
+function LoyaltyHistoryTab({
+  query,
+}: {
+  query: ReturnType<typeof useCustomerLoyaltyTransactions>;
+}) {
+  const transactions = useMemo(
+    () =>
+      [...(query.data ?? [])].sort((a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? '')),
+    [query.data]
+  );
+  return (
+    <HistoryState
+      isLoading={query.isLoading}
+      isError={query.isError}
+      isEmpty={!transactions.length}
+      emptyMessage="Khách hàng này chưa có giao dịch tích điểm."
+      onRetry={() => query.refetch()}
+    >
+      <LoyaltyTransactionTable transactions={transactions} />
+    </HistoryState>
+  );
+}
+
 export default function CustomerManagementPage() {
   const [keyword, setKeyword] = useState('');
   const [status, setStatus] = useState<CustomerStatusFilter>('all');
@@ -632,6 +657,7 @@ export default function CustomerManagementPage() {
   const { data, isLoading } = useCustomers({ limit: 100, sortBy: 'createdAt', sortOrder });
   const updateUserMutation = useUpdateCustomer();
   const loyaltyQuery = useCustomerLoyaltyAccount(detailTarget?.id ?? '');
+  const transactionsQuery = useCustomerLoyaltyTransactions(detailTarget?.id ?? '');
   const appointmentsQuery = useAppointments(
     {
       customerId: detailTarget?.id,
@@ -953,10 +979,11 @@ export default function CustomerManagementPage() {
               onValueChange={(value) => setDetailTab(value as CustomerDetailTab)}
               className="min-h-0"
             >
-              <TabsList className="grid h-auto w-full grid-cols-3">
+              <TabsList className="grid h-auto w-full grid-cols-4">
                 <TabsTrigger value="overview">Tổng quan</TabsTrigger>
                 <TabsTrigger value="appointments">Lịch đã đặt</TabsTrigger>
                 <TabsTrigger value="payments">Thanh toán</TabsTrigger>
+                <TabsTrigger value="loyalty">Lịch sử tích điểm</TabsTrigger>
               </TabsList>
               <div className="max-h-[70vh] overflow-y-auto pr-1">
                 <TabsContent value="overview">
@@ -983,6 +1010,9 @@ export default function CustomerManagementPage() {
                     onPageChange={setPaymentPage}
                     onView={setViewAppointment}
                   />
+                </TabsContent>
+                <TabsContent value="loyalty">
+                  <LoyaltyHistoryTab query={transactionsQuery} />
                 </TabsContent>
               </div>
             </Tabs>
