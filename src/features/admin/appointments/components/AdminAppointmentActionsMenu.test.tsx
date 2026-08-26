@@ -60,10 +60,11 @@ describe('AdminAppointmentActionsMenu reschedule lifecycle', () => {
   );
 
   it.each(['confirmed', 'in_queue', 'in_progress'] as AppointmentStatus[])(
-    'preserves assign and cancel for active %s appointments',
+    'preserves assignment but hides cancel for active %s appointments',
     (status) => {
       render(<AdminAppointmentActionsMenu appointment={appointment(status)} {...props} />);
-      expect(screen.getAllByRole('button')).toHaveLength(4);
+      expect(screen.getAllByRole('button')).toHaveLength(3);
+      expect(screen.queryByText('Hủy lịch')).toBeNull();
     }
   );
 

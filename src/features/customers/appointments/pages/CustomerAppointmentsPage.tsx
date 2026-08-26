@@ -307,6 +307,7 @@ export default function CustomerAppointmentsPage() {
                 appointments={displayedAppointments}
                 onViewDetail={openDetailDialog}
                 onCancel={openCancelDialog}
+                onPay={(appointment) => navigate(`/customer/payment/${appointment._id}`)}
               />
 
               {hasAdditionalAppointments ? (

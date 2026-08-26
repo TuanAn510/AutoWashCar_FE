@@ -46,7 +46,7 @@ const targetPath = (notification: NotificationItem, role: User['role']) => {
   return role === 'admin' ? '/admin/dashboard' : role === 'staff' ? '/staff/dashboard' : '/customer/dashboard';
 };
 
-export function NotificationBell({ user }: { user: User }) {
+export function NotificationBell(_: { user: User }) {
   const navigate = useNavigate();
   const [page, setPage] = useState(0);
   const [expanded, setExpanded] = useState(false);

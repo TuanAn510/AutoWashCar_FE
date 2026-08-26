@@ -20,6 +20,7 @@ import { queryKeys } from '@/constants/queryKeys';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAppointmentDetail } from '@/features/customers/appointments/hooks/useAppointmentDetail';
+import { canCustomerPayAppointment } from '@/features/customers/appointments/utils/appointmentDisplay';
 import { paymentService } from '@/services/paymentService';
 import { queryKeys } from '@/constants/queryKeys';
 import { cn, formatDateTime, formatPrice, formatTime } from '@/lib/utils';
@@ -204,10 +205,28 @@ useEffect(() => {
     }
   };
 
-  const handleCashConfirm = () => {
-    setShowCashPopup(false);
-    setSelectedMethod(null);
-    navigate('/customer/appointments');
+  const handleCashConfirm = async () => {
+    if (!appointmentId) return;
+
+    setIsProcessing(true);
+    setPaymentError(null);
+    try {
+      await paymentService.createPayment({ appointmentId, method: 'cash' });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: queryKeys.appointments.all }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.appointments.mine() }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.payments.all }),
+      ]);
+      setShowCashPopup(false);
+      setSelectedMethod(null);
+      navigate('/customer/appointments');
+    } catch (error) {
+      setPaymentError(
+        error instanceof Error ? error.message : 'Không thể tạo thanh toán. Vui lòng thử lại.'
+      );
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   if (paymentStatus === 'success') {
@@ -283,6 +302,23 @@ useEffect(() => {
           <p className="mt-2 text-sm text-[#64748b]">
             Lịch hẹn không tồn tại hoặc bạn không có quyền truy cập.
           </p>
+        </section>
+      </main>
+    );
+  }
+
+  if (!canCustomerPayAppointment(appointment.status, appointment.paymentStatus)) {
+    return (
+      <main className="flex min-h-[calc(100vh-73px)] items-center justify-center bg-[#f8fafc] px-4">
+        <section className="w-full max-w-[560px] rounded-xl border border-amber-200 bg-white px-6 py-12 text-center shadow-[0_18px_44px_rgba(15,23,42,0.08)]">
+          <AlertTriangle className="mx-auto size-12 text-amber-500" />
+          <h2 className="mt-4 text-xl font-black text-[#15243a]">Chưa thể thanh toán</h2>
+          <p className="mt-2 text-sm text-[#64748b]">
+            Chỉ có thể thanh toán lịch hẹn đã hoàn thành và chưa được thanh toán.
+          </p>
+          <Button className="mt-6" onClick={() => navigate('/customer/appointments')}>
+            Quay lại danh sách
+          </Button>
         </section>
       </main>
     );

@@ -71,13 +71,6 @@ export function AdminAppointmentActionsMenu({
               <UserPlus className="size-4" />
               Phân công nhân viên
             </DropdownMenuItem>
-            <DropdownMenuItem
-              variant="destructive"
-              onClick={() => onCancel(appointment)}
-            >
-              <XCircle className="size-4" />
-              Hủy lịch
-            </DropdownMenuItem>
           </>
         ) : null}
       </DropdownMenuContent>
