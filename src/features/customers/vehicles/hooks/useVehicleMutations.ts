@@ -38,9 +38,15 @@ export function useUpdateVehicle() {
   return useMutation({
     mutationFn: ({ vehicleId, payload }: { vehicleId: string; payload: UpdateVehiclePayload }) =>
       vehiclesApi.updateVehicle(vehicleId, payload),
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.vehicles.all });
-      toast.success('Cập nhật xe thành công.');
+      const needsReVerification =
+        data?.verificationStatus && data.verificationStatus !== 'approved';
+      if (needsReVerification) {
+        toast.success('Xe đã được cập nhật. Thông tin xe cần được xác minh lại, vui lòng chờ admin duyệt.');
+      } else {
+        toast.success('Cập nhật xe thành công.');
+      }
     },
     onError: (error) => {
       if (toApiError(error).code === 'VEHICLE_VERIFICATION_REQUIRED') {
