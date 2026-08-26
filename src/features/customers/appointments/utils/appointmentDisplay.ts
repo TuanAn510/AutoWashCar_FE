@@ -30,7 +30,7 @@ export const canCustomerCancelAppointment = (
 export const canCustomerPayAppointment = (
   status: AppointmentStatus | string,
   paymentStatus: AppointmentPaymentStatus | string
-) => status === 'confirmed' && ['unpaid', 'cancelled'].includes(paymentStatus);
+) => !['pending', 'cancelled'].includes(status) && paymentStatus !== 'paid';
 
 export const getAppointmentNote = (note?: string | null) =>
   note?.trim() ? note.trim() : 'Không có ghi chú';

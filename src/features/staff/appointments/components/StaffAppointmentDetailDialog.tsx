@@ -13,28 +13,17 @@ export function StaffAppointmentDetailDialog({
   appointment,
   open,
   onOpenChange,
-  onConfirmPayment,
 }: {
   appointment: AppointmentItem | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onConfirmPayment?: (appointment: AppointmentItem) => void;
 }) {
   if (!appointment) {
     return null;
   }
 
   const paymentStatusLabel =
-    appointment.paymentStatus === 'paid'
-      ? 'Đã thanh toán'
-      : appointment.paymentStatus === 'pending'
-        ? 'Chờ thanh toán'
-        : 'Chưa thanh toán';
-  const canConfirmCashPayment =
-    appointment.status === 'completed' &&
-    appointment.paymentMethod === 'cash' &&
-    appointment.paymentStatus !== 'paid' &&
-    !!onConfirmPayment;
+    appointment.paymentStatus === 'paid' ? 'Đã thanh toán' : 'Chưa thanh toán';
   const assignedStaffs = appointment.assignedStaffIds?.length
     ? appointment.assignedStaffIds
     : appointment.assignedStaffId
@@ -55,11 +44,6 @@ export function StaffAppointmentDetailDialog({
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
             Đóng
           </Button>
-          {canConfirmCashPayment ? (
-            <Button type="button" onClick={() => onConfirmPayment(appointment)}>
-              Xác nhận thanh toán
-            </Button>
-          ) : null}
         </>
       }
     >

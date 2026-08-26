@@ -20,10 +20,7 @@ import { StaffAppointmentSummaryCards } from '@/features/staff/appointments/comp
 import { UpdateAppointmentStatusDialog } from '@/features/staff/appointments/components/UpdateAppointmentStatusDialog';
 import { getAllowedStaffAppointmentStatuses } from '@/features/staff/appointments/constants/appointmentStatus';
 import { useMyStaffAppointments } from '@/features/staff/appointments/hooks/useMyStaffAppointments';
-import {
-  useConfirmStaffAppointmentPayment,
-  useUpdateAppointmentStatus,
-} from '@/features/staff/appointments/hooks/useUpdateAppointmentStatus';
+import { useUpdateAppointmentStatus } from '@/features/staff/appointments/hooks/useUpdateAppointmentStatus';
 
 const getLocalDateRange = (date: string) => {
   const [year, month, day] = date.split('-').map(Number);
@@ -47,9 +44,6 @@ const getTodayRange = () => {
 
 const APPOINTMENTS_PER_PAGE = 10;
 const APPOINTMENTS_PER_PAGE_BIG = 100;
-
-const appointmentGroupDate = (a: AppointmentItem): Date =>
-  new Date(a.completedAt ?? a.cancelledAt ?? a.scheduledAt);
 
 export default function StaffAppointmentsPage() {
   const [appointmentTab, setAppointmentTab] = useState<'today' | 'all'>('all');
@@ -85,41 +79,22 @@ export default function StaffAppointmentsPage() {
 
   const staffAppointmentsQuery = useMyStaffAppointments(appointmentFilters);
   const updateStatusMutation = useUpdateAppointmentStatus();
-  const confirmPaymentMutation = useConfirmStaffAppointmentPayment();
 
   const appointments = useMemo(
     () => staffAppointmentsQuery.data?.appointments ?? [],
     [staffAppointmentsQuery.data?.appointments]
   );
 
-  const { processingAppointments, completedAppointments, olderAppointments } = useMemo(() => {
-    const now = new Date();
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const { paidAppointments, unpaidAppointments } = useMemo(() => {
+    const paid: AppointmentItem[] = [];
+    const unpaid: AppointmentItem[] = [];
 
-    const processing: AppointmentItem[] = [];
-    const completed: AppointmentItem[] = [];
-    const older: AppointmentItem[] = [];
-
-    for (const a of appointments) {
-      const isTerminal = a.status === 'completed' || a.status === 'cancelled';
-      if (!isTerminal) {
-        processing.push(a);
-        continue;
-      }
-      const dateStart = new Date(
-        appointmentGroupDate(a).getFullYear(),
-        appointmentGroupDate(a).getMonth(),
-        appointmentGroupDate(a).getDate()
-      ).getTime();
-      if (dateStart >= todayStart) completed.push(a);
-      else older.push(a);
+    for (const appointment of appointments) {
+      if (appointment.paymentStatus === 'paid') paid.push(appointment);
+      else unpaid.push(appointment);
     }
 
-    return {
-      processingAppointments: processing,
-      completedAppointments: completed,
-      olderAppointments: older,
-    };
+    return { paidAppointments: paid, unpaidAppointments: unpaid };
   }, [appointments]);
 
   const summary = staffAppointmentsQuery.data?.summary ?? {
@@ -170,14 +145,6 @@ export default function StaffAppointmentsPage() {
     });
     setNextStatus('');
     setStatusAppointment(null);
-  };
-
-  const handleConfirmCashPayment = async (appointment: AppointmentItem) => {
-    await confirmPaymentMutation.mutateAsync({
-      appointmentId: appointment._id,
-      payload: { paymentStatus: 'paid', paymentMethod: 'cash' },
-    });
-    setDetailAppointment(null);
   };
 
   return (
@@ -258,19 +225,17 @@ export default function StaffAppointmentsPage() {
               Thử lại
             </Button>
           </section>
-        ) : processingAppointments.length === 0 &&
-          completedAppointments.length === 0 &&
-          olderAppointments.length === 0 ? (
+        ) : paidAppointments.length === 0 && unpaidAppointments.length === 0 ? (
           <EmptyStaffAppointmentsState />
         ) : (
           <section className="space-y-8">
-            {processingAppointments.length > 0 ? (
+            {unpaidAppointments.length > 0 ? (
               <div className="space-y-3">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <h2 className="text-2xl font-semibold text-slate-950">Lịch hẹn đang xử lý</h2>
+                    <h2 className="text-2xl font-semibold text-amber-700">Chưa thanh toán</h2>
                     <p className="mt-1 text-sm text-slate-500">
-                      {processingAppointments.length} lịch hẹn chưa hoàn thành.
+                      {unpaidAppointments.length} lịch hẹn có paymentStatus khác PAID.
                     </p>
                   </div>
                   <button
@@ -285,7 +250,7 @@ export default function StaffAppointmentsPage() {
                 </div>
 
                 <StaffAppointmentList
-                  appointments={processingAppointments}
+                  appointments={unpaidAppointments}
                   onViewDetail={setDetailAppointment}
                   onOpenStatusDialog={handleOpenStatusDialog}
                   onQuickUpdate={handleQuickUpdate}
@@ -295,40 +260,17 @@ export default function StaffAppointmentsPage() {
               </div>
             ) : null}
 
-            {completedAppointments.length > 0 ? (
+            {paidAppointments.length > 0 ? (
               <div className="space-y-3">
                 <div>
-                  <h2 className="text-2xl font-semibold text-emerald-700">
-                    Lịch hẹn đã xử lý {appointmentTab === 'today' ? '' : '(hôm nay trở đi)'}
-                  </h2>
+                  <h2 className="text-2xl font-semibold text-emerald-700">Đã thanh toán</h2>
                   <p className="mt-1 text-sm text-slate-500">
-                    {completedAppointments.length} lịch hẹn hoàn thành hoặc đã hủy từ ngày thực tế
-                    trở đi.
+                    {paidAppointments.length} lịch hẹn có paymentStatus PAID.
                   </p>
                 </div>
 
                 <StaffAppointmentList
-                  appointments={completedAppointments}
-                  onViewDetail={setDetailAppointment}
-                  onOpenStatusDialog={handleOpenStatusDialog}
-                  onQuickUpdate={handleQuickUpdate}
-                  dateSort={dateSort}
-                  onDateSortToggle={toggleDateSort}
-                />
-              </div>
-            ) : null}
-
-            {olderAppointments.length > 0 ? (
-              <div className="space-y-3">
-                <div>
-                  <h2 className="text-2xl font-semibold text-slate-400">Lịch hẹn cũ</h2>
-                  <p className="mt-1 text-sm text-slate-500">
-                    {olderAppointments.length} lịch hẹn hoàn thành/hủy trước hôm nay.
-                  </p>
-                </div>
-
-                <StaffAppointmentList
-                  appointments={olderAppointments}
+                  appointments={paidAppointments}
                   onViewDetail={setDetailAppointment}
                   onOpenStatusDialog={handleOpenStatusDialog}
                   onQuickUpdate={handleQuickUpdate}
@@ -355,7 +297,6 @@ export default function StaffAppointmentsPage() {
             setDetailAppointment(null);
           }
         }}
-        onConfirmPayment={handleConfirmCashPayment}
       />
 
       <UpdateAppointmentStatusDialog

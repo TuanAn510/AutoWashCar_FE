@@ -36,12 +36,12 @@ const appointment = (
 afterEach(cleanup);
 
 describe('customer appointment card actions', () => {
-  it.each(['unpaid', 'cancelled'] as AppointmentPaymentStatus[])(
-    'shows payment directly for confirmed %s appointments',
-    (paymentStatus) => {
+  it.each(['confirmed', 'in_queue', 'in_progress', 'completed'] as AppointmentStatus[])(
+    'shows payment directly for %s unpaid appointments',
+    (status) => {
       render(
         <AppointmentCard
-          appointment={appointment('confirmed', paymentStatus)}
+          appointment={appointment(status, 'unpaid')}
           onViewDetail={vi.fn()}
           onCancel={vi.fn()}
           onPay={vi.fn()}
@@ -53,7 +53,7 @@ describe('customer appointment card actions', () => {
     }
   );
 
-  it.each(['paid', 'pending'] as AppointmentPaymentStatus[])(
+  it.each(['paid'] as AppointmentPaymentStatus[])(
     'hides payment for confirmed %s appointments',
     (paymentStatus) => {
       render(
@@ -69,20 +69,20 @@ describe('customer appointment card actions', () => {
     }
   );
 
-  it('hides payment after a completed appointment is unpaid', () => {
+  it('shows payment for confirmed pending payment appointments', () => {
     render(
       <AppointmentCard
-        appointment={appointment('completed', 'unpaid')}
+        appointment={appointment('confirmed', 'pending')}
         onViewDetail={vi.fn()}
         onCancel={vi.fn()}
         onPay={vi.fn()}
       />
     );
 
-    expect(screen.queryByRole('button', { name: 'Thanh toán' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Thanh toán' })).toBeTruthy();
   });
 
-  it.each(['in_queue', 'in_progress', 'completed', 'cancelled'] as AppointmentStatus[])(
+  it.each(['cancelled'] as AppointmentStatus[])(
     'shows detail only for %s appointments',
     (status) => {
       render(

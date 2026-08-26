@@ -60,7 +60,7 @@ export function StaffAppointmentList({
         </div>
       ) : null}
       <div className="w-full max-w-full overflow-x-auto">
-        <table className="w-full min-w-[1200px] table-fixed border-collapse text-left text-sm">
+        <table className="w-full min-w-[1300px] table-fixed border-collapse text-left text-sm">
           <thead>
             <tr className="border-b border-slate-200 text-slate-900">
               <th className="w-[160px] px-3 py-4 font-semibold">Thao tác</th>
@@ -88,6 +88,7 @@ export function StaffAppointmentList({
               </th>
               <th className="w-[90px] px-3 py-4 font-semibold">Thời lượng</th>
               <th className="w-[130px] px-3 py-4 font-semibold">Trạng thái</th>
+              <th className="w-[150px] px-3 py-4 font-semibold">Thanh toán</th>
               <th className="w-[100px] px-3 py-4 font-semibold text-center">Chi tiết</th>
             </tr>
           </thead>
@@ -130,13 +131,6 @@ export function StaffAppointmentList({
                           {quickAction.label}
                         </Button>
                       ) : null}
-                      {appointment.status === 'completed' &&
-                      appointment.paymentStatus === 'paid' ? (
-                        <Badge variant="success" className="rounded-full px-2.5 py-0.5 text-xs">
-                          <CreditCard className="mr-1 size-3" />
-                          Đã thanh toán
-                        </Badge>
-                      ) : null}
                     </div>
                   </td>
                   <td className="px-3 py-4">
@@ -169,6 +163,15 @@ export function StaffAppointmentList({
                   </td>
                   <td className="px-3 py-4">
                     <AppointmentStatusBadge status={appointment.status} />
+                  </td>
+                  <td className="px-3 py-4">
+                    <Badge
+                      variant={appointment.paymentStatus === 'paid' ? 'success' : 'neutral'}
+                      className="rounded-full px-2.5 py-0.5 text-xs"
+                    >
+                      <CreditCard className="mr-1 size-3" />
+                      {appointment.paymentStatus === 'paid' ? 'Đã thanh toán' : 'Chưa thanh toán'}
+                    </Badge>
                   </td>
                   <td className="px-3 py-4">
                     <div className="flex items-center justify-center">
